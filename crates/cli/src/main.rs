@@ -14,7 +14,8 @@ use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use mathsheet_core::{
-    BorrowMode, CarryMode, DigitRange, OutputFormat, WorksheetParams, WorksheetType, generate,
+    BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
+    generate,
 };
 
 #[derive(Clone, Copy, Default, ValueEnum)]
@@ -59,6 +60,24 @@ impl From<CliBorrowMode> for BorrowMode {
     }
 }
 
+#[derive(Clone, Copy, Default, ValueEnum)]
+enum CliLocale {
+    /// US defaults (× for multiply, ÷ for divide)
+    #[default]
+    Us,
+    /// Norwegian defaults (· for multiply, : for divide)
+    No,
+}
+
+impl From<CliLocale> for Locale {
+    fn from(l: CliLocale) -> Self {
+        match l {
+            CliLocale::Us => Locale::Us,
+            CliLocale::No => Locale::No,
+        }
+    }
+}
+
 // --- Shared flags ---
 
 #[derive(Parser)]
@@ -87,6 +106,10 @@ struct SharedArgs {
     /// Override the operator symbol (typst expression, e.g. "sym.colon")
     #[arg(long)]
     symbol: Option<String>,
+
+    /// Locale for regional symbol defaults: us, no
+    #[arg(long, value_enum, default_value = "us")]
+    locale: CliLocale,
 
     #[arg(long)]
     debug: bool,
@@ -161,6 +184,24 @@ enum Command {
         #[arg(long)]
         remainder: bool,
     },
+
+    /// Multiplication drill (horizontal times-table recall)
+    MultDrill {
+        #[command(flatten)]
+        shared: SharedArgs,
+
+        /// Which tables to drill, comma-separated. e.g. "2,3" or "1-10"
+        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(1, 10)])]
+        multiplicand: Vec<DigitRange>,
+
+        /// Range of the other factor. e.g. "1-10" or "1-12"
+        #[arg(long, default_value = "1-10")]
+        multiplier: DigitRange,
+
+        /// Number of problems (0 = all problems from the table). Overrides --problems.
+        #[arg(long, default_value = "0")]
+        count: u32,
+    },
 }
 
 #[derive(Parser)]
@@ -194,9 +235,18 @@ fn main() -> Result<()> {
             shared,
             WorksheetType::LongDivision { digits, remainder },
         ),
+        Command::MultDrill { mut shared, multiplicand, multiplier, count } => {
+            if shared.cols == 4 {
+                shared.cols = 3;
+            }
+            shared.problems = count;
+            (shared, WorksheetType::MultiplicationDrill { multiplicand, multiplier })
+        }
     };
 
-    if shared.problems % shared.cols != 0 {
+    // Drills allow partial last rows. Other worksheets need exact grid fill.
+    let is_drill = matches!(worksheet, WorksheetType::MultiplicationDrill { .. });
+    if !is_drill && shared.problems % shared.cols != 0 {
         bail!(
             "--problems ({}) must be divisible by --cols ({})",
             shared.problems,
@@ -213,6 +263,7 @@ fn main() -> Result<()> {
         debug: shared.debug,
         seed: shared.seed,
         symbol: shared.symbol,
+        locale: shared.locale.into(),
     };
 
     let root = shared

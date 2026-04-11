@@ -11,6 +11,11 @@ pub fn render(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetP
     render_inner(default_operator, problems, params, "vertical")
 }
 
+/// Render a horizontal-style worksheet (drills: A × B = ___).
+pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> String {
+    render_inner(default_operator, problems, params, "horizontal")
+}
+
 /// Render a long-division-style worksheet.
 pub fn render_long_division(problems: &[Vec<u32>], params: &WorksheetParams) -> String {
     // Operator is not used for long division (the bracket is the operator).
@@ -31,11 +36,10 @@ fn render_inner(
         .max()
         .unwrap_or(2);
 
-    // Long division needs wider boxes (divisor + bracket + dividend + answer space).
-    let box_width = if style == "long-division" {
-        f64::max(3.0, max_digits as f64 * 0.6 + 1.2)
-    } else {
-        f64::max(2.2, max_digits as f64 * 0.55 + 0.6)
+    let box_width = match style {
+        "long-division" => f64::max(3.0, max_digits as f64 * 0.6 + 1.2),
+        "horizontal" => f64::max(6.0, max_digits as f64 * 1.2 + 4.0),
+        _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
     };
 
     let debug_str = if params.debug { "true" } else { "false" };

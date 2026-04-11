@@ -5,6 +5,7 @@
 
 mod add;
 mod divide;
+mod mult_drill;
 mod multiply;
 mod subtract;
 
@@ -15,6 +16,7 @@ use anyhow::{Result, bail};
 
 const MAX_DIGITS: u32 = 5;
 const MAX_PROBLEMS: u32 = 16;
+const MAX_PROBLEMS_DRILL: u32 = 40;
 const MAX_OPERANDS: usize = 4;
 
 /// A digit count that can be a fixed value or a range.
@@ -64,14 +66,20 @@ impl std::str::FromStr for DigitRange {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         if let Some((lo, hi)) = s.split_once('-') {
-            let min = lo.parse::<u32>().map_err(|e| format!("bad digit range: {e}"))?;
-            let max = hi.parse::<u32>().map_err(|e| format!("bad digit range: {e}"))?;
+            let min = lo
+                .parse::<u32>()
+                .map_err(|e| format!("bad digit range: {e}"))?;
+            let max = hi
+                .parse::<u32>()
+                .map_err(|e| format!("bad digit range: {e}"))?;
             if min > max {
                 return Err(format!("invalid range: {min} > {max}"));
             }
             Ok(DigitRange { min, max })
         } else {
-            let n = s.parse::<u32>().map_err(|e| format!("bad digit count: {e}"))?;
+            let n = s
+                .parse::<u32>()
+                .map_err(|e| format!("bad digit count: {e}"))?;
             Ok(DigitRange::fixed(n))
         }
     }
@@ -116,6 +124,49 @@ pub enum WorksheetType {
         digits: DigitRange,
         remainder: bool,
     },
+    MultiplicationDrill {
+        /// Which tables to drill (e.g. [2,3] or [1-10]).
+        multiplicand: Vec<DigitRange>,
+        /// Range of the other factor (default 1-10).
+        multiplier: DigitRange,
+    },
+}
+
+/// Regional defaults for operator symbols in horizontal layouts.
+///
+/// Vertical/bracket layouts use universal notation regardless of locale.
+/// Locale only affects horizontal layouts (drills).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Locale {
+    #[default]
+    Us,
+    No,
+}
+
+impl Locale {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "us" => Some(Locale::Us),
+            "no" => Some(Locale::No),
+            _ => None,
+        }
+    }
+
+    /// Default multiplication symbol for horizontal layouts.
+    pub fn multiply_symbol(&self) -> &'static str {
+        match self {
+            Locale::Us => "sym.times",
+            Locale::No => "sym.dot.op",
+        }
+    }
+
+    /// Default division symbol for horizontal layouts.
+    pub fn divide_symbol(&self) -> &'static str {
+        match self {
+            Locale::Us => "sym.div",
+            Locale::No => "sym.colon",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -127,7 +178,9 @@ pub struct WorksheetParams {
     pub paper: String,
     pub debug: bool,
     pub seed: Option<u64>,
+    /// Explicit symbol override. Takes precedence over locale.
     pub symbol: Option<String>,
+    pub locale: Locale,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -147,8 +200,25 @@ pub fn generate(
     format: OutputFormat,
     root: &std::path::Path,
 ) -> Result<Worksheet> {
-    if params.num_problems == 0 || params.num_problems > MAX_PROBLEMS {
-        bail!("number of problems must be 1-{MAX_PROBLEMS}, got {}", params.num_problems);
+    let is_drill = matches!(&params.worksheet, WorksheetType::MultiplicationDrill { .. });
+    let max_problems = if is_drill {
+        MAX_PROBLEMS_DRILL
+    } else {
+        MAX_PROBLEMS
+    };
+    // Drills allow 0 = "all problems" (auto-sized from table enumeration).
+    if is_drill {
+        if params.num_problems > max_problems {
+            bail!(
+                "number of problems must be 0-{max_problems}, got {}",
+                params.num_problems
+            );
+        }
+    } else if params.num_problems == 0 || params.num_problems > max_problems {
+        bail!(
+            "number of problems must be 1-{max_problems}, got {}",
+            params.num_problems
+        );
     }
 
     let typ_source = match &params.worksheet {
@@ -177,9 +247,37 @@ pub fn generate(
         WorksheetType::LongDivision { digits, .. } => {
             validate_digit_range(*digits, "long division dividend")?;
             if digits.min < 2 || digits.max > 4 {
-                bail!("long division dividend must be 2-4 digits, got {}-{}", digits.min, digits.max);
+                bail!(
+                    "long division dividend must be 2-4 digits, got {}-{}",
+                    digits.min,
+                    digits.max
+                );
             }
             divide::generate_long(params)
+        }
+        WorksheetType::MultiplicationDrill {
+            multiplicand,
+            multiplier,
+        } => {
+            if params.cols > 3 {
+                bail!(
+                    "multiplication drill supports max 3 columns, got {}",
+                    params.cols
+                );
+            }
+            for r in multiplicand {
+                if r.min < 1 || r.max > 12 {
+                    bail!("multiplicand must be 1-12, got {}-{}", r.min, r.max);
+                }
+            }
+            if multiplier.min < 1 || multiplier.max > 12 {
+                bail!(
+                    "multiplier must be 1-12, got {}-{}",
+                    multiplier.min,
+                    multiplier.max
+                );
+            }
+            mult_drill::generate_typ(params)
         }
     };
 
@@ -202,7 +300,11 @@ fn validate_digit_ranges(ranges: &[DigitRange]) -> Result<()> {
 
 fn validate_digit_range(r: DigitRange, label: &str) -> Result<()> {
     if r.min == 0 || r.max > MAX_DIGITS {
-        bail!("{label} digit count must be 1-{MAX_DIGITS}, got {}-{}", r.min, r.max);
+        bail!(
+            "{label} digit count must be 1-{MAX_DIGITS}, got {}-{}",
+            r.min,
+            r.max
+        );
     }
     if r.min > r.max {
         bail!("{label} digit range invalid: {} > {}", r.min, r.max);

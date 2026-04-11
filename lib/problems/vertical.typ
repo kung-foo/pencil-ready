@@ -6,7 +6,7 @@
 //
 // Supports N operands. Only the last operand gets the operator symbol.
 
-#import "/lib/problems/shared.typ": problem-font, problem-text-size, problem-tracking
+#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking
 
 #let vertical-problem(numbers, operator, width: 2.2cm, debug: false) = {
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking)
@@ -27,7 +27,7 @@
     grid(
       columns: (auto, 1fr),
       column-gutter: 0.2cm,
-      align(left, operator), align(right, text(str(last))),
+      align(left, {set text(font: operator-font); operator}), align(right, text(str(last))),
     )
     v(-0.7cm)
     line(length: 100%, stroke: 0.8pt)

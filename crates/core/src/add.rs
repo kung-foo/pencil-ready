@@ -151,6 +151,7 @@ mod tests {
             debug: false,
             seed: Some(42),
             symbol: None,
+            locale: Default::default(),
         }
     }
 }

@@ -86,3 +86,40 @@ Practices the long division algorithm with larger numbers. Divisor is always 1 d
 
 - **No remainder**: pick divisor (2-9), pick quotient such that dividend = divisor × quotient stays in digit range.
 - **With remainder**: pick divisor (2-9), pick dividend randomly in digit range.
+
+## Multiplication Drill
+
+Horizontal times-table recall. Tests rapid recall of specific multiplication tables.
+
+```
+7 × 3 = ___     4 × 9 = ___
+```
+
+Layout is horizontal with 2-3 columns, many problems per page. Uses the shared `--symbol` override for locale (e.g. `sym.dot.c` for Norwegian `·`).
+
+- `multiplicand: list[range]` — which table(s) to drill, comma-separated. Supports ranges.
+  - `--multiplicand 2` → the 2s table: 2×1, 2×2, ... 2×10
+  - `--multiplicand 2,3` → the 2s and 3s tables mixed together
+  - `--multiplicand 1-10` → all tables 1-10 (default)
+  - `--multiplicand 1-12` → full extended tables
+- `multiplier: range` — the range of the other factor (default: 1-10)
+  - `--multiplier 1-12` → test up to ×12
+
+### Commutative deduplication
+
+If `2 × 7` is in the problem set, `7 × 2` is excluded. This avoids testing the same fact twice. The multiplicand is always shown on the left.
+
+### Problem generation
+
+- Enumerate all pairs: for each multiplicand M in the selected tables, pair with each multiplier N in the multiplier range
+- Deduplicate: if both (M, N) and (N, M) would appear (because N is also a selected multiplicand), keep only the one where M ≤ N
+- Shuffle the resulting list
+- If the total exceeds `num_problems`, take a random subset
+- If the total is less than `num_problems`, use all of them (don't pad with duplicates)
+
+### Constraints
+
+- Max problems per page: higher than other worksheets — up to 40 for horizontal layout
+- Default columns: 2 (horizontal problems are wider)
+- Multiplicand range: 1-12
+- Multiplier range: 1-12
