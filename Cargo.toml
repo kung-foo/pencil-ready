@@ -1,0 +1,29 @@
+# Workspace root — like a Go workspace (go.work) or a monorepo with multiple modules.
+# Each member is its own crate (≈ Go module) that gets its own Cargo.toml.
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+# Shared settings for all crates in the workspace.
+# Individual crates inherit these via `package.edition.workspace = true`.
+[workspace.package]
+edition = "2024"
+
+# Centralized dependency versions — like pinning versions in go.mod,
+# but shared across all workspace members. Individual crates opt in
+# with `dep.workspace = true` in their own Cargo.toml.
+[workspace.dependencies]
+anyhow = "1"
+rand = { version = "0.8", features = ["small_rng"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+
+# Typst ecosystem — the compiler + export crates
+typst = "0.14"
+typst-library = "0.14"
+typst-pdf = "0.14"
+typst-svg = "0.14"
+typst-render = "0.14"

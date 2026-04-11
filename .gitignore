@@ -1,0 +1,23 @@
+output/
+target/
+tools/
+
+# Claude sandbox artifacts
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.ripgreprc
+
+# Editor / IDE
+.idea
+.vscode
+.zed
+
+# Claude
+.claude/
+.envrc
+.mcp.json
+.gitmodules

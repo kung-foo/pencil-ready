@@ -1,0 +1,13 @@
+[package]
+name = "mathsheet-core"
+version = "0.1.0"
+edition.workspace = true  # inherits "2024" from workspace root
+
+[dependencies]
+anyhow.workspace = true
+rand.workspace = true
+typst.workspace = true
+typst-library.workspace = true
+typst-pdf.workspace = true
+typst-svg.workspace = true
+typst-render.workspace = true

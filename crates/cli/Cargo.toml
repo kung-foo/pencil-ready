@@ -1,0 +1,15 @@
+[package]
+name = "mathsheet-cli"
+version = "0.1.0"
+edition.workspace = true
+
+# `[[bin]]` declares this crate produces an executable (not a library).
+# The binary name is what you type in the terminal: `mathsheet multiply ...`
+[[bin]]
+name = "mathsheet"
+path = "src/main.rs"
+
+[dependencies]
+mathsheet-core = { path = "../core" }
+anyhow.workspace = true
+clap.workspace = true
