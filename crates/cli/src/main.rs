@@ -69,7 +69,7 @@ struct SharedArgs {
     #[arg(long, default_value = "4")]
     cols: u32,
 
-    #[arg(long, default_value = "Cascadia Code")]
+    #[arg(long, default_value = "B612")]
     font: String,
 
     #[arg(long, default_value = "a4")]

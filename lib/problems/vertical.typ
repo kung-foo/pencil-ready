@@ -6,10 +6,10 @@
 //
 // Supports N operands. Only the last operand gets the operator symbol.
 
-#import "/lib/problems/shared.typ": problem-text-size, problem-tracking
+#import "/lib/problems/shared.typ": problem-font, problem-text-size, problem-tracking
 
 #let vertical-problem(numbers, operator, width: 2.2cm, debug: false) = {
-  set text(size: problem-text-size, tracking: problem-tracking)
+  set text(font: problem-font, size: problem-text-size, tracking: problem-tracking)
   let debug-box = if debug { 1pt + red } else { none }
   let first = str(numbers.at(0))
   let rest = numbers.slice(1)
