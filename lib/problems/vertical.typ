@@ -6,7 +6,7 @@
 //
 // Supports N operands. Only the last operand gets the operator symbol.
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking
+#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking, problem-features
 
 // `answer-rows` = how many rows of writing space to reserve below the line.
 //   1 for add/subtract (single answer line)
@@ -18,7 +18,7 @@
   answer-rows: 1,
   debug: false,
 ) = {
-  set text(font: problem-font, size: problem-text-size, tracking: problem-tracking)
+  set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
   let first = str(numbers.at(0))
   let rest = numbers.slice(1)

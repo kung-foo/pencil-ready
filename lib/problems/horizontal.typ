@@ -4,12 +4,12 @@
 //
 // The entire problem is one non-breaking box so nothing wraps.
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking
+#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features
 
 // Renders the natural-width problem content. The caller (worksheet grid
 // or story page) is responsible for any fill/alignment behavior.
 #let horizontal-problem(numbers, operator, debug: false) = {
-  set text(font: problem-font, size: problem-text-size-horizontal, tracking: problem-tracking)
+  set text(font: problem-font, size: problem-text-size-horizontal, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
   let a = str(numbers.at(0))
   let b = str(numbers.at(1))
