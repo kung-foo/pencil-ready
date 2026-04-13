@@ -3,7 +3,7 @@
 use crate::template;
 use crate::{DigitRange, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> String {
+pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let (multiplicand, multiplier) = match &params.worksheet {
         WorksheetType::MultiplicationDrill { multiplicand, multiplier } => {
             (multiplicand, *multiplier)
@@ -62,7 +62,7 @@ fn generate_problems(
 
     // 0 = all problems (use the full enumerated set).
     if params.num_problems > 0 {
-        pairs.truncate(params.num_problems as usize);
+        pairs.truncate(params.total_problems() as usize);
     }
 
     pairs.iter().map(|&(a, b)| vec![a, b]).collect()
@@ -114,6 +114,7 @@ mod tests {
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
+            pages: 1,
         }
     }
 }

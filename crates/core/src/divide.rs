@@ -4,7 +4,7 @@ use crate::template;
 use crate::{WorksheetParams, WorksheetType};
 
 /// Simple division: times-table recall. Divisor (2-9) × quotient (1-max_quotient).
-pub fn generate_simple(params: &WorksheetParams) -> String {
+pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<String> {
     let max_quotient = match &params.worksheet {
         WorksheetType::SimpleDivision { max_quotient } => *max_quotient,
         _ => unreachable!(),
@@ -15,7 +15,7 @@ pub fn generate_simple(params: &WorksheetParams) -> String {
 }
 
 /// Long division: algorithm practice. Dividend has N digits, divisor is 1 digit (2-9).
-pub fn generate_long(params: &WorksheetParams) -> String {
+pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<String> {
     let (digit_range, remainder) = match &params.worksheet {
         WorksheetType::LongDivision { digits, remainder } => (*digits, *remainder),
         _ => unreachable!(),
@@ -42,11 +42,12 @@ fn generate_simple_problems(params: &WorksheetParams, max_quotient: u32) -> Vec<
         None => SmallRng::from_entropy(),
     };
 
-    let max_attempts = params.num_problems * 100;
-    let mut problems = Vec::with_capacity(params.num_problems as usize);
+    let total = params.total_problems();
+    let max_attempts = total * 100;
+    let mut problems = Vec::with_capacity(total as usize);
     let mut attempts = 0;
 
-    while problems.len() < params.num_problems as usize && attempts < max_attempts {
+    while problems.len() < total as usize && attempts < max_attempts {
         let divisor = rng.gen_range(2..=9u32);
         let quotient = rng.gen_range(1..=max_quotient);
         let dividend = divisor * quotient;
@@ -74,11 +75,12 @@ fn generate_long_problems(
         None => SmallRng::from_entropy(),
     };
 
-    let max_attempts = params.num_problems * 100;
-    let mut problems = Vec::with_capacity(params.num_problems as usize);
+    let total = params.total_problems();
+    let max_attempts = total * 100;
+    let mut problems = Vec::with_capacity(total as usize);
     let mut attempts = 0;
 
-    while problems.len() < params.num_problems as usize && attempts < max_attempts {
+    while problems.len() < total as usize && attempts < max_attempts {
         let divisor = rng.gen_range(2..=9u32);
         // Pick a random digit count from the range for this problem.
         let dd = rng.gen_range(digit_range.min..=digit_range.max);
@@ -167,6 +169,7 @@ mod tests {
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
+            pages: 1,
         }
     }
 
@@ -181,6 +184,7 @@ mod tests {
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
+            pages: 1,
         }
     }
 }

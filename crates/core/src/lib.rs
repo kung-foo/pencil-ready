@@ -188,6 +188,16 @@ pub struct WorksheetParams {
     /// Explicit symbol override. Takes precedence over locale.
     pub symbol: Option<String>,
     pub locale: Locale,
+    /// Number of pages. Each page has `num_problems` unique problems.
+    /// pages > 1 requires PDF output.
+    pub pages: u32,
+}
+
+impl WorksheetParams {
+    /// Total number of unique problems across all pages.
+    pub fn total_problems(&self) -> u32 {
+        self.num_problems * self.pages
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -217,6 +227,13 @@ pub fn generate(
     format: OutputFormat,
     root: &std::path::Path,
 ) -> Result<Worksheet> {
+    if params.pages == 0 {
+        bail!("pages must be at least 1");
+    }
+    if params.pages > 1 && !matches!(format, OutputFormat::Pdf) {
+        bail!("pages > 1 requires PDF output (PNG/SVG are single-image formats)");
+    }
+
     let is_drill = matches!(
         &params.worksheet,
         WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. }
@@ -244,25 +261,25 @@ pub fn generate(
     let typ_source = match &params.worksheet {
         WorksheetType::Add { digits, .. } => {
             validate_digit_ranges(digits)?;
-            add::generate_typ(params)
+            add::generate_typ(params)?
         }
         WorksheetType::Subtract { digits, .. } => {
             validate_digit_ranges(digits)?;
             if digits.len() > 2 {
                 bail!("subtract supports max 2 operands, got {}", digits.len());
             }
-            subtract::generate_typ(params)
+            subtract::generate_typ(params)?
         }
         WorksheetType::Multiply { digits } => {
             validate_digit_ranges(digits)?;
             if digits.len() > 2 {
                 bail!("multiply supports max 2 operands, got {}", digits.len());
             }
-            multiply::generate_typ(params)
+            multiply::generate_typ(params)?
         }
         WorksheetType::SimpleDivision { max_quotient } => {
             validate_max_quotient(*max_quotient)?;
-            divide::generate_simple(params)
+            divide::generate_simple(params)?
         }
         WorksheetType::LongDivision { digits, .. } => {
             validate_digit_range(*digits, "long division dividend")?;
@@ -273,7 +290,7 @@ pub fn generate(
                     digits.max
                 );
             }
-            divide::generate_long(params)
+            divide::generate_long(params)?
         }
         WorksheetType::MultiplicationDrill {
             multiplicand,
@@ -297,7 +314,7 @@ pub fn generate(
                     multiplier.max
                 );
             }
-            mult_drill::generate_typ(params)
+            mult_drill::generate_typ(params)?
         }
         WorksheetType::DivisionDrill {
             divisor,
@@ -321,7 +338,7 @@ pub fn generate(
                     max_quotient.max
                 );
             }
-            div_drill::generate_typ(params)
+            div_drill::generate_typ(params)?
         }
     };
 

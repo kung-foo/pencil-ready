@@ -85,6 +85,10 @@ struct SharedArgs {
     #[arg(long, default_value = "12")]
     problems: u32,
 
+    /// Number of pages (PDF only). Each page has `problems` unique problems.
+    #[arg(long, default_value = "1")]
+    pages: u32,
+
     #[arg(long, default_value = "4")]
     cols: u32,
 
@@ -279,6 +283,7 @@ fn main() -> Result<()> {
         seed: shared.seed,
         symbol: shared.symbol,
         locale: shared.locale.into(),
+        pages: shared.pages,
     };
 
     let root = shared

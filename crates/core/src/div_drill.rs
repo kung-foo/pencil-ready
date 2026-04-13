@@ -6,7 +6,7 @@
 use crate::template;
 use crate::{DigitRange, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> String {
+pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let (divisor_ranges, max_quotient) = match &params.worksheet {
         WorksheetType::DivisionDrill { divisor, max_quotient } => {
             (divisor, *max_quotient)
@@ -60,7 +60,7 @@ fn generate_problems(
 
     // 0 = all problems.
     if params.num_problems > 0 {
-        pairs.truncate(params.num_problems as usize);
+        pairs.truncate(params.total_problems() as usize);
     }
 
     pairs.iter().map(|&(dividend, divisor)| vec![dividend, divisor]).collect()
@@ -106,6 +106,7 @@ mod tests {
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
+            pages: 1,
         }
     }
 }

@@ -3,7 +3,7 @@
 use crate::template;
 use crate::{CarryMode, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> String {
+pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let problems = generate_problems(params);
     template::render("sym.plus", &problems, params, 1)
 }
@@ -24,11 +24,12 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         None => SmallRng::from_entropy(),
     };
 
-    let max_attempts = params.num_problems * 100;
-    let mut problems = Vec::with_capacity(params.num_problems as usize);
+    let total = params.total_problems();
+    let max_attempts = total * 100;
+    let mut problems = Vec::with_capacity(total as usize);
     let mut attempts = 0;
 
-    while problems.len() < params.num_problems as usize && attempts < max_attempts {
+    while problems.len() < total as usize && attempts < max_attempts {
         let nums: Vec<u32> = digits.iter().map(|d| d.random(&mut rng)).collect();
         attempts += 1;
 
@@ -152,6 +153,7 @@ mod tests {
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
+            pages: 1,
         }
     }
 }

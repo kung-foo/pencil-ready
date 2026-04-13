@@ -3,7 +3,7 @@
 use crate::template;
 use crate::{WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> String {
+pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let problems = generate_problems(params);
     // Space needed below the line for partial products + final answer.
     //   1-digit multiplier → 1 row (just the product)
@@ -35,11 +35,12 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
     let top_range = digits[0];
     let bot_range = *digits.get(1).unwrap_or(&top_range);
 
-    let max_attempts = params.num_problems * 100;
-    let mut problems = Vec::with_capacity(params.num_problems as usize);
+    let total = params.total_problems();
+    let max_attempts = total * 100;
+    let mut problems = Vec::with_capacity(total as usize);
     let mut attempts = 0;
 
-    while problems.len() < params.num_problems as usize && attempts < max_attempts {
+    while problems.len() < total as usize && attempts < max_attempts {
         let a = top_range.random(&mut rng);
         let b = bot_range.random(&mut rng);
         let candidate = vec![a, b];
