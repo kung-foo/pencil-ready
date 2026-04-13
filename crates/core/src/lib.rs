@@ -4,6 +4,7 @@
 //! They share a common template renderer and the typst World implementation.
 
 mod add;
+mod div_drill;
 mod divide;
 mod mult_drill;
 mod multiply;
@@ -130,6 +131,12 @@ pub enum WorksheetType {
         /// Range of the other factor (default 1-10).
         multiplier: DigitRange,
     },
+    DivisionDrill {
+        /// Which divisors to drill (e.g. [2,3] or [1-10]).
+        divisor: Vec<DigitRange>,
+        /// Range of the quotient (default 1-10).
+        max_quotient: DigitRange,
+    },
 }
 
 /// Regional defaults for operator symbols in horizontal layouts.
@@ -200,7 +207,10 @@ pub fn generate(
     format: OutputFormat,
     root: &std::path::Path,
 ) -> Result<Worksheet> {
-    let is_drill = matches!(&params.worksheet, WorksheetType::MultiplicationDrill { .. });
+    let is_drill = matches!(
+        &params.worksheet,
+        WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. }
+    );
     let max_problems = if is_drill {
         MAX_PROBLEMS_DRILL
     } else {
@@ -278,6 +288,30 @@ pub fn generate(
                 );
             }
             mult_drill::generate_typ(params)
+        }
+        WorksheetType::DivisionDrill {
+            divisor,
+            max_quotient,
+        } => {
+            if params.cols > 3 {
+                bail!(
+                    "division drill supports max 3 columns, got {}",
+                    params.cols
+                );
+            }
+            for r in divisor {
+                if r.min < 1 || r.max > 12 {
+                    bail!("divisor must be 1-12, got {}-{}", r.min, r.max);
+                }
+            }
+            if max_quotient.min < 1 || max_quotient.max > 12 {
+                bail!(
+                    "max-quotient must be 1-12, got {}-{}",
+                    max_quotient.min,
+                    max_quotient.max
+                );
+            }
+            div_drill::generate_typ(params)
         }
     };
 

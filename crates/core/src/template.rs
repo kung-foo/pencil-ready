@@ -88,7 +88,7 @@ fn render_inner(
   style: "{style}",
 )
 
-#worksheet-footer[Made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴]
+#worksheet-footer[*Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com]]
 "#
     )
 }

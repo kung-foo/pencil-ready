@@ -202,6 +202,24 @@ enum Command {
         #[arg(long, default_value = "0")]
         count: u32,
     },
+
+    /// Division drill (horizontal times-table recall, reversed)
+    DivDrill {
+        #[command(flatten)]
+        shared: SharedArgs,
+
+        /// Which divisors to drill, comma-separated. e.g. "2,3" or "1-10"
+        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(1, 10)])]
+        divisor: Vec<DigitRange>,
+
+        /// Range of the quotient. e.g. "1-10" or "1-12"
+        #[arg(long, default_value = "1-10")]
+        max_quotient: DigitRange,
+
+        /// Number of problems (0 = all problems from the table). Overrides --problems.
+        #[arg(long, default_value = "0")]
+        count: u32,
+    },
 }
 
 #[derive(Parser)]
@@ -242,17 +260,14 @@ fn main() -> Result<()> {
             shared.problems = count;
             (shared, WorksheetType::MultiplicationDrill { multiplicand, multiplier })
         }
+        Command::DivDrill { mut shared, divisor, max_quotient, count } => {
+            if shared.cols == 4 {
+                shared.cols = 3;
+            }
+            shared.problems = count;
+            (shared, WorksheetType::DivisionDrill { divisor, max_quotient })
+        }
     };
-
-    // Drills allow partial last rows. Other worksheets need exact grid fill.
-    let is_drill = matches!(worksheet, WorksheetType::MultiplicationDrill { .. });
-    if !is_drill && shared.problems % shared.cols != 0 {
-        bail!(
-            "--problems ({}) must be divisible by --cols ({})",
-            shared.problems,
-            shared.cols
-        );
-    }
 
     let params = WorksheetParams {
         worksheet,
