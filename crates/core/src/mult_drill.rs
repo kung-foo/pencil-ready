@@ -108,7 +108,6 @@ mod tests {
             worksheet: WorksheetType::MultiplicationDrill { multiplicand, multiplier },
             num_problems: 40,
             cols: 2,
-            font: "B612".into(),
             paper: "a4".into(),
             debug: false,
             seed: Some(42),

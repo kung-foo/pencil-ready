@@ -192,7 +192,6 @@ mod tests {
             },
             num_problems: 12,
             cols: 3,
-            font: "B612".into(),
             paper: "a4".into(),
             debug: false,
             seed: Some(42),

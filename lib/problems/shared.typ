@@ -1,5 +1,8 @@
 // Shared constants for all problem layouts.
 
+// Page body / label font — used for headers, footers, labels, and the
+// default text font. Problem digits use `problem-font`.
+#let body-font = "B612"
 #let problem-font = "Fira Code"
 #let operator-font = "Fira Math"
 #let problem-text-size = 22pt

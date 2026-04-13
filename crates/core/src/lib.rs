@@ -213,7 +213,6 @@ pub struct WorksheetParams {
     pub worksheet: WorksheetType,
     pub num_problems: u32,
     pub cols: u32,
-    pub font: String,
     pub paper: String,
     pub debug: bool,
     pub seed: Option<u64>,

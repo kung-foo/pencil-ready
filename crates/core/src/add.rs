@@ -147,7 +147,6 @@ mod tests {
             worksheet: WorksheetType::Add { digits, carry },
             num_problems: 20,
             cols: 4,
-            font: "Cascadia Code".into(),
             paper: "a4".into(),
             debug: false,
             seed: Some(42),

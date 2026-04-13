@@ -93,7 +93,6 @@ fn render_inner_full(
     let solve_first_str = if solve_first { "true" } else { "false" };
     let implicit_str = if implicit { "true" } else { "false" };
     let cols = params.cols;
-    let font = &params.font;
     let paper = &params.paper;
 
     // Chunk problems across pages.
@@ -157,9 +156,10 @@ fn render_inner_full(
         r#"#import "/lib/header.typ": worksheet-header
 #import "/lib/layout.typ": worksheet-grid
 #import "/lib/footer.typ": worksheet-footer
+#import "/lib/problems/shared.typ": body-font
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
-#set text(font: "{font}", size: 10pt)
+#set text(font: body-font, size: 10pt)
 
 {page_blocks}"#
     ))
