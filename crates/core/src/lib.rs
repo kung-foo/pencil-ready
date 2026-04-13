@@ -146,6 +146,9 @@ pub enum WorksheetType {
         max_whole: u32,
         /// If true, numerator is always 1 (unit fractions only).
         unit_only: bool,
+        /// If true, render the first problem as a worked example (shows
+        /// the multiply-across intermediate and simplified integer).
+        solve_first: bool,
     },
 }
 

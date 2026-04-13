@@ -7,9 +7,13 @@ use crate::{WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let problems = generate_problems(params);
+    let solve_first = match &params.worksheet {
+        WorksheetType::FractionMultiply { solve_first, .. } => *solve_first,
+        _ => unreachable!(),
+    };
     // Locale-aware multiply symbol (× for US, · for Norway).
     let symbol = params.locale.multiply_symbol();
-    template::render_horizontal_fraction(symbol, &problems, params)
+    template::render_horizontal_fraction(symbol, &problems, params, solve_first)
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
@@ -19,6 +23,7 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
             min_whole,
             max_whole,
             unit_only,
+            ..
         } => (denominators, *min_whole, *max_whole, *unit_only),
         _ => unreachable!(),
     };
@@ -113,6 +118,7 @@ mod tests {
                 min_whole,
                 max_whole,
                 unit_only,
+                solve_first: false,
             },
             num_problems: 12,
             cols: 2,

@@ -245,6 +245,11 @@ enum Command {
         /// Use only unit fractions (numerator always 1)
         #[arg(long)]
         unit_only: bool,
+
+        /// Render the first problem as a worked example (shows intermediate
+        /// fraction and simplified integer)
+        #[arg(long)]
+        solve_first: bool,
     },
 }
 
@@ -293,7 +298,7 @@ fn main() -> Result<()> {
             shared.problems = count;
             (shared, WorksheetType::DivisionDrill { divisor, max_quotient })
         }
-        Command::FractionMult { mut shared, denominators, min_whole, max_whole, unit_only } => {
+        Command::FractionMult { mut shared, denominators, min_whole, max_whole, unit_only, solve_first } => {
             // Always 3 columns for fraction mult.
             shared.cols = 3;
             (shared, WorksheetType::FractionMultiply {
@@ -301,6 +306,7 @@ fn main() -> Result<()> {
                 min_whole,
                 max_whole,
                 unit_only,
+                solve_first,
             })
         }
     };

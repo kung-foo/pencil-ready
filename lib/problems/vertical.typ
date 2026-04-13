@@ -6,7 +6,7 @@
 //
 // Supports N operands. Only the last operand gets the operator symbol.
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking, problem-features
+#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking, problem-features, problem-line-height
 
 // `answer-rows` = how many rows of writing space to reserve below the line.
 //   1 for add/subtract (single answer line)
@@ -23,9 +23,8 @@
   let first = str(numbers.at(0))
   let rest = numbers.slice(1)
 
-  // 1.3em ≈ one typeset line at this size (font em + leading).
   let carry-space = 0.5em
-  let answer-space = 1.3em * answer-rows
+  let answer-space = problem-line-height * answer-rows
 
   box(
     width: width,

@@ -1,4 +1,4 @@
-#let worksheet-grid(problems, operator, num-cols: 4, width: 2.2cm, debug: false, style: "vertical", answer-rows: 1) = {
+#let worksheet-grid(problems, operator, num-cols: 4, width: 2.2cm, debug: false, style: "vertical", answer-rows: 1, solve-first: false) = {
   import "/lib/problems/vertical.typ": vertical-problem
   import "/lib/problems/long-division.typ": long-division-problem
   import "/lib/problems/horizontal.typ": horizontal-problem
@@ -34,7 +34,7 @@
         } else if style == "horizontal" {
           pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, operator, debug: debug))
         } else if style == "horizontal-fraction" {
-          pad(left: 0.3cm, right: 0.3cm, horizontal-fraction-problem(nums, operator, debug: debug))
+          pad(left: 0.3cm, right: 0.3cm, horizontal-fraction-problem(nums, operator, debug: debug, solved: solve-first and idx == 0))
         } else {
           vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug)
         }

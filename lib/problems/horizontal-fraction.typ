@@ -1,13 +1,18 @@
-// Horizontal fraction problem: `whole × num/den = ___`
+// Horizontal fraction problem: two-step layout
 //
 //   8 × 1/2 = ___
+//           = ___
 //
-// The fraction is rendered via math.frac (auto-sizes for inline math).
+// Row 1 holds the multiply-across intermediate (a fraction).
+// Row 2 holds the simplified integer answer.
+// The `=` signs align vertically to reinforce the equals-column habit.
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features
+#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features, problem-line-height
 
-#let horizontal-fraction-problem(numbers, operator, debug: false) = {
+#let horizontal-fraction-problem(numbers, operator, debug: false, solved: false) = {
   // numbers = (whole, numerator, denominator)
+  // solved  = if true, fill in the worked answer (multiply-across + simplified)
+  //           as a demonstration example.
   // NOTE: do NOT set tracking on the outer text — math.frac inherits the
   // outer text settings and inserts a visible gap between digits of multi-
   // digit numerators/denominators (e.g. "10" rendered as "1 0"). Apply
@@ -21,30 +26,47 @@
   // inside math.frac — the outer text font doesn't propagate there).
   show math.equation: set text(font: "Fira Math", features: ())
   let debug-box = if debug { 1pt + red } else { none }
-  let whole = str(numbers.at(0))
+  let whole-v = numbers.at(0)
+  let whole = str(whole-v)
   let n = numbers.at(1)
   let d = numbers.at(2)
 
-  let answer-blank = box(width: 2em, height: 1em, stroke: (bottom: 0.5pt))
+  // Worked-answer values (only rendered when solved: true).
+  let inter-num = whole-v * n
+  let final = inter-num / d  // integer division: answers are always whole
+
+  // Reserve fixed horizontal space on the right so solved and unsolved
+  // problems occupy the same width — the worksheet grid stays aligned.
+  let slot-width = 3.2em
+  let row1-right = box(width: slot-width, height: 1em, align(left + horizon, {
+    if solved { $#str(inter-num)/#str(d)$ }
+  }))
+  let row2-right = box(width: slot-width, height: 1em, align(left + horizon, {
+    if solved {
+      text(tracking: problem-tracking, str(int(final)))
+    }
+  }))
 
   let op-box = box(width: 1.2em, align(center, {
     set text(font: operator-font)
     operator
   }))
 
-  // Single non-breaking inline box so nothing wraps.
-  //
-  // The inline math fraction's denominator descends below the text baseline,
-  // so wrap the equation in its own box to pin its full extent, then give
-  // the outer box bottom inset so the debug stroke and layout grid contain
-  // the descender. The top already has plenty of room from the text's ascent.
-  box(stroke: debug-box, inset: (top: 0.1em, bottom: 0.6em), {
+  let lhs = {
     text(tracking: problem-tracking, whole)
     op-box
     box($#str(n)/#str(d)$)
-    h(0.3em)
-    sym.eq
-    h(0.3em)
-    answer-blank
-  })
+  }
+
+  // 3-column grid keeps the `=` signs aligned across both rows.
+  // Row 1: [whole × n/d] [=] [intermediate slot]
+  // Row 2: [          ] [=] [integer      slot]
+  box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
+    columns: (auto, auto, auto),
+    column-gutter: 0.3em,
+    row-gutter: problem-line-height,
+    align: (right + horizon, center + horizon, left + horizon),
+    lhs, sym.eq, row1-right,
+    [], sym.eq, row2-right,
+  ))
 }

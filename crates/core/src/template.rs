@@ -20,8 +20,8 @@ pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: 
 }
 
 /// Render a horizontal fraction worksheet (whole × num/den = ___).
-pub fn render_horizontal_fraction(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> Result<String> {
-    render_inner(default_operator, problems, params, "horizontal-fraction", 1)
+pub fn render_horizontal_fraction(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams, solve_first: bool) -> Result<String> {
+    render_inner_with_solve(default_operator, problems, params, "horizontal-fraction", 1, solve_first)
 }
 
 /// Render a long-division-style worksheet.
@@ -39,6 +39,17 @@ fn render_inner(
     params: &WorksheetParams,
     style: &str,
     answer_rows: u32,
+) -> Result<String> {
+    render_inner_with_solve(default_operator, problems, params, style, answer_rows, false)
+}
+
+fn render_inner_with_solve(
+    default_operator: &str,
+    problems: &[Vec<u32>],
+    params: &WorksheetParams,
+    style: &str,
+    answer_rows: u32,
+    solve_first: bool,
 ) -> Result<String> {
     let expected = params.total_problems() as usize;
     // Drills with num_problems=0 allow any count. Others must match exactly.
@@ -71,6 +82,7 @@ fn render_inner(
     };
 
     let debug_str = if params.debug { "true" } else { "false" };
+    let solve_first_str = if solve_first { "true" } else { "false" };
     let cols = params.cols;
     let font = &params.font;
     let paper = &params.paper;
@@ -119,6 +131,7 @@ fn render_inner(
   debug: {debug_str},
   style: "{style}",
   answer-rows: {answer_rows},
+  solve-first: {solve_first_str},
 )
 
 #worksheet-footer[*Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com]]
