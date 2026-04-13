@@ -16,7 +16,15 @@
     grid(
       columns: range(num-cols).map(_ => 1fr),
       rows: range(num-rows).map(_ => 1fr),
-      align: if style == "vertical" { center + top } else { left + top },
+      align: if style == "vertical" {
+        center + top
+      } else if style == "horizontal" {
+        // Right-align problems within each cell so the = and answer
+        // blanks line up vertically down each column.
+        right + horizon
+      } else {
+        left + top
+      },
       stroke: debug-grid,
       ..range(num-problems).map(idx => {
         let nums = problems.at(idx)

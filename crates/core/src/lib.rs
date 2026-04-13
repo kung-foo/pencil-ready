@@ -202,6 +202,16 @@ pub struct Worksheet {
     pub format: OutputFormat,
 }
 
+/// Compile arbitrary .typ source and export to the given format.
+/// Used by visual testing / Storybook generation to render isolated components.
+pub fn compile_typst(
+    typ_source: &str,
+    format: OutputFormat,
+    root: &std::path::Path,
+) -> Result<Vec<u8>> {
+    world::compile_and_export(typ_source, format, root)
+}
+
 pub fn generate(
     params: &WorksheetParams,
     format: OutputFormat,

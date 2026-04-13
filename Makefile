@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve
 
 build:
 	cargo build
@@ -22,3 +22,18 @@ clean-output:
 	rm -f output/*.pdf output/*.png output/*.svg output/*.typ
 
 clean-all: clean clean-output
+
+# --- Visual stories ---
+
+stories-gen:
+	cargo run -p mathsheet-stories -- generate
+
+stories-diff:
+	cargo run -p mathsheet-stories -- diff
+
+# regen + diff in one step (fails on any change)
+stories-check:
+	cargo run -p mathsheet-stories -- check
+
+stories-approve:
+	cargo run -p mathsheet-stories -- approve
