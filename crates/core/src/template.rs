@@ -144,7 +144,7 @@ fn render_inner_full(
   variable: "{variable}",
 )
 
-#worksheet-footer[*Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com]]
+#worksheet-footer(pencil-ready-content)
 "#
         ));
         if i + 1 < pages.len() {
@@ -155,7 +155,7 @@ fn render_inner_full(
     Ok(format!(
         r#"#import "/lib/header.typ": worksheet-header
 #import "/lib/layout.typ": worksheet-grid
-#import "/lib/footer.typ": worksheet-footer
+#import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))

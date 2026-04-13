@@ -2,7 +2,7 @@
 
 // Page body / label font — used for headers, footers, labels, and the
 // default text font. Problem digits use `problem-font`.
-#let body-font = "B612"
+#let body-font = "Roboto Slab"
 #let problem-font = "Fira Code"
 #let operator-font = "Fira Math"
 #let problem-text-size = 22pt

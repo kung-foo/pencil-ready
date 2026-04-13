@@ -22,8 +22,10 @@
         center + top
       } else if style == "horizontal" or style == "horizontal-fraction" or style == "algebra-two-step" {
         // Right-align problems within each cell so the = and answer
-        // blanks line up vertically down each column.
-        right + horizon
+        // blanks line up vertically down each column. Top-align so every
+        // problem starts flush with the top of its cell instead of being
+        // vertically centered — the visual rhythm across rows is cleaner.
+        right + top
       } else {
         left + top
       },
