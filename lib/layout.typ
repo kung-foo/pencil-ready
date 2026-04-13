@@ -29,7 +29,7 @@
       ..range(num-problems).map(idx => {
         let nums = problems.at(idx)
         if style == "long-division" {
-          pad(left: 0.5cm, long-division-problem(nums, width: width, debug: debug))
+          pad(left: 0.5cm, long-division-problem(nums, width: width, answer-rows: answer-rows, debug: debug))
         } else if style == "horizontal" {
           pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, operator, debug: debug))
         } else {

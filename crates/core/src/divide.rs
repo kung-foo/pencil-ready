@@ -22,7 +22,15 @@ pub fn generate_long(params: &WorksheetParams) -> String {
     };
 
     let problems = generate_long_problems(params, digit_range, remainder);
-    template::render_long_division(&problems, params)
+    // Solve space: roughly 2 rows per dividend digit (multiply + bring-down).
+    // Use the max dividend in the set so all cells get uniform sizing.
+    let max_dividend_digits = problems
+        .iter()
+        .map(|nums| if nums[0] == 0 { 1 } else { nums[0].ilog10() + 1 })
+        .max()
+        .unwrap_or(1);
+    let answer_rows = 2 * max_dividend_digits;
+    template::render_long_division(&problems, params, answer_rows)
 }
 
 fn generate_simple_problems(params: &WorksheetParams, max_quotient: u32) -> Vec<Vec<u32>> {

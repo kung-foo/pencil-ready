@@ -32,11 +32,21 @@
   )
 }
 
-#let long-division-problem(numbers, width: 3.9em, debug: false) = {
+// `answer-rows` = rows of solve space below the bracket. Typically 2× the
+// number of dividend digits (one row each for multiply + subtract/bring-down).
+#let long-division-problem(
+  numbers,
+  width: 3.9em,
+  answer-rows: 0,
+  debug: false,
+) = {
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking)
   let debug-box = if debug { 1pt + red } else { none }
   let dividend-str = str(numbers.at(0))
   let divisor-str = str(numbers.at(1))
+
+  // 1.3em per row ≈ one typeset line at this size.
+  let work-space = 1.3em * answer-rows
 
   box(width: width, stroke: debug-box, align(left, {
     context {
@@ -59,6 +69,9 @@
           place(bottom + left, division-bracket(m.width, m.height))
         }),
       )
+      // Work space below the bracket — added AFTER the inner box so the
+      // bracket's `place(bottom)` stays anchored to the dividend baseline.
+      v(work-space)
     }
   }))
 }

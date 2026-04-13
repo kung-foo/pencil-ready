@@ -24,9 +24,15 @@ pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: 
 }
 
 /// Render a long-division-style worksheet.
-pub fn render_long_division(problems: &[Vec<u32>], params: &WorksheetParams) -> String {
+/// `answer_rows` is the number of rows of work space below the bracket
+/// (typically 2× dividend digits).
+pub fn render_long_division(
+    problems: &[Vec<u32>],
+    params: &WorksheetParams,
+    answer_rows: u32,
+) -> String {
     // Operator is not used for long division (the bracket is the operator).
-    render_inner("", problems, params, "long-division", 1)
+    render_inner("", problems, params, "long-division", answer_rows)
 }
 
 fn render_inner(
