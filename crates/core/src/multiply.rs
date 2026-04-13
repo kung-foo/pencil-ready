@@ -51,5 +51,11 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         }
     }
 
+    // Append the product so the typst component can render the final
+    // answer in solved mode. (Partial products for multi-digit multipliers
+    // aren't filled in — only the bottom line.)
     problems
+        .into_iter()
+        .map(|nums| vec![nums[0], nums[1], nums[0] * nums[1]])
+        .collect()
 }

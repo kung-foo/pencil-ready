@@ -20,13 +20,13 @@ pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: 
 }
 
 /// Render a horizontal fraction worksheet (whole × num/den = ___).
-pub fn render_horizontal_fraction(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams, solve_first: bool) -> Result<String> {
-    render_inner_full(default_operator, problems, params, "horizontal-fraction", 1, solve_first, false, "x")
+pub fn render_horizontal_fraction(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> Result<String> {
+    render_inner_full(default_operator, problems, params, "horizontal-fraction", 1, false, "x")
 }
 
 /// Render an algebra two-step worksheet (ax + b = c, solve for x).
-pub fn render_algebra_two_step(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams, solve_first: bool, implicit: bool, variable: &str) -> Result<String> {
-    render_inner_full(default_operator, problems, params, "algebra-two-step", 1, solve_first, implicit, variable)
+pub fn render_algebra_two_step(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams, implicit: bool, variable: &str) -> Result<String> {
+    render_inner_full(default_operator, problems, params, "algebra-two-step", 1, implicit, variable)
 }
 
 /// Render a long-division-style worksheet.
@@ -45,7 +45,7 @@ fn render_inner(
     style: &str,
     answer_rows: u32,
 ) -> Result<String> {
-    render_inner_full(default_operator, problems, params, style, answer_rows, false, false, "x")
+    render_inner_full(default_operator, problems, params, style, answer_rows, false, "x")
 }
 
 fn render_inner_full(
@@ -54,7 +54,6 @@ fn render_inner_full(
     params: &WorksheetParams,
     style: &str,
     answer_rows: u32,
-    solve_first: bool,
     implicit: bool,
     variable: &str,
 ) -> Result<String> {
@@ -90,7 +89,7 @@ fn render_inner_full(
     };
 
     let debug_str = if params.debug { "true" } else { "false" };
-    let solve_first_str = if solve_first { "true" } else { "false" };
+    let solve_first_str = if params.solve_first { "true" } else { "false" };
     let implicit_str = if implicit { "true" } else { "false" };
     let cols = params.cols;
     let paper = &params.paper;

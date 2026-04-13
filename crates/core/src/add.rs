@@ -45,7 +45,17 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         }
     }
 
+    // Append the sum as the last element — the typst component pulls the
+    // final entry as the answer when rendering in solved mode.
     problems
+        .into_iter()
+        .map(|nums| {
+            let sum = nums.iter().sum::<u32>();
+            let mut with_answer = nums;
+            with_answer.push(sum);
+            with_answer
+        })
+        .collect()
 }
 
 fn column_sum(nums: &[u32], pos: u32) -> u32 {
@@ -125,7 +135,9 @@ mod tests {
         let params = test_params(CarryMode::None, vec![DR::fixed(2), DR::fixed(2)]);
         let problems = generate_problems(&params);
         for nums in &problems {
-            assert!(!has_carry(nums), "{nums:?} has a carry");
+            // Last element is the sum; operands are the prefix.
+            let operands = &nums[..nums.len() - 1];
+            assert!(!has_carry(operands), "{operands:?} has a carry");
         }
     }
 
@@ -135,8 +147,10 @@ mod tests {
         let problems = generate_problems(&params);
         assert_eq!(problems.len(), 20);
         for nums in &problems {
-            assert_eq!(nums.len(), 3);
-            assert!(has_carry(nums), "{nums:?} has no carry");
+            // 3 operands + 1 appended sum = 4 entries.
+            assert_eq!(nums.len(), 4);
+            let operands = &nums[..nums.len() - 1];
+            assert!(has_carry(operands), "{operands:?} has no carry");
         }
     }
 
@@ -153,6 +167,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             pages: 1,
+            solve_first: false,
         }
     }
 }

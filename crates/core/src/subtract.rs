@@ -55,7 +55,12 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         }
     }
 
+    // Append the difference so the typst component can render the answer
+    // in solved mode.
     problems
+        .into_iter()
+        .map(|nums| vec![nums[0], nums[1], nums[0] - nums[1]])
+        .collect()
 }
 
 fn has_borrow(a: u32, b: u32) -> bool {
@@ -183,6 +188,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             pages: 1,
+            solve_first: false,
         }
     }
 }

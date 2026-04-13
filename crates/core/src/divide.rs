@@ -59,7 +59,12 @@ fn generate_simple_problems(params: &WorksheetParams, max_quotient: u32) -> Vec<
         }
     }
 
+    // Append the quotient so the typst component can render the answer
+    // in solved mode.
     problems
+        .into_iter()
+        .map(|nums| vec![nums[0], nums[1], nums[0] / nums[1]])
+        .collect()
 }
 
 fn generate_long_problems(
@@ -90,7 +95,9 @@ fn generate_long_problems(
 
         let candidate = if remainder {
             let dividend = rng.gen_range(dividend_min..=dividend_max);
-            vec![dividend, divisor]
+            // With remainder: compute quotient for the solved render.
+            // Remainder is not currently rendered in solved mode.
+            vec![dividend, divisor, dividend / divisor]
         } else {
             let q_min = (dividend_min + divisor - 1) / divisor;
             let q_max = dividend_max / divisor;
@@ -99,7 +106,7 @@ fn generate_long_problems(
             }
             let quotient = rng.gen_range(q_min..=q_max);
             let dividend = divisor * quotient;
-            vec![dividend, divisor]
+            vec![dividend, divisor, quotient]
         };
 
         if !problems.contains(&candidate) {
@@ -169,6 +176,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             pages: 1,
+            solve_first: false,
         }
     }
 
@@ -183,6 +191,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             pages: 1,
+            solve_first: false,
         }
     }
 }

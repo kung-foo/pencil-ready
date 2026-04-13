@@ -65,7 +65,9 @@ fn generate_problems(
         pairs.truncate(params.total_problems() as usize);
     }
 
-    pairs.iter().map(|&(a, b)| vec![a, b]).collect()
+    // Include the product as a third element so the typst component can
+    // render the answer when `solved` is on.
+    pairs.iter().map(|&(a, b)| vec![a, b, a * b]).collect()
 }
 
 #[cfg(test)]
@@ -114,6 +116,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             pages: 1,
+            solve_first: false,
         }
     }
 }

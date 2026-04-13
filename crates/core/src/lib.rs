@@ -147,9 +147,6 @@ pub enum WorksheetType {
         max_whole: u32,
         /// If true, numerator is always 1 (unit fractions only).
         unit_only: bool,
-        /// If true, render the first problem as a worked example (shows
-        /// the multiply-across intermediate and simplified integer).
-        solve_first: bool,
     },
     AlgebraTwoStep {
         /// Coefficient range (default 2-12).
@@ -166,8 +163,6 @@ pub enum WorksheetType {
         implicit: bool,
         /// Randomly mix canonical (`ax + b = c`) and const-first (`b + ax = c`).
         mix_forms: bool,
-        /// Render the first problem as a worked example.
-        solve_first: bool,
     },
 }
 
@@ -222,6 +217,9 @@ pub struct WorksheetParams {
     /// Number of pages. Each page has `num_problems` unique problems.
     /// pages > 1 requires PDF output.
     pub pages: u32,
+    /// Render the first problem as a worked example — applies to any
+    /// worksheet type whose problem component understands a `solved` flag.
+    pub solve_first: bool,
 }
 
 impl WorksheetParams {

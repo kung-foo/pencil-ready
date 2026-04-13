@@ -112,6 +112,12 @@ struct GlobalArgs {
     #[arg(long)]
     debug: bool,
 
+    /// Render the first problem as a worked example. Each worksheet type
+    /// decides what "solved" means (filled-in answer, partial products,
+    /// step-by-step work, etc.).
+    #[arg(long)]
+    solve_first: bool,
+
     #[arg(long, default_value = ".")]
     root: PathBuf,
 }
@@ -291,10 +297,6 @@ enum Command {
         /// and subtraction (ax − b = c) equation forms within a worksheet.
         #[arg(long, default_value = "true")]
         mix_forms: bool,
-
-        /// Render the first problem as a worked example
-        #[arg(long)]
-        solve_first: bool,
     },
 
     /// Fraction multiplication (whole × num/den = ___, integer answers)
@@ -323,11 +325,6 @@ enum Command {
         /// Use only unit fractions (numerator always 1)
         #[arg(long)]
         unit_only: bool,
-
-        /// Render the first problem as a worked example (shows intermediate
-        /// fraction and simplified integer)
-        #[arg(long)]
-        solve_first: bool,
     },
 }
 
@@ -394,23 +391,23 @@ fn resolve(command: Command) -> Resolved {
             worksheet: WorksheetType::DivisionDrill { divisor, max_quotient },
         },
         Command::AlgebraTwoStep {
-            global, a_range, b_range, x_range, implicit, variable, mix_forms, solve_first,
+            global, a_range, b_range, x_range, implicit, variable, mix_forms,
         } => Resolved {
             global,
             num_problems: 6,
             cols: 2,
             worksheet: WorksheetType::AlgebraTwoStep {
-                a_range, b_range, x_range, variable, implicit, mix_forms, solve_first,
+                a_range, b_range, x_range, variable, implicit, mix_forms,
             },
         },
         Command::FractionMult {
-            global, problems, denominators, min_whole, max_whole, unit_only, solve_first,
+            global, problems, denominators, min_whole, max_whole, unit_only,
         } => Resolved {
             global,
             num_problems: problems,
             cols: 3,
             worksheet: WorksheetType::FractionMultiply {
-                denominators, min_whole, max_whole, unit_only, solve_first,
+                denominators, min_whole, max_whole, unit_only,
             },
         },
     }
@@ -430,6 +427,7 @@ fn main() -> Result<()> {
         symbol: global.symbol,
         locale: global.locale.into(),
         pages: global.pages,
+        solve_first: global.solve_first,
     };
 
     let root = global

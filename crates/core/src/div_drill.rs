@@ -63,7 +63,9 @@ fn generate_problems(
         pairs.truncate(params.total_problems() as usize);
     }
 
-    pairs.iter().map(|&(dividend, divisor)| vec![dividend, divisor]).collect()
+    // Include the quotient as a third element so the typst component can
+    // render the answer when `solved` is on.
+    pairs.iter().map(|&(dividend, divisor)| vec![dividend, divisor, dividend / divisor]).collect()
 }
 
 #[cfg(test)]
@@ -106,6 +108,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             pages: 1,
+            solve_first: false,
         }
     }
 }

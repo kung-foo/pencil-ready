@@ -13,13 +13,12 @@ use crate::{WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let problems = generate_problems(params);
-    let (solve_first, implicit, variable) = match &params.worksheet {
+    let (implicit, variable) = match &params.worksheet {
         WorksheetType::AlgebraTwoStep {
-            solve_first,
             implicit,
             variable,
             ..
-        } => (*solve_first, *implicit, variable.as_str()),
+        } => (*implicit, variable.as_str()),
         _ => unreachable!(),
     };
     // Algebra uses `·` regardless of locale — `×` looks too much like the
@@ -27,7 +26,7 @@ pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     // convention (elementary `×` → pre-algebra `·` → algebra implicit).
     // The explicit --symbol flag still overrides this.
     let symbol = "sym.dot.op";
-    template::render_algebra_two_step(symbol, &problems, params, solve_first, implicit, variable)
+    template::render_algebra_two_step(symbol, &problems, params, implicit, variable)
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
@@ -188,7 +187,6 @@ mod tests {
                 variable: "x".into(),
                 implicit: false,
                 mix_forms,
-                solve_first: false,
             },
             num_problems: 12,
             cols: 3,
@@ -198,6 +196,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             pages: 1,
+            solve_first: false,
         }
     }
 }

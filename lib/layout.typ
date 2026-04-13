@@ -33,15 +33,15 @@
       ..range(num-problems).map(idx => {
         let nums = problems.at(idx)
         if style == "long-division" {
-          pad(left: 0.5cm, long-division-problem(nums, width: width, answer-rows: answer-rows, debug: debug))
+          pad(left: 0.5cm, long-division-problem(nums, width: width, answer-rows: answer-rows, debug: debug, solved: solve-first and idx == 0))
         } else if style == "horizontal" {
-          pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, operator, debug: debug))
+          pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, operator, debug: debug, solved: solve-first and idx == 0))
         } else if style == "horizontal-fraction" {
           pad(left: 0.3cm, right: 0.3cm, horizontal-fraction-problem(nums, operator, debug: debug, solved: solve-first and idx == 0))
         } else if style == "algebra-two-step" {
           pad(left: 0.3cm, right: 1.5cm, algebra-two-step-problem(nums, operator, debug: debug, solved: solve-first and idx == 0, implicit: implicit, variable: variable))
         } else {
-          vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug)
+          vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug, solved: solve-first and idx == 0)
         }
       })
     )
