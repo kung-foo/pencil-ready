@@ -2,6 +2,7 @@
   import "/lib/problems/vertical.typ": vertical-problem
   import "/lib/problems/long-division.typ": long-division-problem
   import "/lib/problems/horizontal.typ": horizontal-problem
+  import "/lib/problems/horizontal-fraction.typ": horizontal-fraction-problem
 
   let num-problems = problems.len()
   // Ceiling division: handles partial last rows (e.g. 10 problems, 3 cols = 4 rows).
@@ -18,7 +19,7 @@
       rows: range(num-rows).map(_ => 1fr),
       align: if style == "vertical" {
         center + top
-      } else if style == "horizontal" {
+      } else if style == "horizontal" or style == "horizontal-fraction" {
         // Right-align problems within each cell so the = and answer
         // blanks line up vertically down each column.
         right + horizon
@@ -32,6 +33,8 @@
           pad(left: 0.5cm, long-division-problem(nums, width: width, answer-rows: answer-rows, debug: debug))
         } else if style == "horizontal" {
           pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, operator, debug: debug))
+        } else if style == "horizontal-fraction" {
+          pad(left: 0.3cm, right: 0.3cm, horizontal-fraction-problem(nums, operator, debug: debug))
         } else {
           vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug)
         }

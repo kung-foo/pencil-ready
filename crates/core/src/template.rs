@@ -19,6 +19,11 @@ pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: 
     render_inner(default_operator, problems, params, "horizontal", 1)
 }
 
+/// Render a horizontal fraction worksheet (whole × num/den = ___).
+pub fn render_horizontal_fraction(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> Result<String> {
+    render_inner(default_operator, problems, params, "horizontal-fraction", 1)
+}
+
 /// Render a long-division-style worksheet.
 pub fn render_long_division(
     problems: &[Vec<u32>],
@@ -59,6 +64,9 @@ fn render_inner(
     let box_width = match style {
         "long-division" => f64::max(3.0, max_digits as f64 * 0.6 + 1.2),
         "horizontal" => f64::max(6.0, max_digits as f64 * 1.2 + 4.0),
+        // horizontal-fraction: width is computed by the component itself,
+        // but we still need to provide something to the grid.
+        "horizontal-fraction" => 6.0,
         _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
     };
 

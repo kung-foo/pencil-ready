@@ -123,3 +123,64 @@ If `2 × 7` is in the problem set, `7 × 2` is excluded. This avoids testing the
 - Default columns: 2 (horizontal problems are wider)
 - Multiplicand range: 1-12
 - Multiplier range: 1-12
+
+## Fraction Multiplication
+
+Horizontal layout: a whole number times a proper fraction with a clean integer
+answer. The fraction is rendered with `math.frac` (numerator stacked over
+denominator with a horizontal bar).
+
+```
+       1                   4
+8  ×   ─   =  ___    20 × ─  =  ___
+       2                   5
+```
+
+Each problem is one line with the whole number, multiplication operator, the
+stacked fraction, equals sign, and answer blank. Optional scratch space rows
+below each problem for the student to work out intermediate steps.
+
+### Parameters
+
+- `denominators: list[u32]` — allowed denominators (default: `2,3,4,5,10`)
+- `min_whole: u32` / `max_whole: u32` — range for the whole number (default: `2-20`)
+- `unit_only: bool` — if true, numerator is always 1; if false, numerator is
+  randomly chosen from `1..denominator-1` (default: `false`)
+
+Always 2 columns. The number of problems controls how much vertical breathing
+room each problem gets (more problems = less space between for scratch work).
+
+### Constraints
+
+- Whole-number answers only: `whole × numerator` must be divisible by
+  `denominator`. The generator picks compatible combinations.
+- Denominators are limited to `2-12` (5th-grade scope)
+- Whole number is at most 2 digits
+- Always uses Norwegian-friendly horizontal layout (right-aligned in cell so
+  the `=` and answer blank line up across rows)
+
+### Locale
+
+Same locale rules as the multiplication drill — `--locale us` shows `×`,
+`--locale no` shows `·`. The fraction itself doesn't change between locales.
+
+### Problem generation
+
+1. Pick a denominator from the allowed set.
+2. Pick a numerator: `1` if `unit_only`, else random in `1..denominator-1`.
+3. Pick a quotient `q` so that `whole = q × denominator / gcd(num, denominator)`
+   lands within `whole_range`.
+4. Compute `whole × num / den` to verify the answer is a whole integer
+   (always true given the construction above).
+5. Deduplicate so each `(whole, num, den)` triple appears only once.
+
+### Layout component
+
+The problem renders inline:
+
+```typst
+horizontal-fraction-problem((8, 1, 2), [#sym.times])
+```
+
+Internally uses `math.frac(numerator, denominator)` for the fraction glyph,
+which auto-sizes appropriately for inline math context.

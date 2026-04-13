@@ -6,6 +6,7 @@
 mod add;
 mod div_drill;
 mod divide;
+mod fraction_mult;
 mod mult_drill;
 mod multiply;
 mod subtract;
@@ -136,6 +137,15 @@ pub enum WorksheetType {
         divisor: Vec<DigitRange>,
         /// Range of the quotient (default 1-10).
         max_quotient: DigitRange,
+    },
+    FractionMultiply {
+        /// Allowed denominators (e.g. [2, 3, 4, 5, 10]).
+        denominators: Vec<u32>,
+        /// Whole-number range (inclusive).
+        min_whole: u32,
+        max_whole: u32,
+        /// If true, numerator is always 1 (unit fractions only).
+        unit_only: bool,
     },
 }
 
@@ -339,6 +349,27 @@ pub fn generate(
                 );
             }
             div_drill::generate_typ(params)?
+        }
+        WorksheetType::FractionMultiply {
+            denominators,
+            min_whole,
+            max_whole,
+            ..
+        } => {
+            if denominators.is_empty() {
+                bail!("denominators must have at least one value");
+            }
+            for &d in denominators {
+                if d < 2 || d > 12 {
+                    bail!("denominator must be 2-12, got {d}");
+                }
+            }
+            if *min_whole < 2 || *max_whole > 99 || min_whole > max_whole {
+                bail!(
+                    "whole range must be 2-99 with min ≤ max, got {min_whole}-{max_whole}"
+                );
+            }
+            fraction_mult::generate_typ(params)?
         }
     };
 

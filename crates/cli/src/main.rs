@@ -224,6 +224,28 @@ enum Command {
         #[arg(long, default_value = "0")]
         count: u32,
     },
+
+    /// Fraction multiplication (whole × num/den = ___, integer answers)
+    FractionMult {
+        #[command(flatten)]
+        shared: SharedArgs,
+
+        /// Allowed denominators, comma-separated. e.g. "2,3,4,5,10"
+        #[arg(long, value_delimiter = ',', default_values_t = [2, 3, 4, 5, 10])]
+        denominators: Vec<u32>,
+
+        /// Minimum whole-number value
+        #[arg(long, default_value = "2")]
+        min_whole: u32,
+
+        /// Maximum whole-number value
+        #[arg(long, default_value = "20")]
+        max_whole: u32,
+
+        /// Use only unit fractions (numerator always 1)
+        #[arg(long)]
+        unit_only: bool,
+    },
 }
 
 #[derive(Parser)]
@@ -270,6 +292,16 @@ fn main() -> Result<()> {
             }
             shared.problems = count;
             (shared, WorksheetType::DivisionDrill { divisor, max_quotient })
+        }
+        Command::FractionMult { mut shared, denominators, min_whole, max_whole, unit_only } => {
+            // Always 3 columns for fraction mult.
+            shared.cols = 3;
+            (shared, WorksheetType::FractionMultiply {
+                denominators,
+                min_whole,
+                max_whole,
+                unit_only,
+            })
         }
     };
 
