@@ -8,18 +8,24 @@
 
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking
 
-#let vertical-problem(numbers, operator, width: 2.8em, debug: false) = {
+// `answer-rows` = how many rows of writing space to reserve below the line.
+//   1 for add/subtract (single answer line)
+//   ~partial products + 1 for multiply (e.g. 2×2 needs 3: two partials + sum)
+#let vertical-problem(
+  numbers,
+  operator,
+  width: 2.8em,
+  answer-rows: 1,
+  debug: false,
+) = {
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking)
   let debug-box = if debug { 1pt + red } else { none }
   let first = str(numbers.at(0))
   let rest = numbers.slice(1)
 
-  // Reserve solve space: carry marks above, answer digits below the line.
-  // These amounts are part of the component's bounding box so it works
-  // standalone (in a story) and in a grid (no external padding needed).
-  let carry-space = 0.5em
   // 1.3em ≈ one typeset line at this size (font em + leading).
-  let answer-space = 1.3em
+  let carry-space = 0.5em
+  let answer-space = 1.3em * answer-rows
 
   box(
     width: width,

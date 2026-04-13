@@ -7,19 +7,26 @@
 use crate::WorksheetParams;
 
 /// Render a vertical-style worksheet (add, subtract, multiply, simple divide).
-pub fn render(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> String {
-    render_inner(default_operator, problems, params, "vertical")
+/// `answer_rows` is the number of rows of solve space reserved below the line.
+/// Use 1 for add/subtract/simple-divide; higher for multi-digit multiply.
+pub fn render(
+    default_operator: &str,
+    problems: &[Vec<u32>],
+    params: &WorksheetParams,
+    answer_rows: u32,
+) -> String {
+    render_inner(default_operator, problems, params, "vertical", answer_rows)
 }
 
 /// Render a horizontal-style worksheet (drills: A × B = ___).
 pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> String {
-    render_inner(default_operator, problems, params, "horizontal")
+    render_inner(default_operator, problems, params, "horizontal", 1)
 }
 
 /// Render a long-division-style worksheet.
 pub fn render_long_division(problems: &[Vec<u32>], params: &WorksheetParams) -> String {
     // Operator is not used for long division (the bracket is the operator).
-    render_inner("", problems, params, "long-division")
+    render_inner("", problems, params, "long-division", 1)
 }
 
 fn render_inner(
@@ -27,6 +34,7 @@ fn render_inner(
     problems: &[Vec<u32>],
     params: &WorksheetParams,
     style: &str,
+    answer_rows: u32,
 ) -> String {
     let operator = params.symbol.as_deref().unwrap_or(default_operator);
 
@@ -86,6 +94,7 @@ fn render_inner(
   width: {box_width}cm,
   debug: {debug_str},
   style: "{style}",
+  answer-rows: {answer_rows},
 )
 
 #worksheet-footer[*Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com]]

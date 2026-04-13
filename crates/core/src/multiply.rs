@@ -5,7 +5,17 @@ use crate::{WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> String {
     let problems = generate_problems(params);
-    template::render("sym.times", &problems, params)
+    // Space needed below the line for partial products + final answer.
+    //   1-digit multiplier → 1 row (just the product)
+    //   N-digit multiplier (N ≥ 2) → N partials + 1 final sum = N+1 rows
+    let max_multiplier = problems
+        .iter()
+        .map(|nums| nums[1])
+        .max()
+        .unwrap_or(0);
+    let mult_digits = if max_multiplier == 0 { 1 } else { max_multiplier.ilog10() + 1 };
+    let answer_rows = if mult_digits <= 1 { 1 } else { mult_digits + 1 };
+    template::render("sym.times", &problems, params, answer_rows)
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {

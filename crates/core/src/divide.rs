@@ -11,7 +11,7 @@ pub fn generate_simple(params: &WorksheetParams) -> String {
     };
 
     let problems = generate_simple_problems(params, max_quotient);
-    template::render("sym.div", &problems, params)
+    template::render("sym.div", &problems, params, 1)
 }
 
 /// Long division: algorithm practice. Dividend has N digits, divisor is 1 digit (2-9).

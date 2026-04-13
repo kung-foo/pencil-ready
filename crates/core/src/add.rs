@@ -5,7 +5,7 @@ use crate::{CarryMode, WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> String {
     let problems = generate_problems(params);
-    template::render("sym.plus", &problems, params)
+    template::render("sym.plus", &problems, params, 1)
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
