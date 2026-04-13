@@ -18,7 +18,8 @@
 #let division-bracket(text-width, text-height) = {
   let h = text-height * 1.5
   let bulge = h * 0.3
-  let overline-end = bulge + text-width + 12pt
+  // Extend overline past the dividend by ~half a cap height for breathing room.
+  let overline-end = bulge + text-width + text-height * 0.7
 
   curve(
     stroke: 1.8pt,
@@ -31,7 +32,7 @@
   )
 }
 
-#let long-division-problem(numbers, width: 3cm, debug: false) = {
+#let long-division-problem(numbers, width: 3.9em, debug: false) = {
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking)
   let debug-box = if debug { 1pt + red } else { none }
   let dividend-str = str(numbers.at(0))
@@ -48,12 +49,12 @@
 
       grid(
         columns: (auto, auto),
-        column-gutter: 5pt,
+        column-gutter: 0.25em,
         align: bottom,
         pad(bottom: overshoot, text(divisor-str)),
         box({
           v(answer-space)
-          pad(left: bulge + 4pt, top: 10pt, dividend-content)
+          pad(left: bulge + 0.2em, top: 0.45em, dividend-content)
           v(overshoot)
           place(bottom + left, division-bracket(m.width, m.height))
         }),
