@@ -225,6 +225,43 @@ enum Command {
         count: u32,
     },
 
+    /// Two-step linear equation (ax + b = c, solve for x)
+    AlgebraTwoStep {
+        #[command(flatten)]
+        shared: SharedArgs,
+
+        /// Coefficient range, e.g. "2-10"
+        #[arg(long, default_value = "2-10")]
+        a_range: DigitRange,
+
+        /// Constant range, e.g. "1-30"
+        #[arg(long, default_value = "1-30")]
+        b_range: DigitRange,
+
+        /// Answer (x) range, e.g. "0-20"
+        #[arg(long, default_value = "0-20")]
+        x_range: DigitRange,
+
+        /// Render coefficient-variable as `4x` (implicit). Default: explicit
+        /// operator (`4 · x` or `4 × x`).
+        #[arg(long)]
+        implicit: bool,
+
+        /// Variable glyph to solve for. Default: x. Any string works
+        /// (letter, symbol, emoji) as long as a loaded font renders it.
+        #[arg(long, default_value = "x")]
+        variable: String,
+
+        /// Randomly mix canonical (ax + b = c) and const-first (b + ax = c)
+        /// equation forms within a worksheet.
+        #[arg(long, default_value = "true")]
+        mix_forms: bool,
+
+        /// Render the first problem as a worked example
+        #[arg(long)]
+        solve_first: bool,
+    },
+
     /// Fraction multiplication (whole × num/den = ___, integer answers)
     FractionMult {
         #[command(flatten)]
@@ -297,6 +334,21 @@ fn main() -> Result<()> {
             }
             shared.problems = count;
             (shared, WorksheetType::DivisionDrill { divisor, max_quotient })
+        }
+        Command::AlgebraTwoStep { mut shared, a_range, b_range, x_range, implicit, variable, mix_forms, solve_first } => {
+            // Always 2 columns and 6 problems for algebra two-step — the
+            // equations are wide and three-row problems need breathing room.
+            shared.cols = 2;
+            shared.problems = 6;
+            (shared, WorksheetType::AlgebraTwoStep {
+                a_range,
+                b_range,
+                x_range,
+                variable,
+                implicit,
+                mix_forms,
+                solve_first,
+            })
         }
         Command::FractionMult { mut shared, denominators, min_whole, max_whole, unit_only, solve_first } => {
             // Always 3 columns for fraction mult.

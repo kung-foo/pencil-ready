@@ -21,7 +21,12 @@ pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: 
 
 /// Render a horizontal fraction worksheet (whole × num/den = ___).
 pub fn render_horizontal_fraction(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams, solve_first: bool) -> Result<String> {
-    render_inner_with_solve(default_operator, problems, params, "horizontal-fraction", 1, solve_first)
+    render_inner_full(default_operator, problems, params, "horizontal-fraction", 1, solve_first, false, "x")
+}
+
+/// Render an algebra two-step worksheet (ax + b = c, solve for x).
+pub fn render_algebra_two_step(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams, solve_first: bool, implicit: bool, variable: &str) -> Result<String> {
+    render_inner_full(default_operator, problems, params, "algebra-two-step", 1, solve_first, implicit, variable)
 }
 
 /// Render a long-division-style worksheet.
@@ -40,16 +45,18 @@ fn render_inner(
     style: &str,
     answer_rows: u32,
 ) -> Result<String> {
-    render_inner_with_solve(default_operator, problems, params, style, answer_rows, false)
+    render_inner_full(default_operator, problems, params, style, answer_rows, false, false, "x")
 }
 
-fn render_inner_with_solve(
+fn render_inner_full(
     default_operator: &str,
     problems: &[Vec<u32>],
     params: &WorksheetParams,
     style: &str,
     answer_rows: u32,
     solve_first: bool,
+    implicit: bool,
+    variable: &str,
 ) -> Result<String> {
     let expected = params.total_problems() as usize;
     // Drills with num_problems=0 allow any count. Others must match exactly.
@@ -78,11 +85,13 @@ fn render_inner_with_solve(
         // horizontal-fraction: width is computed by the component itself,
         // but we still need to provide something to the grid.
         "horizontal-fraction" => 6.0,
+        "algebra-two-step" => 6.0,
         _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
     };
 
     let debug_str = if params.debug { "true" } else { "false" };
     let solve_first_str = if solve_first { "true" } else { "false" };
+    let implicit_str = if implicit { "true" } else { "false" };
     let cols = params.cols;
     let font = &params.font;
     let paper = &params.paper;
@@ -132,6 +141,8 @@ fn render_inner_with_solve(
   style: "{style}",
   answer-rows: {answer_rows},
   solve-first: {solve_first_str},
+  implicit: {implicit_str},
+  variable: "{variable}",
 )
 
 #worksheet-footer[*Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com]]

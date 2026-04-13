@@ -1,8 +1,9 @@
-#let worksheet-grid(problems, operator, num-cols: 4, width: 2.2cm, debug: false, style: "vertical", answer-rows: 1, solve-first: false) = {
+#let worksheet-grid(problems, operator, num-cols: 4, width: 2.2cm, debug: false, style: "vertical", answer-rows: 1, solve-first: false, implicit: false, variable: "x") = {
   import "/lib/problems/vertical.typ": vertical-problem
   import "/lib/problems/long-division.typ": long-division-problem
   import "/lib/problems/horizontal.typ": horizontal-problem
   import "/lib/problems/horizontal-fraction.typ": horizontal-fraction-problem
+  import "/lib/problems/algebra-two-step.typ": algebra-two-step-problem
 
   let num-problems = problems.len()
   // Ceiling division: handles partial last rows (e.g. 10 problems, 3 cols = 4 rows).
@@ -19,7 +20,7 @@
       rows: range(num-rows).map(_ => 1fr),
       align: if style == "vertical" {
         center + top
-      } else if style == "horizontal" or style == "horizontal-fraction" {
+      } else if style == "horizontal" or style == "horizontal-fraction" or style == "algebra-two-step" {
         // Right-align problems within each cell so the = and answer
         // blanks line up vertically down each column.
         right + horizon
@@ -35,6 +36,8 @@
           pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, operator, debug: debug))
         } else if style == "horizontal-fraction" {
           pad(left: 0.3cm, right: 0.3cm, horizontal-fraction-problem(nums, operator, debug: debug, solved: solve-first and idx == 0))
+        } else if style == "algebra-two-step" {
+          pad(left: 0.3cm, right: 1.5cm, algebra-two-step-problem(nums, operator, debug: debug, solved: solve-first and idx == 0, implicit: implicit, variable: variable))
         } else {
           vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug)
         }

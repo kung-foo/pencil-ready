@@ -4,6 +4,7 @@
 //! They share a common template renderer and the typst World implementation.
 
 mod add;
+mod algebra_two_step;
 mod div_drill;
 mod divide;
 mod fraction_mult;
@@ -148,6 +149,24 @@ pub enum WorksheetType {
         unit_only: bool,
         /// If true, render the first problem as a worked example (shows
         /// the multiply-across intermediate and simplified integer).
+        solve_first: bool,
+    },
+    AlgebraTwoStep {
+        /// Coefficient range (default 2-12).
+        a_range: DigitRange,
+        /// Constant range (default 1-30).
+        b_range: DigitRange,
+        /// Answer range (default 0-20). 0 and 1 are deliberately included.
+        x_range: DigitRange,
+        /// The variable glyph to solve for. Typically "x", but any string
+        /// (letter, symbol, emoji) works as long as a loaded font renders it.
+        variable: String,
+        /// Implicit coefficient-variable juxtaposition (`4x`) when true,
+        /// explicit operator (`4 · x` or `4 × x`) when false.
+        implicit: bool,
+        /// Randomly mix canonical (`ax + b = c`) and const-first (`b + ax = c`).
+        mix_forms: bool,
+        /// Render the first problem as a worked example.
         solve_first: bool,
     },
 }
@@ -373,6 +392,30 @@ pub fn generate(
                 );
             }
             fraction_mult::generate_typ(params)?
+        }
+        WorksheetType::AlgebraTwoStep {
+            a_range,
+            b_range,
+            x_range,
+            variable,
+            ..
+        } => {
+            if a_range.min < 2 || a_range.max > 12 {
+                bail!("a-range must be 2-12, got {}-{}", a_range.min, a_range.max);
+            }
+            if b_range.max > 99 || b_range.min > b_range.max {
+                bail!("b-range must be 0-99 with min ≤ max, got {}-{}", b_range.min, b_range.max);
+            }
+            if x_range.max > 99 || x_range.min > x_range.max {
+                bail!("x-range must be 0-99 with min ≤ max, got {}-{}", x_range.min, x_range.max);
+            }
+            // Variable must be exactly one unicode scalar (a single letter,
+            // symbol, or single-codepoint emoji like 🍌). Compound emoji
+            // sequences (flags, ZWJ) aren't supported.
+            if variable.chars().count() != 1 {
+                bail!("variable must be a single character, got {:?}", variable);
+            }
+            algebra_two_step::generate_typ(params)?
         }
     };
 

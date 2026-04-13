@@ -126,19 +126,21 @@ If `2 × 7` is in the problem set, `7 × 2` is excluded. This avoids testing the
 
 ## Fraction Multiplication
 
-Horizontal layout: a whole number times a proper fraction with a clean integer
-answer. The fraction is rendered with `math.frac` (numerator stacked over
-denominator with a horizontal bar).
+Whole number times a proper fraction with a clean integer answer. Teaches
+the two-step procedure: multiply across, then simplify. The fraction is
+rendered with `math.frac` (numerator stacked over denominator).
 
 ```
-       1                   4
-8  ×   ─   =  ___    20 × ─  =  ___
-       2                   5
+        7    210           4    80
+30  ×  ── = ───        20 × ─ = ──
+       10    10              5   5
+          =  21                = 16
 ```
 
-Each problem is one line with the whole number, multiplication operator, the
-stacked fraction, equals sign, and answer blank. Optional scratch space rows
-below each problem for the student to work out intermediate steps.
+Two-row step-by-step layout per problem with vertically aligned `=` signs.
+Row 1 holds the multiply-across intermediate fraction (numerator = `whole
+× num`, denominator unchanged). Row 2 holds the simplified integer. No
+pre-drawn answer blanks — the student writes directly on the line.
 
 ### Parameters
 
@@ -146,18 +148,30 @@ below each problem for the student to work out intermediate steps.
 - `min_whole: u32` / `max_whole: u32` — range for the whole number (default: `2-20`)
 - `unit_only: bool` — if true, numerator is always 1; if false, numerator is
   randomly chosen from `1..denominator-1` (default: `false`)
+- `solve_first: bool` — render the first problem filled in as a worked
+  example showing the multiply-across intermediate and the simplified
+  integer. Default: `false`.
 
-Always 2 columns. The number of problems controls how much vertical breathing
-room each problem gets (more problems = less space between for scratch work).
+Always 3 columns. The number of problems controls how much vertical
+breathing room each problem gets (more problems = less space between rows).
+
+### Layout
+
+- Two-row grid per problem. Row 1 shows `whole × num/den =` on the left
+  and an empty slot on the right (or the intermediate fraction if solved).
+  Row 2 shows `=` and an empty slot (or the integer answer if solved).
+- The `=` signs align vertically across both rows.
+- A fixed-width slot is reserved to the right of each `=` so solved and
+  unsolved problems share the same bounding box.
+- Row gutter is `problem-line-height` (1.3em), matching the stack
+  spacing used by vertical add/multiply problems.
 
 ### Constraints
 
-- Whole-number answers only: `whole × numerator` must be divisible by
+- Whole-number final answer only: `whole × numerator` must be divisible by
   `denominator`. The generator picks compatible combinations.
 - Denominators are limited to `2-12` (5th-grade scope)
 - Whole number is at most 2 digits
-- Always uses Norwegian-friendly horizontal layout (right-aligned in cell so
-  the `=` and answer blank line up across rows)
 
 ### Locale
 
@@ -168,19 +182,117 @@ Same locale rules as the multiplication drill — `--locale us` shows `×`,
 
 1. Pick a denominator from the allowed set.
 2. Pick a numerator: `1` if `unit_only`, else random in `1..denominator-1`.
-3. Pick a quotient `q` so that `whole = q × denominator / gcd(num, denominator)`
-   lands within `whole_range`.
-4. Compute `whole × num / den` to verify the answer is a whole integer
-   (always true given the construction above).
-5. Deduplicate so each `(whole, num, den)` triple appears only once.
+3. Pick a whole number `w` such that `w × num` is divisible by `den`
+   (stride = `den / gcd(num, den)`), landing within `whole_range`.
+4. Enumerate all valid `(whole, num, den)` triples, shuffle, and take
+   `num_problems`.
 
 ### Layout component
 
-The problem renders inline:
-
 ```typst
-horizontal-fraction-problem((8, 1, 2), [#sym.times])
+horizontal-fraction-problem((30, 7, 10), [#sym.times], solved: false)
 ```
 
-Internally uses `math.frac(numerator, denominator)` for the fraction glyph,
-which auto-sizes appropriately for inline math context.
+The equation is rendered in math mode with Fira Math pinned as the math
+font — the default math font inherits the outer text's letter-spacing and
+breaks multi-digit numerators/denominators (e.g. "10") into "1 0".
+
+## Algebra: Two-Step
+
+Solve a two-step linear equation of the form `ax + b = c` for `x`. Teaches
+the isolate-variable procedure: subtract the constant from both sides, then
+divide by the coefficient.
+
+```
+(4 × x) + 5 = 21          5 + (6 × x) = 29
+    (4 × x) = ___             (6 × x) = ___
+          x = ___                   x = ___
+```
+
+Three-row step-by-step layout with vertically aligned `=` signs. Row 1 is
+the equation as given; rows 2 and 3 are the student's work. The variable
+`x` is rendered in STIX Two Text italic — classical serif LaTeX-style
+variable — so it's visually distinct from the sans-serif digits and
+instantly readable as a variable rather than a letter.
+
+Explicit multiplication is grouped in parentheses `(4 × x)` to emphasize
+that the coefficient and variable form a single quantity. Implicit form
+(`4x`) drops both the operator and the parens.
+
+### Parameters
+
+- `a_range: range` — coefficient range (default: `2-10`). Covers the
+  times-table facts the student already knows.
+- `b_range: range` — constant range (default: `1-30`).
+- `x_range: range` — allowed answer range (default: `0-20`). `x = 0` and
+  `x = 1` are deliberately included — the student should understand that
+  `5x + 10 = 10` means `x = 0`.
+- `implicit: bool` — if true, render coefficient–variable as `4x`
+  (juxtaposition, no parens). If false (default), render with explicit
+  operator inside parens: `(4 · x)` (Norway) or `(4 × x)` (US).
+- `mix_forms: bool` — if true, randomly vary the equation form between
+  `ax + b = c` and `b + ax = c`. Rows 2/3 stay canonical (`ax = ...`,
+  `x = ...`) and the `=` signs still align. Default: `true`.
+- `solve_first: bool` — render the first problem filled in as a worked
+  example showing the intermediate `ax = c - b` and final `x = answer`.
+  Default: `false`. Same convention as fraction multiplication.
+
+### Layout
+
+- Three-row grid per problem, `=` column shared across all rows.
+- Right-align row 1 so the `=` sits in a consistent column; rows 2 and 3
+  indent to keep `ax =` and `x =` in the canonical positions.
+- Fixed-width slot reserved to the right of `=` on each row so solved and
+  unsolved problems occupy the same bounding box and the worksheet grid
+  stays aligned.
+- 2 columns on the page — the equations are wide (especially with
+  parens), and three-row problems need vertical breathing room.
+
+### Constraints
+
+- Whole-integer answer only. `c - b` must be divisible by `a`.
+- `c = a*x + b` is a derived value; not directly configurable.
+- `a ≥ 2` (coefficient of 1 collapses to a one-step problem).
+- `x ≥ 0` (no negatives at 5th-grade level).
+
+### Equation forms
+
+Three forms mix when `mix_forms` is on:
+
+| Form | Example | Work row 1 intermediate |
+|---|---|---|
+| Canonical plus   | `(4 · x) + 5 = 21`  | `4 · x = c - b` |
+| Const-first plus | `5 + (4 · x) = 21`  | `4 · x = c - b` |
+| Canonical minus  | `(4 · x) - 3 = 17`  | `4 · x = c + b` |
+
+The canonical-minus form is only emitted for triples where `a · x ≥ b`,
+so `c` stays non-negative. The RHS-flipped form (`21 = 4x + 5`) is
+deferred — it complicates equals-column alignment with canonical work
+rows.
+
+### Locale
+
+Unlike the drills and fraction multiplication, algebra always uses `·`
+regardless of locale. Reason: `×` looks too much like the variable `x`
+once variables are introduced. This matches the US pre-algebra convention
+(elementary `×` → pre-algebra `·` → algebra implicit). `--symbol` still
+overrides.
+
+### Problem generation
+
+1. Enumerate all valid `(a, b, x)` triples in their ranges.
+2. Compute `c = a*x + b`.
+3. Randomly assign a form (canonical vs. const-first) if `mix_forms` is on.
+4. Shuffle; take `num_problems`.
+5. Deduplicate so the same `(a, b, x, form)` never repeats.
+
+### Layout component
+
+The problem renders as a 3-row grid:
+
+```typst
+two-step-problem((a: 4, b: 5, x: 4, form: "canonical"), debug: false, solved: false)
+```
+
+The component owns the form-to-row-1 rendering; rows 2 and 3 are always
+`ax = ...` and `x = ...` regardless of form.
