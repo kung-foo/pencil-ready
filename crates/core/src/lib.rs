@@ -256,11 +256,20 @@ pub fn generate(
     format: OutputFormat,
     root: &std::path::Path,
 ) -> Result<Worksheet> {
-    if params.pages == 0 {
-        bail!("pages must be at least 1");
-    }
     if params.pages > 1 && !matches!(format, OutputFormat::Pdf) {
         bail!("pages > 1 requires PDF output (PNG/SVG are single-image formats)");
+    }
+    let typ_source = generate_typst_source(params)?;
+    let bytes = world::compile_and_export(&typ_source, format, root)?;
+    Ok(Worksheet { bytes, format })
+}
+
+/// Build the typst source for a worksheet without compiling it. Exposed
+/// so the CLI can concatenate several worksheets into a single multi-page
+/// PDF (the `all` subcommand).
+pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
+    if params.pages == 0 {
+        bail!("pages must be at least 1");
     }
 
     let is_drill = matches!(
@@ -415,9 +424,7 @@ pub fn generate(
             algebra_two_step::generate_typ(params)?
         }
     };
-
-    let bytes = world::compile_and_export(&typ_source, format, root)?;
-    Ok(Worksheet { bytes, format })
+    Ok(typ_source)
 }
 
 fn validate_digit_ranges(ranges: &[DigitRange]) -> Result<()> {

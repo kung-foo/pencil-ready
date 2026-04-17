@@ -16,7 +16,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use mathsheet_core::{
     BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
-    generate,
+    compile_typst, generate, generate_typst_source,
 };
 
 #[derive(Clone, Copy, Default, ValueEnum)]
@@ -251,11 +251,11 @@ enum Command {
         cols: u32,
 
         /// Which divisors to drill, comma-separated. e.g. "2,3" or "1-10"
-        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(1, 10)])]
+        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(2, 10)])]
         divisor: Vec<DigitRange>,
 
         /// Range of the quotient. e.g. "1-10" or "1-12"
-        #[arg(long, default_value = "1-10")]
+        #[arg(long, default_value = "2-10")]
         max_quotient: DigitRange,
 
         /// Number of problems (0 = all problems from the enumerated table).
@@ -326,6 +326,16 @@ enum Command {
         #[arg(long)]
         unit_only: bool,
     },
+
+    /// Generate a multi-page PDF with one of each worksheet type.
+    ///
+    /// All worksheets use their defaults plus --solve-first and --seed 42
+    /// so the output is reproducible and the first problem on each page is
+    /// worked as an example.
+    All {
+        #[command(flatten)]
+        global: GlobalArgs,
+    },
 }
 
 #[derive(Parser)]
@@ -348,74 +358,159 @@ struct Resolved {
 
 fn resolve(command: Command) -> Resolved {
     match command {
-        Command::Add { global, problems, cols, digits, carry } => Resolved {
+        Command::Add {
+            global,
+            problems,
+            cols,
+            digits,
+            carry,
+        } => Resolved {
             global,
             num_problems: problems,
             cols,
-            worksheet: WorksheetType::Add { digits, carry: carry.into() },
+            worksheet: WorksheetType::Add {
+                digits,
+                carry: carry.into(),
+            },
         },
-        Command::Subtract { global, problems, cols, digits, borrow } => Resolved {
+        Command::Subtract {
+            global,
+            problems,
+            cols,
+            digits,
+            borrow,
+        } => Resolved {
             global,
             num_problems: problems,
             cols,
-            worksheet: WorksheetType::Subtract { digits, borrow: borrow.into() },
+            worksheet: WorksheetType::Subtract {
+                digits,
+                borrow: borrow.into(),
+            },
         },
-        Command::Multiply { global, problems, cols, digits } => Resolved {
+        Command::Multiply {
+            global,
+            problems,
+            cols,
+            digits,
+        } => Resolved {
             global,
             num_problems: problems,
             cols,
             worksheet: WorksheetType::Multiply { digits },
         },
-        Command::SimpleDivide { global, problems, cols, max_quotient } => Resolved {
+        Command::SimpleDivide {
+            global,
+            problems,
+            cols,
+            max_quotient,
+        } => Resolved {
             global,
             num_problems: problems,
             cols,
             worksheet: WorksheetType::SimpleDivision { max_quotient },
         },
-        Command::LongDivide { global, problems, cols, digits, remainder } => Resolved {
+        Command::LongDivide {
+            global,
+            problems,
+            cols,
+            digits,
+            remainder,
+        } => Resolved {
             global,
             num_problems: problems,
             cols,
             worksheet: WorksheetType::LongDivision { digits, remainder },
         },
-        Command::MultDrill { global, cols, multiplicand, multiplier, count } => Resolved {
+        Command::MultDrill {
+            global,
+            cols,
+            multiplicand,
+            multiplier,
+            count,
+        } => Resolved {
             global,
             num_problems: count,
             cols,
-            worksheet: WorksheetType::MultiplicationDrill { multiplicand, multiplier },
+            worksheet: WorksheetType::MultiplicationDrill {
+                multiplicand,
+                multiplier,
+            },
         },
-        Command::DivDrill { global, cols, divisor, max_quotient, count } => Resolved {
+        Command::DivDrill {
+            global,
+            cols,
+            divisor,
+            max_quotient,
+            count,
+        } => Resolved {
             global,
             num_problems: count,
             cols,
-            worksheet: WorksheetType::DivisionDrill { divisor, max_quotient },
+            worksheet: WorksheetType::DivisionDrill {
+                divisor,
+                max_quotient,
+            },
         },
         Command::AlgebraTwoStep {
-            global, a_range, b_range, x_range, implicit, variable, mix_forms,
+            global,
+            a_range,
+            b_range,
+            x_range,
+            implicit,
+            variable,
+            mix_forms,
         } => Resolved {
             global,
             num_problems: 6,
             cols: 2,
             worksheet: WorksheetType::AlgebraTwoStep {
-                a_range, b_range, x_range, variable, implicit, mix_forms,
+                a_range,
+                b_range,
+                x_range,
+                variable,
+                implicit,
+                mix_forms,
             },
         },
         Command::FractionMult {
-            global, problems, denominators, min_whole, max_whole, unit_only,
+            global,
+            problems,
+            denominators,
+            min_whole,
+            max_whole,
+            unit_only,
         } => Resolved {
             global,
             num_problems: problems,
             cols: 3,
             worksheet: WorksheetType::FractionMultiply {
-                denominators, min_whole, max_whole, unit_only,
+                denominators,
+                min_whole,
+                max_whole,
+                unit_only,
             },
         },
+        Command::All { .. } => unreachable!("Command::All is handled before resolve()"),
     }
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let Resolved { global, num_problems, cols, worksheet } = resolve(cli.command);
+
+    // `all` is a meta-command: it bundles one of each worksheet type into
+    // a single multi-page PDF. Handled before the normal dispatch since it
+    // doesn't map to a single WorksheetType.
+    if let Command::All { global } = cli.command {
+        return run_all(global);
+    }
+
+    let Resolved {
+        global,
+        num_problems,
+        cols,
+        worksheet,
+    } = resolve(cli.command);
 
     let params = WorksheetParams {
         worksheet,
@@ -451,8 +546,8 @@ fn main() -> Result<()> {
         };
         let out_path = format!("{}.{}", global.output, ext);
 
-        let worksheet = generate(&params, *format, &root)
-            .with_context(|| format!("generating {ext}"))?;
+        let worksheet =
+            generate(&params, *format, &root).with_context(|| format!("generating {ext}"))?;
 
         if let Some(parent) = std::path::Path::new(&out_path).parent() {
             std::fs::create_dir_all(parent)?;
@@ -464,5 +559,173 @@ fn main() -> Result<()> {
         println!("wrote {out_path}");
     }
 
+    Ok(())
+}
+
+/// Build a default `WorksheetParams` for a given worksheet type. Mirrors
+/// what each subcommand's dispatch would produce, but without going
+/// through clap — used only by the `all` meta-command.
+fn default_params_for(
+    worksheet: WorksheetType,
+    num_problems: u32,
+    cols: u32,
+    global: &GlobalArgs,
+) -> WorksheetParams {
+    WorksheetParams {
+        worksheet,
+        num_problems,
+        cols,
+        paper: global.paper.clone(),
+        debug: global.debug,
+        // Ignore any --seed the caller passed: `all` must be reproducible.
+        seed: Some(42),
+        symbol: global.symbol.clone(),
+        locale: global.locale.into(),
+        pages: 1,
+        // Force worked-example rendering for every type.
+        solve_first: true,
+    }
+}
+
+/// Extract the body portion of a generated typst source — everything
+/// after the imports and `#set page` / `#set text` preamble. Used so
+/// the `all` command can concatenate multiple worksheets' bodies into
+/// one document without duplicating the setup.
+fn typst_body(source: &str) -> &str {
+    let marker = "#set text(font: body-font, size: 10pt)\n\n";
+    source
+        .split_once(marker)
+        .map(|(_, body)| body)
+        .unwrap_or(source)
+}
+
+fn run_all(global: GlobalArgs) -> Result<()> {
+    // One entry per worksheet type. Column and problem counts mirror each
+    // subcommand's dispatch. Keep in sync with `resolve()`.
+    let sheets: Vec<(&str, WorksheetType, u32, u32)> = vec![
+        (
+            "add",
+            WorksheetType::Add {
+                digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+                carry: CarryMode::Any,
+            },
+            12,
+            4,
+        ),
+        (
+            "subtract",
+            WorksheetType::Subtract {
+                digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+                borrow: BorrowMode::Any,
+            },
+            12,
+            4,
+        ),
+        (
+            "multiply",
+            WorksheetType::Multiply {
+                digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+            },
+            12,
+            4,
+        ),
+        (
+            "simple-divide",
+            WorksheetType::SimpleDivision { max_quotient: 10 },
+            12,
+            4,
+        ),
+        (
+            "long-divide",
+            WorksheetType::LongDivision {
+                digits: DigitRange::fixed(3),
+                remainder: false,
+            },
+            12,
+            4,
+        ),
+        (
+            "mult-drill",
+            WorksheetType::MultiplicationDrill {
+                multiplicand: vec![DigitRange::new(1, 10)],
+                multiplier: DigitRange::new(1, 10),
+            },
+            // Drills: 0 = all problems in the enumerated table.
+            0,
+            3,
+        ),
+        (
+            "div-drill",
+            WorksheetType::DivisionDrill {
+                divisor: vec![DigitRange::new(2, 10)],
+                max_quotient: DigitRange::new(2, 10),
+            },
+            0,
+            3,
+        ),
+        (
+            "fraction-mult",
+            WorksheetType::FractionMultiply {
+                denominators: vec![2, 3, 4, 5, 10],
+                min_whole: 2,
+                max_whole: 20,
+                unit_only: false,
+            },
+            12,
+            3,
+        ),
+        (
+            "algebra-two-step",
+            WorksheetType::AlgebraTwoStep {
+                a_range: DigitRange::new(2, 10),
+                b_range: DigitRange::new(1, 30),
+                x_range: DigitRange::new(0, 20),
+                variable: "x".into(),
+                implicit: false,
+                mix_forms: true,
+            },
+            6,
+            2,
+        ),
+    ];
+
+    let mut bodies = Vec::with_capacity(sheets.len());
+    for (name, worksheet, num_problems, cols) in sheets {
+        let params = default_params_for(worksheet, num_problems, cols, &global);
+        let source = generate_typst_source(&params)
+            .with_context(|| format!("generating source for {name}"))?;
+        bodies.push(typst_body(&source).to_string());
+    }
+
+    // Wrap with the same preamble used by each individual worksheet and
+    // join bodies with pagebreaks.
+    let combined = format!(
+        r#"#import "/lib/header.typ": worksheet-header
+#import "/lib/layout.typ": worksheet-grid
+#import "/lib/footer.typ": worksheet-footer, pencil-ready-content
+#import "/lib/problems/shared.typ": body-font
+
+#set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
+#set text(font: body-font, size: 10pt)
+
+{body}"#,
+        paper = global.paper,
+        body = bodies.join("\n#pagebreak()\n\n"),
+    );
+
+    let root = global
+        .root
+        .canonicalize()
+        .context("could not resolve project root")?;
+
+    let bytes = compile_typst(&combined, OutputFormat::Pdf, &root)
+        .context("compiling combined worksheet PDF")?;
+
+    let out_path = format!("{}.pdf", global.output);
+    if let Some(parent) = std::path::Path::new(&out_path).parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&out_path, &bytes).with_context(|| format!("writing {out_path}"))?;
+    println!("wrote {out_path}");
     Ok(())
 }
