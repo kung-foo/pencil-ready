@@ -6,6 +6,8 @@ edition.workspace = true  # inherits "2024" from workspace root
 [dependencies]
 anyhow.workspace = true
 rand.workspace = true
+serde.workspace = true
+utoipa.workspace = true
 typst.workspace = true
 typst-library.workspace = true
 typst-pdf.workspace = true

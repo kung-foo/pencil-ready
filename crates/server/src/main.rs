@@ -1,36 +1,610 @@
 //! HTTP server for worksheet generation.
 //!
 //! GET /api/worksheets/{type}?format=pdf&seed=42&...
-//!   type  ∈ add | subtract | multiply | simple-divide | long-divide
-//!           mult-drill | div-drill | fraction-mult | algebra-two-step
-//!   format ∈ pdf (default) | png | svg
 //!
-//! Response is raw bytes with a matching Content-Type. Unknown query
-//! params are ignored; invalid values return 400 with an error message.
+//! Each endpoint uses two typed query extractors — `SharedParams` for the
+//! cross-cutting knobs (format, seed, paper, etc.) and an endpoint-specific
+//! struct for the worksheet-type params. Each derives `utoipa::IntoParams`,
+//! so the OpenAPI spec at /openapi.json stays in sync with the code.
+//! Swagger UI at /docs.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Result, anyhow};
 use axum::{
-    Router,
-    extract::{Path as AxPath, Query, State},
+    extract::{Query, State},
     http::{StatusCode, header},
     response::{IntoResponse, Response},
-    routing::get,
 };
-use tower_http::compression::CompressionLayer;
 use pencil_ready_core::{
     BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
     generate,
 };
+use serde::Deserialize;
+use tower_http::compression::CompressionLayer;
+use utoipa::{IntoParams, OpenApi};
+use utoipa_axum::{router::OpenApiRouter, routes};
+use utoipa_swagger_ui::SwaggerUi;
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 struct AppState {
     root: PathBuf,
 }
+
+// ---------------------------------------------------------------------------
+// Shared params
+// ---------------------------------------------------------------------------
+
+/// Cross-cutting query params common to every worksheet endpoint. Extracted
+/// via its own `Query<SharedParams>` on each handler; unknown fields are
+/// silently ignored so the type-specific extractor can pick them up.
+#[derive(Debug, Default, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct SharedParams {
+    /// Output format (default: pdf).
+    #[serde(default)]
+    format: Option<OutputFormat>,
+    /// Seed for reproducible output.
+    #[serde(default)]
+    seed: Option<u64>,
+    /// Number of problems on the page (per-type default).
+    #[serde(default)]
+    problems: Option<u32>,
+    /// Columns in the problem grid (per-type default).
+    #[serde(default)]
+    cols: Option<u32>,
+    /// Pages (PDF only).
+    #[serde(default)]
+    pages: Option<u32>,
+    /// Paper size passed to typst.
+    #[serde(default)]
+    #[param(example = "a4")]
+    paper: Option<String>,
+    /// Regional defaults for operator symbols.
+    #[serde(default)]
+    locale: Option<Locale>,
+    /// Override the operator symbol (typst expression, e.g. "sym.colon").
+    #[serde(default)]
+    symbol: Option<String>,
+    /// Render the first problem as a worked example.
+    #[serde(default)]
+    solve_first: Option<bool>,
+    /// Draw debug borders around problem boxes and grid cells.
+    #[serde(default)]
+    debug: Option<bool>,
+}
+
+impl SharedParams {
+    fn fold(
+        self,
+        worksheet: WorksheetType,
+        default_problems: u32,
+        default_cols: u32,
+    ) -> (OutputFormat, WorksheetParams) {
+        let format = self.format.unwrap_or(OutputFormat::Pdf);
+        let params = WorksheetParams {
+            worksheet,
+            num_problems: self.problems.unwrap_or(default_problems),
+            cols: self.cols.unwrap_or(default_cols),
+            paper: self.paper.unwrap_or_else(|| "a4".into()),
+            debug: self.debug.unwrap_or(false),
+            seed: self.seed,
+            symbol: self.symbol,
+            locale: self.locale.unwrap_or_default(),
+            pages: self.pages.unwrap_or(1),
+            solve_first: self.solve_first.unwrap_or(false),
+        };
+        (format, params)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CSV parsing helpers (query strings use `a,b,c` rather than repeated keys)
+// ---------------------------------------------------------------------------
+
+fn parse_digits_csv(s: &str, field: &str) -> Result<Vec<DigitRange>> {
+    s.split(',')
+        .map(|p| DigitRange::from_str(p.trim()).map_err(|e| anyhow!("{field}: {e}")))
+        .collect()
+}
+
+fn parse_u32_csv(s: &str, field: &str) -> Result<Vec<u32>> {
+    s.split(',')
+        .map(|p| p.trim().parse::<u32>().map_err(|e| anyhow!("{field}: {e}")))
+        .collect()
+}
+
+fn parse_digit_range(s: &str, field: &str) -> Result<DigitRange> {
+    DigitRange::from_str(s).map_err(|e| anyhow!("{field}: {e}"))
+}
+
+fn digits_or(opt: Option<String>, default: &[u32]) -> Result<Vec<DigitRange>> {
+    match opt {
+        Some(s) => parse_digits_csv(&s, "digits"),
+        None => Ok(default.iter().copied().map(DigitRange::fixed).collect()),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Per-endpoint type-specific params + builders
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct AddSpecific {
+    /// Comma-separated digit counts per operand (e.g. "2,2" or "2-4,2-4").
+    #[serde(default)]
+    #[param(value_type = String, example = "2,2")]
+    digits: Option<String>,
+    #[serde(default)]
+    carry: Option<CarryMode>,
+    /// Binary mode: render in base 2.
+    #[serde(default)]
+    binary: Option<bool>,
+}
+
+impl AddSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::Add {
+                digits: digits_or(self.digits, &[2, 2])?,
+                carry: self.carry.unwrap_or(CarryMode::Any),
+                binary: self.binary.unwrap_or(false),
+            },
+            12,
+            4,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct SubtractSpecific {
+    #[serde(default)]
+    #[param(value_type = String, example = "2,2")]
+    digits: Option<String>,
+    #[serde(default)]
+    borrow: Option<BorrowMode>,
+}
+
+impl SubtractSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::Subtract {
+                digits: digits_or(self.digits, &[2, 2])?,
+                borrow: self.borrow.unwrap_or(BorrowMode::Any),
+            },
+            12,
+            4,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct MultiplySpecific {
+    #[serde(default)]
+    #[param(value_type = String, example = "2,2")]
+    digits: Option<String>,
+}
+
+impl MultiplySpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::Multiply {
+                digits: digits_or(self.digits, &[2, 2])?,
+            },
+            12,
+            4,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct SimpleDivideSpecific {
+    /// Max quotient (answer). 2-12.
+    #[serde(default)]
+    max_quotient: Option<u32>,
+}
+
+impl SimpleDivideSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::SimpleDivision {
+                max_quotient: self.max_quotient.unwrap_or(10),
+            },
+            12,
+            4,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct LongDivideSpecific {
+    /// Dividend digit count. "N" or "N-M", e.g. "3" or "2-4".
+    #[serde(default)]
+    #[param(value_type = String, example = "3")]
+    digits: Option<String>,
+    #[serde(default)]
+    remainder: Option<bool>,
+}
+
+impl LongDivideSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let digits = match self.digits {
+            Some(s) => parse_digit_range(&s, "digits")?,
+            None => DigitRange::fixed(3),
+        };
+        Ok(shared.fold(
+            WorksheetType::LongDivision {
+                digits,
+                remainder: self.remainder.unwrap_or(false),
+            },
+            12,
+            4,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct MultDrillSpecific {
+    /// Which tables to drill, comma-separated. e.g. "2,3" or "1-10".
+    #[serde(default)]
+    #[param(value_type = String, example = "1-10")]
+    multiplicand: Option<String>,
+    /// Range of the other factor.
+    #[serde(default)]
+    #[param(value_type = String, example = "1-10")]
+    multiplier: Option<String>,
+    /// Problem count (0 = all problems from the enumerated tables).
+    #[serde(default)]
+    count: Option<u32>,
+}
+
+impl MultDrillSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let multiplicand = match self.multiplicand {
+            Some(s) => parse_digits_csv(&s, "multiplicand")?,
+            None => vec![DigitRange::new(1, 10)],
+        };
+        let multiplier = match self.multiplier {
+            Some(s) => parse_digit_range(&s, "multiplier")?,
+            None => DigitRange::new(1, 10),
+        };
+        let (fmt, mut params) = shared.fold(
+            WorksheetType::MultiplicationDrill {
+                multiplicand,
+                multiplier,
+            },
+            0,
+            3,
+        );
+        if let Some(c) = self.count {
+            params.num_problems = c;
+        }
+        Ok((fmt, params))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct DivDrillSpecific {
+    #[serde(default)]
+    #[param(value_type = String, example = "2-10")]
+    divisor: Option<String>,
+    #[serde(default)]
+    #[param(value_type = String, example = "2-10")]
+    max_quotient: Option<String>,
+    #[serde(default)]
+    count: Option<u32>,
+}
+
+impl DivDrillSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let divisor = match self.divisor {
+            Some(s) => parse_digits_csv(&s, "divisor")?,
+            None => vec![DigitRange::new(2, 10)],
+        };
+        let max_quotient = match self.max_quotient {
+            Some(s) => parse_digit_range(&s, "max_quotient")?,
+            None => DigitRange::new(2, 10),
+        };
+        let (fmt, mut params) = shared.fold(
+            WorksheetType::DivisionDrill {
+                divisor,
+                max_quotient,
+            },
+            0,
+            3,
+        );
+        if let Some(c) = self.count {
+            params.num_problems = c;
+        }
+        Ok((fmt, params))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct FractionMultSpecific {
+    /// Allowed denominators, comma-separated.
+    #[serde(default)]
+    #[param(value_type = String, example = "2,3,4,5,10")]
+    denominators: Option<String>,
+    #[serde(default)]
+    min_whole: Option<u32>,
+    #[serde(default)]
+    max_whole: Option<u32>,
+    #[serde(default)]
+    unit_only: Option<bool>,
+}
+
+impl FractionMultSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let denominators = match self.denominators {
+            Some(s) => parse_u32_csv(&s, "denominators")?,
+            None => vec![2, 3, 4, 5, 10],
+        };
+        Ok(shared.fold(
+            WorksheetType::FractionMultiply {
+                denominators,
+                min_whole: self.min_whole.unwrap_or(2),
+                max_whole: self.max_whole.unwrap_or(20),
+                unit_only: self.unit_only.unwrap_or(false),
+            },
+            12,
+            3,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct AlgebraTwoStepSpecific {
+    #[serde(default)]
+    #[param(value_type = String, example = "2-10")]
+    a_range: Option<String>,
+    #[serde(default)]
+    #[param(value_type = String, example = "1-30")]
+    b_range: Option<String>,
+    #[serde(default)]
+    #[param(value_type = String, example = "0-20")]
+    x_range: Option<String>,
+    /// Variable glyph (single character).
+    #[serde(default)]
+    variable: Option<String>,
+    /// Render coefficient-variable as `4x` (no operator).
+    #[serde(default)]
+    implicit: Option<bool>,
+    #[serde(default)]
+    mix_forms: Option<bool>,
+}
+
+impl AlgebraTwoStepSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let a_range = match self.a_range {
+            Some(s) => parse_digit_range(&s, "a_range")?,
+            None => DigitRange::new(2, 10),
+        };
+        let b_range = match self.b_range {
+            Some(s) => parse_digit_range(&s, "b_range")?,
+            None => DigitRange::new(1, 30),
+        };
+        let x_range = match self.x_range {
+            Some(s) => parse_digit_range(&s, "x_range")?,
+            None => DigitRange::new(0, 20),
+        };
+        Ok(shared.fold(
+            WorksheetType::AlgebraTwoStep {
+                a_range,
+                b_range,
+                x_range,
+                variable: self.variable.unwrap_or_else(|| "x".into()),
+                implicit: self.implicit.unwrap_or(false),
+                mix_forms: self.mix_forms.unwrap_or(true),
+            },
+            6,
+            2,
+        ))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+
+fn render(root: &Path, built: Result<(OutputFormat, WorksheetParams)>) -> Response {
+    let (format, params) = match built {
+        Ok(p) => p,
+        Err(e) => return (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response(),
+    };
+    match generate(&params, format, root) {
+        Ok(ws) => {
+            let (ct, ext) = match format {
+                OutputFormat::Pdf => ("application/pdf", "pdf"),
+                OutputFormat::Png => ("image/png", "png"),
+                OutputFormat::Svg => ("image/svg+xml", "svg"),
+            };
+            // `inline` (not `attachment`) so browsers show a preview; the
+            // filename hint is still used when the user chooses Save As.
+            let filename = format!("pencil-ready-{}.{ext}", params.slug());
+            let disposition = format!("inline; filename=\"{filename}\"");
+            (
+                [
+                    (header::CONTENT_TYPE, ct.to_string()),
+                    (header::CONTENT_DISPOSITION, disposition),
+                ],
+                ws.bytes,
+            )
+                .into_response()
+        }
+        Err(e) => (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response(),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Handlers
+// ---------------------------------------------------------------------------
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/add",
+    params(SharedParams, AddSpecific),
+    responses((status = 200, description = "Worksheet bytes (PDF/PNG/SVG)")),
+    tag = "worksheets",
+)]
+async fn handle_add(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<AddSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/subtract",
+    params(SharedParams, SubtractSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_subtract(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<SubtractSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/multiply",
+    params(SharedParams, MultiplySpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_multiply(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<MultiplySpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/simple-divide",
+    params(SharedParams, SimpleDivideSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_simple_divide(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<SimpleDivideSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/long-divide",
+    params(SharedParams, LongDivideSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_long_divide(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<LongDivideSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/mult-drill",
+    params(SharedParams, MultDrillSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_mult_drill(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<MultDrillSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/div-drill",
+    params(SharedParams, DivDrillSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_div_drill(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<DivDrillSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-mult",
+    params(SharedParams, FractionMultSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_fraction_mult(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionMultSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/algebra-two-step",
+    params(SharedParams, AlgebraTwoStepSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_algebra_two_step(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<AlgebraTwoStepSpecific>,
+) -> Response {
+    render(&s.root, p.build(shared))
+}
+
+// ---------------------------------------------------------------------------
+// OpenAPI + entry
+// ---------------------------------------------------------------------------
+
+#[derive(OpenApi)]
+#[openapi(
+    info(
+        title = "Pencil Ready",
+        version = "0.1.0",
+        description = "Generate printable math worksheets.",
+    ),
+    tags((name = "worksheets", description = "Worksheet generation endpoints")),
+    components(schemas(CarryMode, BorrowMode, Locale, OutputFormat)),
+)]
+struct ApiDoc;
 
 #[tokio::main]
 async fn main() {
@@ -40,255 +614,32 @@ async fn main() {
         .expect("canonicalize project root (set PENCIL_READY_ROOT or cd to repo)");
     let state = Arc::new(AppState { root });
 
-    // Compression middleware: negotiates Accept-Encoding and streams the
-    // response through gzip or brotli. Skips content-types it knows are
-    // already compressed (image/*, application/zip, etc.) so we don't waste
-    // CPU double-compressing PNGs.
     let compression = CompressionLayer::new().gzip(true).br(true);
 
-    let app = Router::new()
-        .route("/", get(|| async { "hello world\n" }))
-        .route("/api/worksheets/{kind}", get(handle_worksheet))
-        .layer(compression)
-        .with_state(state);
+    let (api_router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(handle_add))
+        .routes(routes!(handle_subtract))
+        .routes(routes!(handle_multiply))
+        .routes(routes!(handle_simple_divide))
+        .routes(routes!(handle_long_divide))
+        .routes(routes!(handle_mult_drill))
+        .routes(routes!(handle_div_drill))
+        .routes(routes!(handle_fraction_mult))
+        .routes(routes!(handle_algebra_two_step))
+        .with_state(state)
+        .split_for_parts();
+
+    // SwaggerUi::url("/openapi.json", api) both serves the spec at that
+    // path and points the UI at it — no separate route needed.
+    let app = axum::Router::new()
+        .route("/", axum::routing::get(|| async { "hello world\n" }))
+        .merge(SwaggerUi::new("/docs").url("/openapi.json", api))
+        .merge(api_router)
+        .layer(compression);
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".into());
     let addr = format!("0.0.0.0:{port}");
     println!("listening on {addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn handle_worksheet(
-    AxPath(kind): AxPath<String>,
-    Query(q): Query<HashMap<String, String>>,
-    State(state): State<Arc<AppState>>,
-) -> Response {
-    match build_and_render(&kind, &q, &state.root) {
-        Ok((format, bytes)) => {
-            let ct = match format {
-                OutputFormat::Pdf => "application/pdf",
-                OutputFormat::Png => "image/png",
-                OutputFormat::Svg => "image/svg+xml",
-            };
-            ([(header::CONTENT_TYPE, ct)], bytes).into_response()
-        }
-        Err(e) => (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response(),
-    }
-}
-
-fn build_and_render(
-    kind: &str,
-    q: &HashMap<String, String>,
-    root: &Path,
-) -> Result<(OutputFormat, Vec<u8>)> {
-    let format = parse_format(q.get("format").map(String::as_str).unwrap_or("pdf"))?;
-    let (worksheet, default_problems, default_cols) = build_type(kind, q)?;
-
-    let params = WorksheetParams {
-        worksheet,
-        num_problems: parse_opt(q, "problems")?.unwrap_or(default_problems),
-        cols: parse_opt(q, "cols")?.unwrap_or(default_cols),
-        paper: q.get("paper").cloned().unwrap_or_else(|| "a4".into()),
-        debug: parse_bool(q, "debug")?.unwrap_or(false),
-        seed: parse_opt(q, "seed")?,
-        symbol: q.get("symbol").cloned(),
-        locale: parse_locale(q.get("locale").map(String::as_str).unwrap_or("us"))?,
-        pages: parse_opt(q, "pages")?.unwrap_or(1),
-        solve_first: parse_bool(q, "solve_first")?.unwrap_or(false),
-    };
-
-    let ws = generate(&params, format, root)?;
-    Ok((format, ws.bytes))
-}
-
-/// Returns (type, default_problems, default_cols). Defaults mirror the CLI's
-/// per-subcommand choices.
-fn build_type(kind: &str, q: &HashMap<String, String>) -> Result<(WorksheetType, u32, u32)> {
-    match kind {
-        "add" => Ok((
-            WorksheetType::Add {
-                digits: parse_digit_list(q, "digits", default_digits(&[2, 2]))?,
-                carry: parse_carry(q.get("carry").map(String::as_str).unwrap_or("any"))?,
-                binary: parse_bool(q, "binary")?.unwrap_or(false),
-            },
-            12,
-            4,
-        )),
-        "subtract" => Ok((
-            WorksheetType::Subtract {
-                digits: parse_digit_list(q, "digits", default_digits(&[2, 2]))?,
-                borrow: parse_borrow(q.get("borrow").map(String::as_str).unwrap_or("any"))?,
-            },
-            12,
-            4,
-        )),
-        "multiply" => Ok((
-            WorksheetType::Multiply {
-                digits: parse_digit_list(q, "digits", default_digits(&[2, 2]))?,
-            },
-            12,
-            4,
-        )),
-        "simple-divide" => Ok((
-            WorksheetType::SimpleDivision {
-                max_quotient: parse_opt(q, "max_quotient")?.unwrap_or(10),
-            },
-            12,
-            4,
-        )),
-        "long-divide" => Ok((
-            WorksheetType::LongDivision {
-                digits: parse_single_digit(q, "digits", DigitRange::fixed(3))?,
-                remainder: parse_bool(q, "remainder")?.unwrap_or(false),
-            },
-            12,
-            4,
-        )),
-        "mult-drill" => Ok((
-            WorksheetType::MultiplicationDrill {
-                multiplicand: parse_digit_list(q, "multiplicand", vec![DigitRange::new(1, 10)])?,
-                multiplier: parse_single_digit(q, "multiplier", DigitRange::new(1, 10))?,
-            },
-            parse_opt(q, "count")?.unwrap_or(0),
-            3,
-        )),
-        "div-drill" => Ok((
-            WorksheetType::DivisionDrill {
-                divisor: parse_digit_list(q, "divisor", vec![DigitRange::new(2, 10)])?,
-                max_quotient: parse_single_digit(q, "max_quotient", DigitRange::new(2, 10))?,
-            },
-            parse_opt(q, "count")?.unwrap_or(0),
-            3,
-        )),
-        "fraction-mult" => Ok((
-            WorksheetType::FractionMultiply {
-                denominators: parse_u32_list(q, "denominators", vec![2, 3, 4, 5, 10])?,
-                min_whole: parse_opt(q, "min_whole")?.unwrap_or(2),
-                max_whole: parse_opt(q, "max_whole")?.unwrap_or(20),
-                unit_only: parse_bool(q, "unit_only")?.unwrap_or(false),
-            },
-            12,
-            3,
-        )),
-        "algebra-two-step" => Ok((
-            WorksheetType::AlgebraTwoStep {
-                a_range: parse_single_digit(q, "a_range", DigitRange::new(2, 10))?,
-                b_range: parse_single_digit(q, "b_range", DigitRange::new(1, 30))?,
-                x_range: parse_single_digit(q, "x_range", DigitRange::new(0, 20))?,
-                variable: q.get("variable").cloned().unwrap_or_else(|| "x".into()),
-                implicit: parse_bool(q, "implicit")?.unwrap_or(false),
-                mix_forms: parse_bool(q, "mix_forms")?.unwrap_or(true),
-            },
-            6,
-            2,
-        )),
-        other => bail!("unknown worksheet type: {other}"),
-    }
-}
-
-// --- param helpers ---
-
-fn parse_opt<T: FromStr>(q: &HashMap<String, String>, key: &str) -> Result<Option<T>>
-where
-    T::Err: std::fmt::Display,
-{
-    match q.get(key) {
-        None => Ok(None),
-        Some(s) => s
-            .parse::<T>()
-            .map(Some)
-            .map_err(|e| anyhow!("{key}: {e}")),
-    }
-}
-
-/// Accept `true/false`, `1/0`, `yes/no`, and bare-flag form (empty string = true).
-fn parse_bool(q: &HashMap<String, String>, key: &str) -> Result<Option<bool>> {
-    match q.get(key).map(String::as_str) {
-        None => Ok(None),
-        Some("" | "true" | "1" | "yes") => Ok(Some(true)),
-        Some("false" | "0" | "no") => Ok(Some(false)),
-        Some(other) => bail!("{key}: bad bool value {other:?}"),
-    }
-}
-
-fn parse_format(s: &str) -> Result<OutputFormat> {
-    match s {
-        "pdf" => Ok(OutputFormat::Pdf),
-        "png" => Ok(OutputFormat::Png),
-        "svg" => Ok(OutputFormat::Svg),
-        other => bail!("unknown format: {other} (pdf, png, svg)"),
-    }
-}
-
-fn parse_locale(s: &str) -> Result<Locale> {
-    Locale::from_str(s).ok_or_else(|| anyhow!("unknown locale: {s} (us, no)"))
-}
-
-fn parse_carry(s: &str) -> Result<CarryMode> {
-    match s {
-        "none" => Ok(CarryMode::None),
-        "any" => Ok(CarryMode::Any),
-        "force" => Ok(CarryMode::Force),
-        "ripple" => Ok(CarryMode::Ripple),
-        other => bail!("unknown carry: {other} (none, any, force, ripple)"),
-    }
-}
-
-fn parse_borrow(s: &str) -> Result<BorrowMode> {
-    match s {
-        "none" => Ok(BorrowMode::None),
-        "no-across-zero" => Ok(BorrowMode::NoAcrossZero),
-        "any" => Ok(BorrowMode::Any),
-        "force" => Ok(BorrowMode::Force),
-        "ripple" => Ok(BorrowMode::Ripple),
-        other => bail!("unknown borrow: {other}"),
-    }
-}
-
-fn default_digits(ns: &[u32]) -> Vec<DigitRange> {
-    ns.iter().copied().map(DigitRange::fixed).collect()
-}
-
-fn parse_digit_list(
-    q: &HashMap<String, String>,
-    key: &str,
-    default: Vec<DigitRange>,
-) -> Result<Vec<DigitRange>> {
-    match q.get(key) {
-        None => Ok(default),
-        Some(s) => s
-            .split(',')
-            .map(|part| DigitRange::from_str(part.trim()).map_err(|e| anyhow!("{key}: {e}")))
-            .collect(),
-    }
-}
-
-fn parse_single_digit(
-    q: &HashMap<String, String>,
-    key: &str,
-    default: DigitRange,
-) -> Result<DigitRange> {
-    match q.get(key) {
-        None => Ok(default),
-        Some(s) => DigitRange::from_str(s).map_err(|e| anyhow!("{key}: {e}")),
-    }
-}
-
-fn parse_u32_list(
-    q: &HashMap<String, String>,
-    key: &str,
-    default: Vec<u32>,
-) -> Result<Vec<u32>> {
-    match q.get(key) {
-        None => Ok(default),
-        Some(s) => s
-            .split(',')
-            .map(|p| {
-                p.trim()
-                    .parse::<u32>()
-                    .map_err(|e| anyhow!("{key}: {e}"))
-            })
-            .collect(),
-    }
 }

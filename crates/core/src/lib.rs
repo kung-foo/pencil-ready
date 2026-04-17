@@ -8,6 +8,7 @@ mod algebra_two_step;
 mod div_drill;
 mod divide;
 mod fraction_mult;
+mod meta;
 mod mult_drill;
 mod multiply;
 mod subtract;
@@ -16,6 +17,8 @@ mod template;
 mod world;
 
 use anyhow::{Result, bail};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 const MAX_DIGITS: u32 = 5;
 const MAX_PROBLEMS: u32 = 16;
@@ -28,10 +31,28 @@ const MAX_OPERANDS: usize = 4;
 /// 2, 3, or 4 digits for that operand. When min == max, it's fixed.
 ///
 /// In Go this would be a struct with Min/Max fields. Same here.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Serialized as its `Display` form ("3" or "2-4") so it round-trips
+/// through JSON/query strings the same way the CLI writes it. OpenAPI
+/// schema is overridden at the point of use via
+/// `#[param(value_type = String)]` to avoid exposing the internal shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct DigitRange {
     pub min: u32,
     pub max: u32,
+}
+
+impl TryFrom<String> for DigitRange {
+    type Error = String;
+    fn try_from(s: String) -> std::result::Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+impl From<DigitRange> for String {
+    fn from(d: DigitRange) -> String {
+        d.to_string()
+    }
 }
 
 impl DigitRange {
@@ -88,7 +109,8 @@ impl std::str::FromStr for DigitRange {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
 pub enum CarryMode {
     None,
     #[default]
@@ -97,7 +119,8 @@ pub enum CarryMode {
     Ripple,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
 pub enum BorrowMode {
     None,
     NoAcrossZero,
@@ -174,7 +197,8 @@ pub enum WorksheetType {
 ///
 /// Vertical/bracket layouts use universal notation regardless of locale.
 /// Locale only affects horizontal layouts (drills).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
 pub enum Locale {
     #[default]
     Us,
@@ -233,7 +257,8 @@ impl WorksheetParams {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
 pub enum OutputFormat {
     Pdf,
     Png,

@@ -20,6 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
+utoipa = { version = "5", features = ["axum_extras"] }
 
 # Typst ecosystem — the compiler + export crates
 typst = "0.14"
