@@ -1,4 +1,4 @@
-#let worksheet-grid(problems, operator, num-cols: 4, width: 2.2cm, debug: false, style: "vertical", answer-rows: 1, solve-first: false, implicit: false, variable: "x") = {
+#let worksheet-grid(problems, operator, num-cols: 4, width: 2.2cm, debug: false, style: "vertical", answer-rows: 1, solve-first: false, implicit: false, variable: "x", pad-width: 0) = {
   import "/lib/problems/vertical.typ": vertical-problem
   import "/lib/problems/long-division.typ": long-division-problem
   import "/lib/problems/horizontal.typ": horizontal-problem
@@ -41,7 +41,7 @@
         } else if style == "algebra-two-step" {
           pad(left: 0.3cm, right: 1.5cm, algebra-two-step-problem(nums, operator, debug: debug, solved: solve-first and idx == 0, implicit: implicit, variable: variable))
         } else {
-          vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug, solved: solve-first and idx == 0)
+          vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug, solved: solve-first and idx == 0, pad-width: pad-width)
         }
       })
     )

@@ -112,6 +112,10 @@ pub enum WorksheetType {
     Add {
         digits: Vec<DigitRange>,
         carry: CarryMode,
+        /// Binary mode: operand digit counts become **bit** counts, the
+        /// operands take values in `[0, 2^d − 1]`, and the rendered
+        /// numbers appear in base 2 (with leading-zero padding).
+        binary: bool,
     },
     Subtract {
         digits: Vec<DigitRange>,

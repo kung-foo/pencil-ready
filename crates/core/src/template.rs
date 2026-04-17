@@ -14,6 +14,21 @@ pub fn render(
     render_inner(default_operator, problems, params, "vertical", answer_rows)
 }
 
+/// Vertical worksheet with a fixed operand display-width (left-pad with
+/// zeros up to `pad_width` characters). Used by binary addition so each
+/// operand fills its full bit width.
+pub fn render_padded(
+    default_operator: &str,
+    problems: &[Vec<u32>],
+    params: &WorksheetParams,
+    answer_rows: u32,
+    pad_width: u32,
+) -> Result<String> {
+    render_inner_with_pad(
+        default_operator, problems, params, "vertical", answer_rows, false, "x", pad_width,
+    )
+}
+
 /// Render a horizontal-style worksheet (drills: A × B = ___).
 pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> Result<String> {
     render_inner(default_operator, problems, params, "horizontal", 1)
@@ -56,6 +71,19 @@ fn render_inner_full(
     answer_rows: u32,
     implicit: bool,
     variable: &str,
+) -> Result<String> {
+    render_inner_with_pad(default_operator, problems, params, style, answer_rows, implicit, variable, 0)
+}
+
+fn render_inner_with_pad(
+    default_operator: &str,
+    problems: &[Vec<u32>],
+    params: &WorksheetParams,
+    style: &str,
+    answer_rows: u32,
+    implicit: bool,
+    variable: &str,
+    pad_width: u32,
 ) -> Result<String> {
     let expected = params.total_problems() as usize;
     // Drills with num_problems=0 allow any count. Others must match exactly.
@@ -141,6 +169,7 @@ fn render_inner_full(
   solve-first: {solve_first_str},
   implicit: {implicit_str},
   variable: "{variable}",
+  pad-width: {pad_width},
 )
 
 #worksheet-footer(pencil-ready-content)

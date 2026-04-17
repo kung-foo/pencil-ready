@@ -22,13 +22,25 @@
   answer-rows: 1,
   debug: false,
   solved: false,
+  // When > 0, operand numbers are left-padded with "0" up to this many
+  // characters. Used by binary addition so each operand fills its full
+  // bit width (`str(n)` alone would drop leading zeros).
+  pad-width: 0,
 ) = {
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
   let operand-count = numbers.len() - 1
   let operands = numbers.slice(0, operand-count)
-  let answer = str(numbers.at(operand-count))
-  let first = str(operands.at(0))
+  // Render a value, optionally left-padded with zeros to `pad-width` chars.
+  let fmt = (n) => {
+    let s = str(n)
+    while s.clusters().len() < pad-width {
+      s = "0" + s
+    }
+    s
+  }
+  let answer = fmt(numbers.at(operand-count))
+  let first = fmt(operands.at(0))
   let rest = operands.slice(1)
 
   let carry-space = 0.5em
@@ -45,13 +57,13 @@
       let last = rest.last()
       for n in middle {
         v(-0.65em)
-        align(right, text(str(n)))
+        align(right, text(fmt(n)))
       }
       v(-0.65em)
       grid(
         columns: (auto, 1fr),
         column-gutter: 0.25em,
-        align(left, {set text(font: operator-font); operator}), align(right, text(str(last))),
+        align(left, {set text(font: operator-font); operator}), align(right, text(fmt(last))),
       )
       v(-0.9em)
       line(length: 100%, stroke: 0.8pt)

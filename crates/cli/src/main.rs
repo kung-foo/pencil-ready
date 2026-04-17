@@ -138,13 +138,20 @@ enum Command {
         cols: u32,
 
         /// Digits per operand, comma-separated. Use N for fixed or N-M for range.
-        /// e.g. "2,2" or "2-4,2-4" or "2,2,2"
+        /// e.g. "2,2" or "2-4,2-4" or "2,2,2". In --binary mode this is
+        /// interpreted as the *bit* count per operand (4 is a good default).
         #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::fixed(2), DigitRange::fixed(2)])]
         digits: Vec<DigitRange>,
 
         /// Carry constraint: none, any, force, ripple
         #[arg(long, value_enum, default_value = "any")]
         carry: CliCarryMode,
+
+        /// Base-2 mode. Operands take values in [0, 2^d − 1] and render
+        /// in binary with leading-zero padding. Pair with --digits 4,4
+        /// (or similar) since small bit-counts are trivial.
+        #[arg(long)]
+        binary: bool,
     },
 
     /// Subtraction worksheet
@@ -364,6 +371,7 @@ fn resolve(command: Command) -> Resolved {
             cols,
             digits,
             carry,
+            binary,
         } => Resolved {
             global,
             num_problems: problems,
@@ -371,6 +379,7 @@ fn resolve(command: Command) -> Resolved {
             worksheet: WorksheetType::Add {
                 digits,
                 carry: carry.into(),
+                binary,
             },
         },
         Command::Subtract {
@@ -608,6 +617,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             WorksheetType::Add {
                 digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
                 carry: CarryMode::Any,
+                binary: false,
             },
             12,
             4,
