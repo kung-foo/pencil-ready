@@ -4,6 +4,12 @@
 FROM rust:1-slim-bookworm AS builder
 WORKDIR /app
 
+# utoipa-swagger-ui's build script downloads the Swagger UI bundle via curl
+# (or reqwest if the feature is enabled). Install curl so the build works.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
+
 # Build just the server binary. Cargo resolves the workspace from the root
 # manifest, so we need the full tree, not just the server crate.
 COPY . .
