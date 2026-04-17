@@ -6,16 +6,16 @@
 //! invalidates all baselines — which is the point.
 //!
 //! Workflow:
-//!   cargo run -p mathsheet-stories -- generate    # regenerate stories/current/
-//!   cargo run -p mathsheet-stories -- diff        # compare current vs baseline
-//!   cargo run -p mathsheet-stories -- approve     # promote current to baseline
+//!   cargo run -p pencil-ready-stories -- generate    # regenerate stories/current/
+//!   cargo run -p pencil-ready-stories -- diff        # compare current vs baseline
+//!   cargo run -p pencil-ready-stories -- approve     # promote current to baseline
 
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
 use image::{GenericImageView, ImageBuffer, Rgba};
-use mathsheet_core::{OutputFormat, compile_typst};
+use pencil_ready_core::{OutputFormat, compile_typst};
 
 #[derive(Parser)]
 #[command(name = "stories", about = "Visual regression tool for Pencil Ready")]

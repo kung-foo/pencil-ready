@@ -1,5 +1,5 @@
 [package]
-name = "mathsheet-core"
+name = "pencil-ready-core"
 version = "0.1.0"
 edition.workspace = true  # inherits "2024" from workspace root
 

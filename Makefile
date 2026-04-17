@@ -11,7 +11,7 @@ test:
 
 # Generate a sample worksheet (debug/dev)
 run:
-	cargo run --bin mathsheet -- multiply --digits 2,2 --seed 42 --format all --output output/worksheet
+	cargo run --bin pencil-ready -- multiply --digits 2,2 --seed 42 --format all --output output/worksheet
 
 .PHONY: clean-all
 
@@ -26,14 +26,14 @@ clean-all: clean clean-output
 # --- Visual stories ---
 
 stories-gen:
-	cargo run -p mathsheet-stories -- generate
+	cargo run -p pencil-ready-stories -- generate
 
 stories-diff:
-	cargo run -p mathsheet-stories -- diff
+	cargo run -p pencil-ready-stories -- diff
 
 # regen + diff in one step (fails on any change)
 stories-check:
-	cargo run -p mathsheet-stories -- check
+	cargo run -p pencil-ready-stories -- check
 
 stories-approve:
-	cargo run -p mathsheet-stories -- approve
+	cargo run -p pencil-ready-stories -- approve

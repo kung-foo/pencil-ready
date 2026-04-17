@@ -1,0 +1,8 @@
+target
+output
+stories
+frontend/node_modules
+.git
+.github
+*.pdf
+*.png

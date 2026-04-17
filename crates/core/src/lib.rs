@@ -1,4 +1,4 @@
-//! mathsheet-core: worksheet generation and typst compilation.
+//! pencil-ready-core: worksheet generation and typst compilation.
 //!
 //! Each worksheet type lives in its own module.
 //! They share a common template renderer and the typst World implementation.

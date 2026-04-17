@@ -1,20 +1,20 @@
 //! CLI for generating math worksheets.
 //!
 //! Usage:
-//!   mathsheet add --digits 2,2,2 --carry ripple
-//!   mathsheet subtract --digits 3,2 --borrow none
-//!   mathsheet multiply --digits 2,2
-//!   mathsheet simple-divide --max-quotient 12
-//!   mathsheet long-divide --digits 2-4 --remainder
-//!   mathsheet mult-drill --multiplicand 2,3
-//!   mathsheet algebra-two-step --solve-first
+//!   pencil-ready add --digits 2,2,2 --carry ripple
+//!   pencil-ready subtract --digits 3,2 --borrow none
+//!   pencil-ready multiply --digits 2,2
+//!   pencil-ready simple-divide --max-quotient 12
+//!   pencil-ready long-divide --digits 2-4 --remainder
+//!   pencil-ready mult-drill --multiplicand 2,3
+//!   pencil-ready algebra-two-step --solve-first
 
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use mathsheet_core::{
+use pencil_ready_core::{
     BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
     compile_typst, generate, generate_typst_source,
 };
@@ -346,7 +346,7 @@ enum Command {
 }
 
 #[derive(Parser)]
-#[command(name = "mathsheet", about = "Generate printable math worksheets")]
+#[command(name = "pencil-ready", about = "Generate printable math worksheets")]
 struct Cli {
     #[command(subcommand)]
     command: Command,

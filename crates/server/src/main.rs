@@ -7,7 +7,7 @@
 //! NOT wired up yet — this shows the shape and compiles, but the actual
 //! endpoint is a TODO.
 
-use axum::{Router, routing::post, Json};
+use axum::{Router, routing::{get, post}, Json};
 use serde::{Deserialize, Serialize};
 
 /// Request body for worksheet generation.
@@ -47,7 +47,7 @@ struct GenerateResponse {
 async fn handle_generate(
     Json(req): Json<GenerateRequest>,
 ) -> Json<GenerateResponse> {
-    // TODO: call mathsheet_core::generate() here.
+    // TODO: call pencil_ready_core::generate() here.
     // For now, just echo back what was requested.
     Json(GenerateResponse {
         message: format!(
@@ -65,12 +65,15 @@ async fn handle_generate(
 async fn main() {
     // Build the router — like http.NewServeMux() in Go.
     let app = Router::new()
+        .route("/", get(|| async { "hello world\n" }))
         .route("/generate", post(handle_generate));
 
-    let addr = "0.0.0.0:3000";
+    // Fly.io (and most PaaS) inject PORT. Default matches fly.toml internal_port.
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let addr = format!("0.0.0.0:{port}");
     println!("listening on {addr}");
 
     // In Go: http.ListenAndServe(addr, mux)
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }

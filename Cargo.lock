@@ -1463,50 +1463,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
-name = "mathsheet-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "mathsheet-core",
-]
-
-[[package]]
-name = "mathsheet-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "rand",
- "typst",
- "typst-library",
- "typst-pdf",
- "typst-render",
- "typst-svg",
-]
-
-[[package]]
-name = "mathsheet-server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "mathsheet-core",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "mathsheet-stories"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "image",
- "mathsheet-core",
-]
-
-[[package]]
 name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1692,6 +1648,50 @@ dependencies = [
  "itoa",
  "memchr",
  "ryu",
+]
+
+[[package]]
+name = "pencil-ready-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "pencil-ready-core",
+]
+
+[[package]]
+name = "pencil-ready-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rand",
+ "typst",
+ "typst-library",
+ "typst-pdf",
+ "typst-render",
+ "typst-svg",
+]
+
+[[package]]
+name = "pencil-ready-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "pencil-ready-core",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "pencil-ready-stories"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "image",
+ "pencil-ready-core",
 ]
 
 [[package]]
