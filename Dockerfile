@@ -19,6 +19,15 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/pencil-ready-server /usr/local/bin/pencil-ready-server
 
+# Runtime assets: typst imports from /lib, loads bundled fonts, and reads
+# binary files (rainbow-heart.svg, etc.) from /assets. The server reads
+# these via PENCIL_READY_ROOT.
+WORKDIR /app
+COPY --from=builder /app/lib    /app/lib
+COPY --from=builder /app/fonts  /app/fonts
+COPY --from=builder /app/assets /app/assets
+
 ENV PORT=8080
+ENV PENCIL_READY_ROOT=/app
 EXPOSE 8080
 CMD ["/usr/local/bin/pencil-ready-server"]
