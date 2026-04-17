@@ -20,12 +20,14 @@
 
   // Fixed-width slot so solved and unsolved problems share the same bounding
   // box. When solved, the answer sits on the slot; otherwise the slot shows
-  // a blank line.
+  // a blank line. Use bottom alignment so the answer text sits on the
+  // baseline of the surrounding "a × b =" flow — center+horizon put the
+  // answer above the baseline, making it look like it was floating.
   let answer-slot = box(
     width: 2em,
     height: 1em,
     stroke: if solved { none } else { (bottom: 0.5pt) },
-    align(center + horizon, if solved { text(answer) }),
+    align(center + bottom, if solved { text(answer) }),
   )
 
   let op-box = box(width: 1.2em, align(center, {
