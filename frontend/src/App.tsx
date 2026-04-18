@@ -39,7 +39,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="h-screen flex flex-col">
+      {/* Desktop: page fits in viewport, each column scrolls internally.
+          Mobile: page grows with content, document scrolls normally. */}
+      <div className="min-h-screen md:h-screen flex flex-col">
         <header className="border-b px-6 py-3">
           <h1
             className="text-lg font-semibold"
@@ -90,16 +92,21 @@ function WorksheetPage() {
     }
   };
 
+  // Desktop (md+): three columns each with their own overflow scroll,
+  // filling viewport. Mobile: stack vertically, whole page scrolls.
+  // Preview is pegged to roughly one viewport height on mobile so the
+  // student-facing output stays prominent without competing with the
+  // config form above it.
   return (
-    <div className="flex-1 grid grid-cols-[320px_1fr_320px] gap-4 p-4 min-h-0">
-      <aside className="overflow-auto pr-1 space-y-3">
+    <div className="flex flex-col gap-4 p-4 md:flex-1 md:min-h-0 md:grid md:grid-cols-[320px_1fr_320px]">
+      <aside className="md:overflow-auto md:pr-1 space-y-3">
         <WorksheetConfigPanel cfg={cfg} onChange={onChange} />
         <DownloadButton state={state} />
       </aside>
-      <main className="min-h-0">
+      <main className="min-h-0 h-[85vh] md:h-auto">
         <Preview cfg={cfg} state={state} />
       </main>
-      <aside className="overflow-auto pl-1">
+      <aside className="md:overflow-auto md:pl-1">
         <WorksheetHelp kind={cfg.kind} />
       </aside>
     </div>
