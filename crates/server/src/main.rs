@@ -24,7 +24,7 @@ use pencil_ready_core::{
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::services::ServeDir;
 use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
@@ -641,16 +641,31 @@ async fn main() {
         .merge(api_router);
 
     // In production the SPA bundle lives at PENCIL_READY_STATIC_DIR (set by
-    // the Dockerfile). ServeDir serves real files; not_found_service falls
-    // back to index.html so client-side routing works for any deep link.
-    // In dev we skip this entirely and let Vite serve the frontend.
+    // the Dockerfile). ServeDir handles real files; for anything it would
+    // return 404 for, a custom fallback serves index.html with HTTP 200 so
+    // React Router deep links (e.g. /worksheets/add) are treated as
+    // successful loads — not 404s. tower-http's ServeDir.not_found_service
+    // preserves the outer 404 status, which broke crawlers/caches.
     app = match std::env::var("PENCIL_READY_STATIC_DIR") {
         Ok(dir) => {
             let dir = PathBuf::from(dir);
-            let index = dir.join("index.html");
-            let serve = ServeDir::new(&dir).not_found_service(ServeFile::new(&index));
+            let index_path = dir.join("index.html");
+            let index_html = std::fs::read_to_string(&index_path)
+                .expect("index.html not readable from PENCIL_READY_STATIC_DIR");
+            let index_arc: Arc<str> = Arc::from(index_html);
             println!("serving SPA from {}", dir.display());
-            app.fallback_service(serve)
+            app.fallback_service(ServeDir::new(&dir).fallback(
+                axum::routing::any(move || {
+                    let html = index_arc.clone();
+                    async move {
+                        (
+                            StatusCode::OK,
+                            [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+                            html.as_ref().to_owned(),
+                        )
+                    }
+                }),
+            ))
         }
         Err(_) => {
             // No SPA bundle available — expose a cheap root for liveness.
