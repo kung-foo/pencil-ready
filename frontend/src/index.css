@@ -8,12 +8,10 @@
    source TTFs in fonts/). WOFF2 is universally supported in every browser
    made since ~2016.                                                           */
 
-@font-face {
-  font-family: "Roboto Slab";
-  src: url("/fonts/RobotoSlab-Light.woff2") format("woff2");
-  font-weight: 300;
-  font-display: swap;
-}
+/* Only the weights the UI actually renders — 400 (body), 500
+   (font-medium), 600 (font-semibold). Adding SemiBold explicitly
+   avoids the browser's fallback path of synthesizing 600 from 700,
+   which came out visibly heavier than designed. */
 @font-face {
   font-family: "Roboto Slab";
   src: url("/fonts/RobotoSlab-Regular.woff2") format("woff2");
@@ -28,8 +26,8 @@
 }
 @font-face {
   font-family: "Roboto Slab";
-  src: url("/fonts/RobotoSlab-Bold.woff2") format("woff2");
-  font-weight: 700;
+  src: url("/fonts/RobotoSlab-SemiBold.woff2") format("woff2");
+  font-weight: 600;
   font-display: swap;
 }
 @font-face {
