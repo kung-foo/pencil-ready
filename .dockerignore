@@ -2,6 +2,8 @@ target
 output
 stories
 frontend/node_modules
+frontend/dist
+frontend/storybook-static
 .git
 .github
 *.pdf

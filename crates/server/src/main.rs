@@ -24,6 +24,7 @@ use pencil_ready_core::{
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
+use tower_http::services::{ServeDir, ServeFile};
 use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
@@ -631,11 +632,29 @@ async fn main() {
 
     // SwaggerUi::url("/openapi.json", api) both serves the spec at that
     // path and points the UI at it — no separate route needed.
-    let app = axum::Router::new()
-        .route("/", axum::routing::get(|| async { "hello world\n" }))
+    let mut app = axum::Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", api))
-        .merge(api_router)
-        .layer(compression);
+        .merge(api_router);
+
+    // In production the SPA bundle lives at PENCIL_READY_STATIC_DIR (set by
+    // the Dockerfile). ServeDir serves real files; not_found_service falls
+    // back to index.html so client-side routing works for any deep link.
+    // In dev we skip this entirely and let Vite serve the frontend.
+    app = match std::env::var("PENCIL_READY_STATIC_DIR") {
+        Ok(dir) => {
+            let dir = PathBuf::from(dir);
+            let index = dir.join("index.html");
+            let serve = ServeDir::new(&dir).not_found_service(ServeFile::new(&index));
+            println!("serving SPA from {}", dir.display());
+            app.fallback_service(serve)
+        }
+        Err(_) => {
+            // No SPA bundle available — expose a cheap root for liveness.
+            app.route("/", axum::routing::get(|| async { "hello world\n" }))
+        }
+    };
+
+    let app = app.layer(compression);
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".into());
     let addr = format!("0.0.0.0:{port}");
