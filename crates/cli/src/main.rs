@@ -118,6 +118,11 @@ struct GlobalArgs {
     #[arg(long)]
     solve_first: bool,
 
+    /// Append an answer-key page (or pages, one per problem page) showing
+    /// just the correct answer for each problem. PDF only.
+    #[arg(long)]
+    include_answers: bool,
+
     #[arg(long, default_value = ".")]
     root: PathBuf,
 }
@@ -532,6 +537,7 @@ fn main() -> Result<()> {
         locale: global.locale.into(),
         pages: global.pages,
         solve_first: global.solve_first,
+        include_answers: global.include_answers,
     };
 
     let root = global
@@ -593,6 +599,9 @@ fn default_params_for(
         pages: 1,
         // Force worked-example rendering for every type.
         solve_first: true,
+        // `all` is a single-PDF sampler — don't duplicate pages with an
+        // answer key.
+        include_answers: false,
     }
 }
 

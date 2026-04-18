@@ -22,6 +22,10 @@
   answer-rows: 1,
   debug: false,
   solved: false,
+  // When `solved` is on, skip the worked steps (partial products for
+  // multi-row multiplication) and render only the final numeric answer.
+  // Used by answer-key pages so the result stays terse.
+  answer-only: false,
   // When > 0, operand numbers are left-padded with "0" up to this many
   // characters. Used by binary addition so each operand fills its full
   // bit width (`str(n)` alone would drop leading zeros).
@@ -69,9 +73,10 @@
       line(length: 100%, stroke: 0.8pt)
       if solved {
         v(-0.65em)
-        if answer-rows == 1 {
-          // Single-row answers: add, subtract, simple-divide, or
-          // multiply with a 1-digit multiplier. Just the final value.
+        if answer-rows == 1 or answer-only {
+          // Single-row answers (add, subtract, simple-divide, 1-digit
+          // multiply) OR answer-key mode for multi-digit multiply:
+          // render just the final numeric answer, no partial products.
           align(right, text(answer))
         } else {
           // Multi-digit multiplication: N partial products + final sum.

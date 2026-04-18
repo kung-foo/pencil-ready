@@ -76,6 +76,9 @@ struct SharedParams {
     /// Render the first problem as a worked example.
     #[serde(default)]
     solve_first: Option<bool>,
+    /// Append an answer-key page showing just the final answers (PDF only).
+    #[serde(default)]
+    include_answers: Option<bool>,
     /// Draw debug borders around problem boxes and grid cells.
     #[serde(default)]
     debug: Option<bool>,
@@ -100,6 +103,7 @@ impl SharedParams {
             locale: self.locale.unwrap_or_default(),
             pages: self.pages.unwrap_or(1),
             solve_first: self.solve_first.unwrap_or(false),
+            include_answers: self.include_answers.unwrap_or(false),
         };
         (format, params)
     }

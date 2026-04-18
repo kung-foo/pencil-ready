@@ -40,6 +40,9 @@
   answer-rows: 0,
   debug: false,
   solved: false,
+  // Answer-key mode: when solved, render only the quotient above the bar
+  // and skip the divide-multiply-subtract-bring-down work rows.
+  answer-only: false,
 ) = {
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
@@ -101,8 +104,10 @@
 
       // Work rows below the bracket, aligned with the dividend columns.
       // When unsolved: empty space (v(work-space)) preserves the pre-
-      // solve-first layout so baselines don't shift.
-      if solved {
+      // solve-first layout so baselines don't shift. Answer-only: the
+      // quotient is already rendered above the bracket, so skip the work
+      // and reserve the same empty space as an unsolved problem.
+      if solved and not answer-only {
         // Column pitch must exactly match the dividend's digit advance so
         // work digits sit directly below the corresponding dividend digit.
         let digit-pitch = measure(text("00")).width - measure(text("0")).width

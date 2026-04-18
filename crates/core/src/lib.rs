@@ -248,6 +248,10 @@ pub struct WorksheetParams {
     /// Render the first problem as a worked example — applies to any
     /// worksheet type whose problem component understands a `solved` flag.
     pub solve_first: bool,
+    /// Append an answer-key page (or pages, one per problem page) showing
+    /// just the correct answer for each problem. Requires PDF output since
+    /// multi-page layouts don't fit in PNG/SVG.
+    pub include_answers: bool,
 }
 
 impl WorksheetParams {
@@ -285,8 +289,10 @@ pub fn generate(
     format: OutputFormat,
     root: &std::path::Path,
 ) -> Result<Worksheet> {
-    if params.pages > 1 && !matches!(format, OutputFormat::Pdf) {
-        bail!("pages > 1 requires PDF output (PNG/SVG are single-image formats)");
+    if (params.pages > 1 || params.include_answers) && !matches!(format, OutputFormat::Pdf) {
+        bail!(
+            "pages > 1 or include_answers requires PDF output (PNG/SVG are single-image formats)"
+        );
     }
     let typ_source = generate_typst_source(params)?;
     let bytes = world::compile_and_export(&typ_source, format, root)?;

@@ -9,10 +9,12 @@
 
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features, problem-line-height
 
-#let horizontal-fraction-problem(numbers, operator, debug: false, solved: false) = {
+#let horizontal-fraction-problem(numbers, operator, debug: false, solved: false, answer-only: false) = {
   // numbers = (whole, numerator, denominator)
   // solved  = if true, fill in the worked answer (multiply-across + simplified)
   //           as a demonstration example.
+  // answer-only = when solved, suppress the multiply-across intermediate
+  //               and show only the simplified integer answer.
   // NOTE: do NOT set tracking on the outer text — math.frac inherits the
   // outer text settings and inserts a visible gap between digits of multi-
   // digit numerators/denominators (e.g. "10" rendered as "1 0"). Apply
@@ -39,7 +41,7 @@
   // problems occupy the same width — the worksheet grid stays aligned.
   let slot-width = 3.2em
   let row1-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if solved { $#str(inter-num)/#str(d)$ }
+    if solved and not answer-only { $#str(inter-num)/#str(d)$ }
   }))
   let row2-right = box(width: slot-width, height: 1em, align(left + horizon, {
     if solved {

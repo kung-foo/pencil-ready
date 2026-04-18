@@ -10,19 +10,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { Format, WorksheetConfig, WorksheetKind } from "@/lib/api";
-
-const KIND_OPTIONS: { value: WorksheetKind; label: string }[] = [
-  { value: "add", label: "Addition" },
-  { value: "subtract", label: "Subtraction" },
-  { value: "multiply", label: "Multiplication" },
-  { value: "simple-divide", label: "Division" },
-  { value: "long-divide", label: "Long division" },
-  { value: "mult-drill", label: "Multiplication drill" },
-  { value: "div-drill", label: "Division drill" },
-  { value: "fraction-mult", label: "Fraction multiplication" },
-  { value: "algebra-two-step", label: "Two-step equations" },
-];
+import {
+  BORROW_MODES,
+  BORROW_MODE_LABELS,
+  CARRY_MODES,
+  CARRY_MODE_LABELS,
+  FORMATS,
+  WORKSHEET_KINDS,
+  type WorksheetConfig,
+  type WorksheetKind,
+} from "@/lib/api";
+import { WORKSHEET_INFO } from "@/lib/worksheet-info";
 
 export function WorksheetConfigPanel({
   cfg,
@@ -66,9 +64,9 @@ export function WorksheetConfigPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {KIND_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
+              {WORKSHEET_KINDS.map((k) => (
+                <SelectItem key={k} value={k}>
+                  {WORKSHEET_INFO[k].title}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -101,9 +99,22 @@ export function WorksheetConfigPanel({
             />
           </div>
 
+          <div className="flex items-center justify-between">
+            <Label htmlFor="include_answers">
+              Answer key{" "}
+              <span className="text-xs text-muted-foreground">(PDF only)</span>
+            </Label>
+            <Switch
+              id="include_answers"
+              checked={cfg.include_answers ?? false}
+              onCheckedChange={(v) => patch("include_answers", v)}
+              disabled={cfg.format !== "pdf"}
+            />
+          </div>
+
           <Field label="Format">
             <div className="flex gap-2">
-              {(["pdf", "png", "svg"] as Format[]).map((f) => (
+              {FORMATS.map((f) => (
                 <Button
                   key={f}
                   type="button"
@@ -166,18 +177,17 @@ function KindSpecific({
           <Field label="Carrying">
             <Select
               value={cfg.carry ?? "any"}
-              onValueChange={(v) =>
-                patch("carry", v as NonNullable<typeof cfg.carry>)
-              }
+              onValueChange={(v) => patch("carry", v)}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="any">Any</SelectItem>
-                <SelectItem value="force">Force</SelectItem>
-                <SelectItem value="ripple">Ripple (multi-column)</SelectItem>
+                {CARRY_MODES.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {CARRY_MODE_LABELS[m]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -205,19 +215,17 @@ function KindSpecific({
           <Field label="Borrowing">
             <Select
               value={cfg.borrow ?? "any"}
-              onValueChange={(v) =>
-                patch("borrow", v as NonNullable<typeof cfg.borrow>)
-              }
+              onValueChange={(v) => patch("borrow", v)}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="no-across-zero">No across zero</SelectItem>
-                <SelectItem value="any">Any</SelectItem>
-                <SelectItem value="force">Force</SelectItem>
-                <SelectItem value="ripple">Ripple (multi-column)</SelectItem>
+                {BORROW_MODES.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {BORROW_MODE_LABELS[m]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>

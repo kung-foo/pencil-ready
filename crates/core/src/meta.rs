@@ -84,6 +84,7 @@ mod tests {
             locale: Locale::Us,
             pages: 1,
             solve_first: false,
+            include_answers: false,
         }
     }
 

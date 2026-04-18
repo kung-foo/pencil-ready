@@ -137,9 +137,24 @@ fn render_inner_with_pad(
         format!("[#{operator}]")
     };
 
+    // Flatten into a sequence of (problems, is_answer_key_page) tuples so we
+    // can render problem pages first and answer pages at the end — each page
+    // of problems gets a matching answer page.
+    let mut page_sequence: Vec<(&[Vec<u32>], bool)> =
+        pages.iter().map(|p| (*p, false)).collect();
+    if params.include_answers {
+        for page in &pages {
+            page_sequence.push((*page, true));
+        }
+    }
+
     // Render each page's problem list + a worksheet-grid + optional pagebreak.
     let mut page_blocks = String::new();
-    for (i, page) in pages.iter().enumerate() {
+    let total_page_count = page_sequence.len();
+    // Index of the first answer page (== problems.len() when include_answers
+    // is true; unused otherwise). Used to attach "Answer Key" outline entry.
+    let first_answer_idx = pages.len();
+    for (i, (page, is_answer_page)) in page_sequence.iter().enumerate() {
         let problem_lines: String = page
             .iter()
             .map(|nums| {
@@ -153,8 +168,30 @@ fn render_inner_with_pad(
             .collect::<Vec<_>>()
             .join(",\n  ");
 
+        // On answer-key pages we force every problem into solved-and-
+        // answer-only mode (i.e. just the numeric answer, no partial
+        // products or worked steps). The normal `solve-first` knob is
+        // respected only on problem pages.
+        let (effective_solve_first, all_solved_str, answer_only_str) = if *is_answer_page {
+            ("false", "true", "true")
+        } else {
+            (solve_first_str, "false", "false")
+        };
+
+        // PDF outline entries: when the document has both a problems section
+        // and an answer-key section, emit a heading at the top of each to
+        // produce sidebar bookmarks. The preamble's show-rule suppresses the
+        // visual rendering — only the PDF-outline entry remains.
+        let outline_heading = if params.include_answers && i == 0 {
+            "#heading(outlined: true, bookmarked: true, level: 1)[Problems]\n"
+        } else if *is_answer_page && i == first_answer_idx {
+            "#heading(outlined: true, bookmarked: true, level: 1)[Answer Key]\n"
+        } else {
+            ""
+        };
+
         page_blocks.push_str(&format!(
-            r#"#worksheet-header(debug: {debug_str})
+            r#"{outline_heading}#worksheet-header(debug: {debug_str})
 
 #worksheet-grid(
   (
@@ -166,7 +203,9 @@ fn render_inner_with_pad(
   debug: {debug_str},
   style: "{style}",
   answer-rows: {answer_rows},
-  solve-first: {solve_first_str},
+  solve-first: {effective_solve_first},
+  all-solved: {all_solved_str},
+  answer-only: {answer_only_str},
   implicit: {implicit_str},
   variable: "{variable}",
   pad-width: {pad_width},
@@ -175,7 +214,7 @@ fn render_inner_with_pad(
 #worksheet-footer(pencil-ready-content)
 "#
         ));
-        if i + 1 < pages.len() {
+        if i + 1 < total_page_count {
             page_blocks.push_str("\n#pagebreak()\n\n");
         }
     }
@@ -188,6 +227,11 @@ fn render_inner_with_pad(
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)
+
+// Headings exist only to populate the PDF outline (sidebar bookmarks)
+// when --include-answers is used. Suppress visible rendering here — the
+// worksheet-header already provides the on-page title area.
+#show heading: _ => []
 
 {page_blocks}"#
     ))

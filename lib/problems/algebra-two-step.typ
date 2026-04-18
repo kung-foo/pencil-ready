@@ -16,7 +16,7 @@
 
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-features, problem-line-height
 
-#let algebra-two-step-problem(numbers, operator, debug: false, solved: false, implicit: false, variable: "x") = {
+#let algebra-two-step-problem(numbers, operator, debug: false, solved: false, implicit: false, variable: "x", answer-only: false) = {
   let a = numbers.at(0)
   let b = numbers.at(1)
   let x-val = numbers.at(2)
@@ -86,7 +86,11 @@
   // explicit steps so the worked example teaches the procedure. Row 2
   // uses the bare form (no parens) — it's already isolated by `=`. When
   // unsolved, the student gets blank lines to write free-form work.
-  let row2-lhs = if solved { box(ax-bare) } else { [] }
+  // Answer-only mode: skip the intermediate (row 2) but keep the final
+  // answer (row 3). Row 2's "ax =" and intermediate are what students
+  // write as scratch work — an answer key doesn't need them.
+  let show-intermediate = solved and not answer-only
+  let row2-lhs = if show-intermediate { box(ax-bare) } else { [] }
   let row3-lhs = if solved { $#x-var$ } else { [] }
 
   // Reserve fixed horizontal space on the right of each `=` so solved and
@@ -94,7 +98,7 @@
   let slot-width = 2.6em
   let row1-right = $#c$  // always shown; c is part of the given equation
   let row2-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if solved { $#intermediate$ }
+    if show-intermediate { $#intermediate$ }
   }))
   let row3-right = box(width: slot-width, height: 1em, align(left + horizon, {
     if solved { $#x-val$ }
