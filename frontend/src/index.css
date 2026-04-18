@@ -4,54 +4,55 @@
 /* Fonts                                                                      */
 /* -------------------------------------------------------------------------- */
 /* Same typefaces the worksheets use — bundled so the UI feels like the same
-   document the student prints. Files live in public/fonts (copied from
-   ../fonts during setup).                                                    */
+   document the student prints. Served as WOFF2 (~60% smaller than the
+   source TTFs in fonts/). WOFF2 is universally supported in every browser
+   made since ~2016.                                                           */
 
 @font-face {
   font-family: "Roboto Slab";
-  src: url("/fonts/RobotoSlab-Light.ttf") format("truetype");
+  src: url("/fonts/RobotoSlab-Light.woff2") format("woff2");
   font-weight: 300;
   font-display: swap;
 }
 @font-face {
   font-family: "Roboto Slab";
-  src: url("/fonts/RobotoSlab-Regular.ttf") format("truetype");
+  src: url("/fonts/RobotoSlab-Regular.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "Roboto Slab";
-  src: url("/fonts/RobotoSlab-Medium.ttf") format("truetype");
+  src: url("/fonts/RobotoSlab-Medium.woff2") format("woff2");
   font-weight: 500;
   font-display: swap;
 }
 @font-face {
   font-family: "Roboto Slab";
-  src: url("/fonts/RobotoSlab-Bold.ttf") format("truetype");
+  src: url("/fonts/RobotoSlab-Bold.woff2") format("woff2");
   font-weight: 700;
   font-display: swap;
 }
 @font-face {
   font-family: "Fira Mono";
-  src: url("/fonts/FiraMono-Regular.ttf") format("truetype");
+  src: url("/fonts/FiraMono-Regular.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "Fira Code";
-  src: url("/fonts/FiraCode-Regular.ttf") format("truetype");
+  src: url("/fonts/FiraCode-Regular.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "STIX Two Text";
-  src: url("/fonts/STIXTwoText-VariableFont_wght.ttf") format("truetype-variations");
+  src: url("/fonts/STIXTwoText-VariableFont_wght.woff2") format("woff2");
   font-weight: 400 700;
   font-display: swap;
 }
 @font-face {
   font-family: "STIX Two Text";
-  src: url("/fonts/STIXTwoText-Italic-VariableFont_wght.ttf") format("truetype-variations");
+  src: url("/fonts/STIXTwoText-Italic-VariableFont_wght.woff2") format("woff2");
   font-weight: 400 700;
   font-style: italic;
   font-display: swap;
