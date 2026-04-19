@@ -216,11 +216,22 @@ fn render_inner_with_pad(
         }
     }
 
+    // PDF metadata — shows up in the reader's Document Properties panel
+    // and gets indexed when the file is ingested by content systems.
+    let doc_title = params.title();
+    let doc_kind = params.kind_slug();
     Ok(format!(
         r#"#import "/lib/header.typ": worksheet-header
 #import "/lib/layout.typ": worksheet-grid
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
+
+#set document(
+  title: "{doc_title}",
+  author: "Pencil Ready",
+  description: "Printable math worksheet — https://pencilready.com",
+  keywords: ("math", "worksheet", "{doc_kind}", "pencilready.com"),
+)
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)

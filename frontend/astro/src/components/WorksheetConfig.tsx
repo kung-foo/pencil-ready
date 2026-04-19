@@ -58,9 +58,9 @@ export function WorksheetConfigPanel({
 
   return (
     <Card className="w-full">
-      <CardHeader>
+      {/*<CardHeader>
         <CardTitle>Worksheet</CardTitle>
-      </CardHeader>
+      </CardHeader>*/}
       <CardContent className="space-y-4">
         <Field label="Type">
           <Select

@@ -305,6 +305,9 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --font-display: var(--font-display);
+
+  /* Brand accents — literal colors, not theme-dependent. */
+  --color-pencil-no-2: #fdb600;
 }
 
 @layer base {
@@ -318,10 +321,22 @@
     background-size: 24px 24px;
     background-position: 0 0;
   }
+  /* Headers render in Crimson Text SemiBold; body copy stays on
+     whatever --font-sans the theme sets (Roboto Slab by default).
+     Card titles from shadcn are <div>s — target them by data-slot so
+     they pick up the same treatment. */
   h1,
   h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  [data-slot="card-title"] {
+    font-family: "Crimson Text", Georgia, serif;
+    font-weight: 600;
+  }
   h3 {
-    font-family: var(--font-display);
+    font-size: 1.1em;
   }
 }
 

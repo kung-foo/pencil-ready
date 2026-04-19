@@ -34,6 +34,12 @@ impl WorksheetParams {
         }
         s
     }
+
+    /// Kind-only slug, no solved/seed suffixes — suitable for PDF
+    /// metadata keywords that shouldn't drift per generation.
+    pub fn kind_slug(&self) -> &'static str {
+        base_name(&self.worksheet, Form::Slug)
+    }
 }
 
 #[derive(Clone, Copy)]
