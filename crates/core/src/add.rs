@@ -39,14 +39,17 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
     };
 
     // In binary mode, `digits` is really a bit-count range per operand.
-    // Draw values in [0, 2^d − 1]; `radix` controls carry detection.
+    // Draw values in the full [0, 2^d − 1] range — unlike decimal, we
+    // don't force the top bit to be set. Requiring the high bit makes
+    // no-carry infeasible at any width (every pair would collide at
+    // that bit). The operand is displayed with pad-width zeros so a
+    // value of 0b0010 still reads as a 4-bit number on the page.
     let radix: u32 = if binary { 2 } else { 10 };
     let pick = |range: crate::DigitRange, rng: &mut SmallRng| -> u32 {
         if binary {
             let d = rng.gen_range(range.min..=range.max);
-            let lo = if d == 1 { 0 } else { 1u32 << (d - 1) };
             let hi = (1u32 << d) - 1;
-            rng.gen_range(lo..=hi)
+            rng.gen_range(0u32..=hi)
         } else {
             range.random(rng)
         }
@@ -72,6 +75,11 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
             problems.push(nums);
         }
     }
+
+    // Narrow problem spaces (e.g. 2-bit binary with carry=none) have
+    // fewer unique solutions than requested — allow duplicates rather
+    // than bailing with an empty worksheet.
+    crate::pad_with_duplicates(&mut problems, total as usize, &mut rng);
 
     // Compute the sum (in actual numeric space) and append as the answer.
     // For binary mode, operand and sum values are re-encoded as their

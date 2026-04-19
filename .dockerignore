@@ -1,9 +1,6 @@
 target
 output
 stories
-frontend/react/node_modules
-frontend/react/dist
-frontend/react/storybook-static
 frontend/astro/node_modules
 frontend/astro/dist
 frontend/astro/.astro

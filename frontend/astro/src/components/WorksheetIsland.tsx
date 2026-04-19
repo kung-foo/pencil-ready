@@ -50,8 +50,7 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
       return;
     }
     setCfg(next);
-    // Sync URL so the state is shareable and survives reload, matching
-    // the React SPA's URL-driven behavior.
+    // Sync URL so the state is shareable and survives reload.
     const qs = configToSearchParams(next).toString();
     const path = `/worksheets/${kind}/${qs ? `?${qs}` : ""}`;
     window.history.replaceState(null, "", path);

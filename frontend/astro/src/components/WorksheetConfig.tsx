@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { Shuffle } from "lucide-react";
+import {
   BORROW_MODES,
   BORROW_MODE_LABELS,
   CARRY_MODES,
@@ -77,17 +84,33 @@ export function WorksheetConfigPanel({
 
         <div className="pt-2 border-t space-y-4">
           <Field label="Seed">
-            <Input
-              type="number"
-              placeholder="random"
-              value={cfg.seed ?? ""}
-              onChange={(e) =>
-                patch(
-                  "seed",
-                  e.target.value === "" ? undefined : Number(e.target.value),
-                )
-              }
-            />
+            <InputGroup>
+              <InputGroupInput
+                type="number"
+                placeholder="random"
+                value={cfg.seed ?? ""}
+                onChange={(e) =>
+                  patch(
+                    "seed",
+                    e.target.value === "" ? undefined : Number(e.target.value),
+                  )
+                }
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  type="button"
+                  aria-label="Shuffle seed"
+                  title="Pick a new random seed"
+                  onClick={() =>
+                    // 6-digit seed: deterministic for sharing, short enough
+                    // to fit the filename slug without looking noisy.
+                    patch("seed", Math.floor(Math.random() * 1_000_000))
+                  }
+                >
+                  <Shuffle />
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
           </Field>
 
           <div className="flex items-center justify-between">
@@ -107,8 +130,15 @@ export function WorksheetConfigPanel({
             <Switch
               id="include_answers"
               checked={cfg.include_answers ?? false}
-              onCheckedChange={(v) => patch("include_answers", v)}
-              disabled={cfg.format !== "pdf"}
+              onCheckedChange={(v) => {
+                // Turning on the answer key forces PDF — PNG/SVG are
+                // single-image formats and can't carry a second page.
+                if (v && cfg.format !== "pdf") {
+                  onChange({ ...cfg, include_answers: true, format: "pdf" });
+                } else {
+                  patch("include_answers", v);
+                }
+              }}
             />
           </div>
 
@@ -120,6 +150,9 @@ export function WorksheetConfigPanel({
                   type="button"
                   variant={cfg.format === f ? "default" : "outline"}
                   size="sm"
+                  // PNG / SVG are single-image; grey them out when the
+                  // user has the answer-key toggle on.
+                  disabled={!!cfg.include_answers && f !== "pdf"}
                   onClick={() => patch("format", f)}
                   className="flex-1 uppercase"
                 >

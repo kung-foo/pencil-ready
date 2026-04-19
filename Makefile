@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve react-build astro-build server-release serve-react serve-astro
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve
 
 build:
 	cargo build
@@ -38,25 +38,15 @@ stories-check:
 stories-approve:
 	cargo run -p pencil-ready-stories -- approve
 
-# --- Frontend bundles ---
+# --- Frontend + prod-shaped local run ---
 
-react-build:
-	cd frontend/react && pnpm install --frozen-lockfile && pnpm build
-
-astro-build:
+frontend-build:
 	cd frontend/astro && pnpm install --frozen-lockfile && pnpm build
 
-# --- Prod-shaped local runs ---
-
-# Release binary only; built once and reused across the serve-* targets.
 server-release:
 	cargo build --release --bin pencil-ready-server
 
-# Build + serve the React SPA on :8080 against the live API.
-serve-react: react-build server-release
-	./target/release/pencil-ready-server --framework react --port 8080
-
-# Build + serve the Astro pre-rendered site on :8081. Run both targets
-# in separate terminals for side-by-side comparison.
-serve-astro: astro-build server-release
-	./target/release/pencil-ready-server --framework astro --port 8081
+# Build the Astro bundle, build the server in release mode, and run it
+# serving the bundle + API on :8080 — same shape the Docker image uses.
+serve: frontend-build server-release
+	./target/release/pencil-ready-server --port 8080

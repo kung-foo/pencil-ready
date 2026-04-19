@@ -59,6 +59,8 @@ fn generate_simple_problems(params: &WorksheetParams, max_quotient: u32) -> Vec<
         }
     }
 
+    crate::pad_with_duplicates(&mut problems, total as usize, &mut rng);
+
     // Append the quotient so the typst component can render the answer
     // in solved mode.
     problems
@@ -113,6 +115,8 @@ fn generate_long_problems(
             problems.push(candidate);
         }
     }
+
+    crate::pad_with_duplicates(&mut problems, total as usize, &mut rng);
 
     problems
 }

@@ -55,6 +55,8 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         }
     }
 
+    crate::pad_with_duplicates(&mut problems, total as usize, &mut rng);
+
     // Append the difference so the typst component can render the answer
     // in solved mode.
     problems

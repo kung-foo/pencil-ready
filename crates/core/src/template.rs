@@ -89,12 +89,9 @@ fn render_inner_with_pad(
     // Drills with num_problems=0 allow any count. Others must match exactly.
     if params.num_problems > 0 && problems.len() < expected {
         bail!(
-            "couldn't generate enough unique problems: asked for {expected} \
-             (num_problems={} × pages={}) but only got {}. \
-             Reduce --pages or widen the problem space.",
-            params.num_problems,
-            params.pages,
-            problems.len()
+            "no valid problems for the given constraints — the combination \
+             of digits / carry / borrow / mode rules out every candidate. \
+             Widen at least one parameter."
         );
     }
 

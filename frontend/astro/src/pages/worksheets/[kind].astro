@@ -3,6 +3,14 @@ import Layout from "../../layouts/Layout.astro";
 import { WORKSHEET_KINDS, type WorksheetKind } from "../../lib/api";
 import { WORKSHEET_INFO } from "../../lib/worksheet-info";
 import { WorksheetIsland } from "../../components/WorksheetIsland";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../../components/ui/breadcrumb";
 
 export function getStaticPaths() {
   return WORKSHEET_KINDS.map((kind) => ({ params: { kind } }));
@@ -25,13 +33,19 @@ const info = WORKSHEET_INFO[kind];
     breadcrumb is the one intentional difference — Astro gives each kind
     its own URL so a breadcrumb makes sense here.
   -->
-  <nav class="text-sm text-muted-foreground px-4 pt-4">
-    <a href="/" class="hover:text-primary underline underline-offset-2">
-      All worksheets
-    </a>
-    <span class="mx-1">/</span>
-    <span>{info.title}</span>
-  </nav>
+  <div class="px-4 pt-4">
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink href="/">All worksheets</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>{info.title}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  </div>
 
   <div class="flex flex-col gap-4 p-4 md:grid md:grid-cols-[minmax(0,1fr)_320px]">
     <WorksheetIsland client:only="react" kind={kind} />

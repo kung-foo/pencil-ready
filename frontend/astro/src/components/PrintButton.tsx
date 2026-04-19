@@ -2,19 +2,36 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorksheetState } from "@/lib/useWorksheet";
 
+// iOS/iPadOS (all browsers, since every browser on iOS uses WebKit) does
+// not honor iframe.contentWindow.print() — it either no-ops or falls
+// through to printing the whole page. Detect it and route those users
+// through the native PDF viewer in a new tab, where Share → Print works
+// correctly. Modern iPad reports "MacIntel" from platform; the
+// maxTouchPoints check disambiguates.
+function isIOS() {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 /**
- * Print the currently-loaded worksheet bytes (not the whole web page) by
- * mounting a hidden iframe pointed at the blob URL and calling
- * `contentWindow.print()`. The browser's print dialog then uses the PDF's
- * own page size (A4) for PDF output, or the image's dimensions for
- * PNG/SVG. No server round-trip — we reuse the blob the preview already
- * fetched.
+ * Print the currently-loaded worksheet bytes (not the whole web page). On
+ * desktop browsers a hidden iframe pointed at the blob URL handles it
+ * cleanly — the print dialog uses the PDF's native A4 page size. On iOS
+ * we instead pop the blob into a new tab; iOS's PDF viewer + share sheet
+ * is the user's only practical path to AirPrint.
  */
 export function PrintButton({ state }: { state: WorksheetState }) {
   const ready = state.status === "ready";
 
   const onPrint = () => {
     if (!ready) return;
+    if (isIOS()) {
+      window.open(state.blobUrl, "_blank");
+      return;
+    }
     const iframe = document.createElement("iframe");
     Object.assign(iframe.style, {
       position: "fixed",
@@ -26,8 +43,6 @@ export function PrintButton({ state }: { state: WorksheetState }) {
     });
     iframe.src = state.blobUrl;
     iframe.onload = () => {
-      // PDF viewers occasionally need a tick to finish setting up
-      // before print() is acceptable. One frame is enough in practice.
       requestAnimationFrame(() => {
         try {
           iframe.contentWindow?.focus();
@@ -38,9 +53,8 @@ export function PrintButton({ state }: { state: WorksheetState }) {
       });
     };
     document.body.appendChild(iframe);
-    // Clean up once the print dialog has had time to appear and close.
     // `afterprint` doesn't fire reliably for iframe print() in all
-    // browsers, so a generous timeout is the simplest correct answer.
+    // browsers; a generous timeout is the simplest correct cleanup.
     setTimeout(() => iframe.remove(), 60_000);
   };
 

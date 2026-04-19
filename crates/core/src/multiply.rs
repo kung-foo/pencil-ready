@@ -51,6 +51,8 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         }
     }
 
+    crate::pad_with_duplicates(&mut problems, total as usize, &mut rng);
+
     // Append the product so the typst component can render the final
     // answer in solved mode. (Partial products for multi-digit multipliers
     // aren't filled in — only the bottom line.)

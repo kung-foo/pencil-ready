@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
-/* @font-face declarations live in ./fonts.css so each consumer
-   (React SPA, Astro build) can ship them under its own URL prefix. */
+/* @font-face declarations live in ./fonts.css. */
 
 /* -------------------------------------------------------------------------- */
 /* Tailwind v4 theme bridge                                                   */
@@ -323,5 +322,34 @@
   h2,
   h3 {
     font-family: var(--font-display);
+  }
+}
+
+/* Safety net when the browser falls back to page-level printing
+   (desktop Cmd/Ctrl+P, iOS Share → Print). Hide every element that
+   isn't inside [data-print-area] so only the worksheet preview ends
+   up on paper. Our PrintButton goes through a hidden iframe on
+   desktop and doesn't trigger this path, but anyone hitting
+   Cmd/Ctrl+P directly on the page still gets a useful print output.
+   Uses the canonical visibility trick: visibility cascades, so the
+   ancestors stay invisible while the target subtree is visible. */
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  [data-print-area],
+  [data-print-area] * {
+    visibility: visible;
+  }
+  [data-print-area] {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
   }
 }

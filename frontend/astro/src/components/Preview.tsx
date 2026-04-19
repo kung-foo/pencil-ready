@@ -19,7 +19,11 @@ export function Preview({
       className="w-full h-full flex items-start justify-center"
       style={{ containerType: "size" }}
     >
+      {/* data-print-area flags this subtree as the only thing to print
+          when the browser falls back to page-level printing (iOS Share
+          → Print, desktop Cmd/Ctrl+P). CSS in index.css does the rest. */}
       <div
+        data-print-area
         className="bg-white rounded-sm ring-1 ring-black/5 shadow-[0_4px_16px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden"
         style={{
           // Width is the smaller of (container width) and the width an A4

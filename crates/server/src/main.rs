@@ -18,7 +18,7 @@ use axum::{
     http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use pencil_ready_core::{
     BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
     generate,
@@ -619,31 +619,17 @@ struct Cli {
     /// Listen port.
     #[arg(long, default_value_t = 8080, env = "PORT")]
     port: u16,
-    /// Which frontend to serve. Omit for API-only.
-    #[arg(long, value_enum)]
-    framework: Option<Framework>,
     /// Project root for typst imports (lib/, fonts/, assets/).
     #[arg(long, default_value = ".", env = "PENCIL_READY_ROOT")]
     root: PathBuf,
-    /// Override the static-content directory. Defaults to
-    /// `<root>/frontend/<framework>/dist` when `--framework` is set.
+    /// Static-content directory. If omitted, defaults to
+    /// `<root>/frontend/astro/dist`; the server runs API-only if that
+    /// path doesn't exist and `--static-dir` isn't overridden.
     #[arg(long, env = "PENCIL_READY_STATIC_DIR")]
     static_dir: Option<PathBuf>,
-}
-
-#[derive(Clone, Copy, ValueEnum)]
-enum Framework {
-    React,
-    Astro,
-}
-
-impl Framework {
-    fn dist_subpath(self) -> &'static str {
-        match self {
-            Framework::React => "frontend/react/dist",
-            Framework::Astro => "frontend/astro/dist",
-        }
-    }
+    /// Run API-only, without serving any static bundle.
+    #[arg(long)]
+    api_only: bool,
 }
 
 #[tokio::main]
@@ -656,12 +642,16 @@ async fn main() {
         .expect("canonicalize project root (set --root or cd to the repo)");
     let state = Arc::new(AppState { root: root.clone() });
 
-    // Resolve the static directory from the explicit flag, or derive it
-    // from --framework against the project root. Either can be absent
-    // and the server runs API-only.
-    let static_dir = cli
-        .static_dir
-        .or_else(|| cli.framework.map(|f| root.join(f.dist_subpath())));
+    // Resolve the static directory. Explicit flag wins; otherwise
+    // default to the Astro build alongside the repo. --api-only bypasses
+    // static serving entirely.
+    let static_dir = if cli.api_only {
+        None
+    } else {
+        cli.static_dir
+            .or_else(|| Some(root.join("frontend/astro/dist")))
+            .filter(|p| p.join("index.html").is_file())
+    };
 
     let compression = CompressionLayer::new().gzip(true).br(true);
 

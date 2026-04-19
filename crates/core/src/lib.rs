@@ -462,6 +462,27 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
     Ok(typ_source)
 }
 
+/// When a generator's unique-problem pool is smaller than `target`
+/// (narrow search spaces — `carry=none` + small binary operands, forced
+/// ripple in few digits, etc.), fill the remaining slots by randomly
+/// sampling from whatever was generated. Students get some repetition
+/// instead of the generator bailing with "not enough unique".
+pub(crate) fn pad_with_duplicates<T: Clone>(
+    problems: &mut Vec<T>,
+    target: usize,
+    rng: &mut rand::rngs::SmallRng,
+) {
+    use rand::Rng;
+    if problems.is_empty() || problems.len() >= target {
+        return;
+    }
+    let pool_len = problems.len();
+    while problems.len() < target {
+        let idx = rng.gen_range(0..pool_len);
+        problems.push(problems[idx].clone());
+    }
+}
+
 fn validate_digit_ranges(ranges: &[DigitRange]) -> Result<()> {
     if ranges.is_empty() {
         bail!("digits must have at least one value");
