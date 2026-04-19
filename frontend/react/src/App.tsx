@@ -11,6 +11,7 @@ import {
 import { AppFooter } from "@/components/AppFooter";
 import { DownloadButton } from "@/components/DownloadButton";
 import { Preview } from "@/components/Preview";
+import { PrintButton } from "@/components/PrintButton";
 // ThemeSwitcher hidden for now — keep the import/component for easy re-enable.
 // import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { WorksheetConfigPanel } from "@/components/WorksheetConfig";
@@ -102,6 +103,7 @@ function WorksheetPage() {
       <aside className="md:overflow-auto md:pr-1 space-y-3">
         <WorksheetConfigPanel cfg={cfg} onChange={onChange} />
         <DownloadButton state={state} />
+        <PrintButton state={state} />
       </aside>
       <main className="min-h-0 h-[85vh] md:h-auto">
         <Preview cfg={cfg} state={state} />

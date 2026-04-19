@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { navigate } from "astro:transitions/client";
 import { DownloadButton } from "@/components/DownloadButton";
 import { Preview } from "@/components/Preview";
+import { PrintButton } from "@/components/PrintButton";
 import { WorksheetConfigPanel } from "@/components/WorksheetConfig";
 import {
   configToSearchParams,
@@ -64,6 +65,7 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
       <div className="space-y-3">
         <WorksheetConfigPanel cfg={cfg} onChange={onChange} />
         <DownloadButton state={state} />
+        <PrintButton state={state} />
       </div>
       <div className="min-h-[80vh]">
         <Preview cfg={cfg} state={state} />
