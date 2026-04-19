@@ -84,6 +84,12 @@ struct SharedParams {
     /// Draw debug borders around problem boxes and grid cells.
     #[serde(default)]
     debug: Option<bool>,
+    /// Pre-fill the student name on the header in a handwriting font.
+    #[serde(default)]
+    student_name: Option<String>,
+    /// Pre-fill the teacher name on the header.
+    #[serde(default)]
+    teacher_name: Option<String>,
 }
 
 impl SharedParams {
@@ -106,6 +112,8 @@ impl SharedParams {
             pages: self.pages.unwrap_or(1),
             solve_first: self.solve_first.unwrap_or(false),
             include_answers: self.include_answers.unwrap_or(false),
+            student_name: self.student_name.filter(|s| !s.is_empty()),
+            teacher_name: self.teacher_name.filter(|s| !s.is_empty()),
         };
         (format, params)
     }

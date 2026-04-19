@@ -119,6 +119,12 @@ fn render_inner_with_pad(
     let cols = params.cols;
     let paper = &params.paper;
 
+    // Header student/teacher names: either `none` or a typst string literal.
+    // Escape backslashes and double quotes so arbitrary UTF-8 names drop
+    // straight into the generated .typ source.
+    let student_name_arg = header_name_arg(params.student_name.as_deref());
+    let teacher_name_arg = header_name_arg(params.teacher_name.as_deref());
+
     // Chunk problems across pages.
     let per_page = if params.num_problems > 0 {
         params.num_problems as usize
@@ -188,7 +194,7 @@ fn render_inner_with_pad(
         };
 
         page_blocks.push_str(&format!(
-            r#"{outline_heading}#worksheet-header(debug: {debug_str})
+            r#"{outline_heading}#worksheet-header(student-name: {student_name_arg}, teacher-name: {teacher_name_arg}, debug: {debug_str})
 
 #worksheet-grid(
   (
@@ -247,4 +253,14 @@ fn render_inner_with_pad(
 
 pub fn digit_count(n: u32) -> u32 {
     if n == 0 { 1 } else { n.ilog10() + 1 }
+}
+
+fn header_name_arg(name: Option<&str>) -> String {
+    match name {
+        Some(n) if !n.is_empty() => {
+            let escaped = n.replace('\\', "\\\\").replace('"', "\\\"");
+            format!("\"{escaped}\"")
+        }
+        _ => "none".to_string(),
+    }
 }

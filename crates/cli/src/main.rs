@@ -123,6 +123,15 @@ struct GlobalArgs {
     #[arg(long)]
     include_answers: bool,
 
+    /// Pre-fill the student name on the header in a handwriting font.
+    /// When set, the Name signature line is replaced with this text.
+    #[arg(long)]
+    student_name: Option<String>,
+
+    /// Pre-fill the teacher name on the header.
+    #[arg(long)]
+    teacher_name: Option<String>,
+
     #[arg(long, default_value = ".")]
     root: PathBuf,
 }
@@ -538,6 +547,8 @@ fn main() -> Result<()> {
         pages: global.pages,
         solve_first: global.solve_first,
         include_answers: global.include_answers,
+        student_name: global.student_name,
+        teacher_name: global.teacher_name,
     };
 
     let root = global
@@ -602,6 +613,8 @@ fn default_params_for(
         // `all` is a single-PDF sampler — don't duplicate pages with an
         // answer key.
         include_answers: false,
+        student_name: global.student_name.clone(),
+        teacher_name: global.teacher_name.clone(),
     }
 }
 

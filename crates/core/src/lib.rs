@@ -252,6 +252,11 @@ pub struct WorksheetParams {
     /// just the correct answer for each problem. Requires PDF output since
     /// multi-page layouts don't fit in PNG/SVG.
     pub include_answers: bool,
+    /// Pre-filled student name rendered on the Name line in a handwriting
+    /// font. `None` leaves the blank signature line.
+    pub student_name: Option<String>,
+    /// Pre-filled teacher name rendered on the Teacher line.
+    pub teacher_name: Option<String>,
 }
 
 impl WorksheetParams {
