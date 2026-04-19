@@ -47,9 +47,19 @@ const { title, description, canonical } = Astro.props;
        full-width flexible main. The per-page Astro file (e.g.
        worksheets/[kind].astro) owns its inner grid. -->
   <body class="min-h-screen flex flex-col">
-    <header class="border-b px-6 py-3">
-      <h1 class="text-lg font-semibold">Pencil Ready</h1>
-      <p class="text-xs text-muted-foreground">Worksheet configurator</p>
+    <header class="border-b px-6 py-3 flex items-center justify-between gap-4">
+      <a href="/" class="block">
+        <h1 class="text-lg font-semibold">Pencil Ready</h1>
+        <p class="text-xs text-muted-foreground">Worksheet configurator</p>
+      </a>
+      <nav class="text-sm">
+        <a
+          href="/about/"
+          class="text-muted-foreground hover:text-foreground transition-colors"
+        >
+          About
+        </a>
+      </nav>
     </header>
     <main class="flex-1">
       <slot />
