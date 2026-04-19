@@ -8,30 +8,59 @@
 
 ## Shared parameters
 
-All worksheet types accept these:
+All worksheet types accept these (CLI flag names shown; HTTP query
+params are identical except `problems` replaces `--problems` and
+`include_answers` uses an underscore).
 
-- `digits: list[u32]` — digit count per operand (1-5 each), comma-separated. Length determines the number of operands. (default: 2,2)
-  - `2,2` → two 2-digit operands (e.g. 34 + 57)
-  - `2,2,2` → three 2-digit operands (e.g. 21 + 34 + 45)
-  - `3,2` → 3-digit and 2-digit (e.g. 342 - 56)
-  - `3,1` → 3-digit and 1-digit (e.g. 456 × 7)
-- `num_problems: u32` — number of problems on the page (1-16, default: 12, must be divisible by cols)
-- `cols: u32` — columns in the grid (default: 4)
-- `font: string` — font name (default: "Cascadia Code")
-- `paper: string` — paper size, passed to typst (default: "a4", also: "us-letter", "a3", etc.)
-- `seed: u64?` — optional random seed for reproducible worksheets
-- `debug: bool` — show red borders on boxes, blue borders on grid cells
+- `digits: list[DigitRange]` — digit count per operand, comma-separated
+  (e.g. `2,2`, `3-5,2`). Length determines operand count. Default
+  varies per type.
+- `problems: u32` — number of problems on the page (1–16 for
+  non-drill; up to 40 for drills). Default 12 (or per-type).
+- `cols: u32` — columns in the grid. Default varies per type.
+- `pages: u32` — number of pages. Each page has `problems` unique
+  problems. `pages > 1` requires PDF output.
+- `paper: string` — paper size passed to typst. Default `a4`.
+- `seed: u64?` — optional random seed for reproducible output. Used
+  in the filename slug and the PDF-title when set.
+- `solve_first: bool` — render the first problem as a worked example
+  so the student can see the method. Each type defines its own idea
+  of "solved" (filled-in answer, partial products, x = N, etc.).
+- `include_answers: bool` — append an answer-key section after the
+  problem page(s). One answer page per problem page. PDF-only.
+  Answers are compact: just the final numeric answer, not the full
+  worked steps.
+- `locale: us | no` — regional symbol defaults for horizontal layouts.
+  US: `×` / `÷`; Norway: `·` / `:`.
+- `symbol: string?` — explicit operator override (typst expression,
+  e.g. `sym.colon`). Wins over `locale`.
+- `debug: bool` — draw red/blue debug borders on problem boxes and
+  grid cells.
 
 ## Addition
 
-Supports 2 or more operands via `--digits` (e.g. `--digits 2,2,2` for three addends).
+Supports 2 or more operands via `--digits` (e.g. `--digits 2,2,2` for
+three addends).
 
 - `carry: none | any | force | ripple` (default: any)
-  - **none** — no column sum reaches 10 (no carrying). Easiest.
+  - **none** — no column sum reaches the radix (no carrying). Easiest.
   - **any** — no constraint, random mix.
   - **force** — every problem has at least one carry.
-  - **ripple** — every problem has a carry that chains through 2+ consecutive columns. Hardest.
-  - Carry detection works correctly for 2 or 3+ operands (column sums can exceed 20 with 3 addends).
+  - **ripple** — every problem has a carry that chains through 2+
+    consecutive columns. Hardest.
+  - Carry detection works for 2 or 3+ operands (column sums can
+    exceed 20 with 3 addends).
+- `binary: bool` — render in base 2. The `digits` values are
+  reinterpreted as **bit counts** per operand, and the rendered
+  numbers appear in binary with leading-zero padding. Pair with
+  `--digits 4,4` or similar. Carry rules use radix 2. Operand range
+  is `[0, 2^d − 1]` — the high bit isn't forced, so `carry=none` is
+  feasible at any bit width.
+
+When the unique problem space is smaller than the requested count
+(e.g. 2-bit binary + `carry=none` has only 9 unique solutions),
+`pencil-ready-core` resamples from the valid set to fill the page —
+students get some repetition rather than a short worksheet.
 
 ## Subtraction
 
@@ -123,6 +152,33 @@ If `2 × 7` is in the problem set, `7 × 2` is excluded. This avoids testing the
 - Default columns: 2 (horizontal problems are wider)
 - Multiplicand range: 1-12
 - Multiplier range: 1-12
+
+## Division Drill
+
+The same facts as the multiplication drill, rendered in reverse so the
+student recalls the *quotient* given the product.
+
+```
+56 ÷ 7 = ___     24 ÷ 3 = ___
+```
+
+Uses the same horizontal layout and locale-sensitive symbol (÷ in US,
+`:` in Norway). Problems are enumerated from a times-table range
+(divisor × quotient = dividend) and rendered as `dividend ÷ divisor`.
+
+### Parameters
+
+- `divisor: list[range]` — which divisors to drill (default: `2-10`).
+- `max_quotient: range` — range of the quotient (default: `2-10`).
+- `count: u32` — number of problems (0 = all enumerated pairs).
+
+### Problem generation
+
+- Enumerate all `(divisor, quotient)` pairs in range; compute
+  `dividend = divisor × quotient`.
+- Division is *not* commutative, so no dedup step — `12 ÷ 3` and
+  `12 ÷ 4` are both meaningful.
+- Shuffle; take `count` or all.
 
 ## Fraction Multiplication
 

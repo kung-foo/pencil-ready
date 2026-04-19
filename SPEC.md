@@ -1,57 +1,95 @@
-# Math Worksheets
+# Pencil Ready — project spec
 
-I am teaching my daughter the basic in mathematics. She is currently in 5th grade in Norway. I've been using various sites to generate worksheets that I print out and have her do. I'm 47, and grew up learning math through repetition. So I want to continue that metheodology since "it worked for me". The current issue is that the site that I used up until now, has turning the advertising to 11, and now blocks any users that are using adbockers (which everyone should). So I want to start building a site that replicates what I used to use. But of course, we will make it better, faster, and free.
+Background: teaching my daughter 5th-grade math (Norway). I grew up on
+repetition-based practice and want the same surface for her. The
+ad-clogged worksheet sites aren't usable any more, especially with an
+ad blocker. This is the alternative — free, ad-free, crawlable,
+deterministic, deployed at [pencilready.com](https://pencilready.com).
 
-There are a few example PDFs and screen shots in ./examples
+## Architecture (current)
 
-Let's start with the basics and figure out what the architecture will be.
+### Worksheet generation: Typst
 
-* a React app?
-* the general idea is to generate an SVG and then render that to PDF?
+[Typst](https://typst.app/) is the typesetting engine for every
+worksheet. Sub-100ms compile, native binary, no VMs or browsers.
 
-Requirements:
-* pixel perfect PDF layout
-* currated fonts
+- `lib/*.typ` — reusable typst components (header, footer, grid
+  layout, per-style problem cells under `lib/problems/*.typ`)
+- `fonts/` — the curated font set (Roboto Slab, Fira Mono, Fira Code,
+  Fira Math, STIX Two Text, Crimson Text, Noto Color Emoji). The
+  server loads these directly and ignores system fonts for
+  deterministic output.
+- `assets/` — binary assets (`rainbow-heart.svg`) referenced from
+  typst via `image(...)`.
 
-Example options for a "multiply" page:
+### Workspace layout
 
-* select number of problems (affects layout)
-* number of digits on top
-* number of digits on bottom
-* print an answer sheet?
+Cargo workspace at the repo root with four crates under `crates/`:
 
+| Crate | Purpose |
+|---|---|
+| `pencil-ready-core` | Worksheet generators + typst template rendering |
+| `pencil-ready-cli`  | Command-line binary `pencil-ready` |
+| `pencil-ready-server` | Axum HTTP server, OpenAPI/Swagger |
+| `pencil-ready-stories` | Visual-regression harness |
 
-Questions:
-* should we start with just the SVG->PDF first and do some local python programing instead of the full react app?
+### Rust HTTP server
 
-## Architecture (settled)
+`pencil-ready-server` (axum) is the runtime backend.
 
-### Rendering: Typst
+- `GET /api/worksheets/{kind}?…` — one endpoint per worksheet type;
+  query params are typed per kind (utoipa `IntoParams`); response
+  body is raw PDF/PNG/SVG bytes with `Content-Type` and
+  `Content-Disposition: inline; filename=pencil-ready-<slug>.<ext>`.
+- `GET /openapi.json` — OpenAPI spec generated from the typed params.
+- `GET /docs` — embedded Swagger UI.
+- `--framework`-less static serving: when
+  `--static-dir <path>` (default `<root>/frontend/astro/dist`) points
+  at an existing `index.html`, the server mounts it with a 200-status
+  SPA fallback so deep links work; otherwise runs API-only.
+- CORS permissive on all routes (GET-only, no credentials).
+- Compression: `tower-http` gzip + brotli.
 
-We use [Typst](https://typst.app/) for document generation. Typst is a modern typesetting system (like LaTeX but faster and simpler) that compiles `.typ` source files to PDF, PNG, and SVG. Compilation is sub-100ms, native binary, no VMs or browsers involved.
+### Frontend: Astro
 
-* Typst library files in `lib/` define reusable components (header, footer, problem cell, grid layout)
-* A generated `.typ` file contains only the problem data and imports — all layout logic lives in the library
-* Fonts are bundled in `fonts/` (B612, B612 Mono, Noto Sans Math, Noto Color Emoji) — system fonts are ignored via `TYPST_IGNORE_SYSTEM_FONTS=true` for deterministic builds
-* Custom SVG assets (e.g. rainbow heart) can be inlined via `image()` in typst
+[Astro](https://astro.build/) at `frontend/astro/` — static per-route
+HTML + a single React island per worksheet page.
+
+- 11 pre-rendered pages at build time: landing, `/about`,
+  `/worksheets/<kind>/` for each kind. Each page's full content
+  (title, summary, prerequisites, learning goals) sits in the HTML
+  source — no JS required for indexability.
+- React island (`client:only="react"`) holds the configurator
+  (shadcn/ui: Select/Input/Switch/Button/Card/Breadcrumb/
+  InputGroup). Type-change navigations go through Astro's
+  `ClientRouter` so there's a smooth View-Transitions swap, not a
+  full reload.
+- Prefetching: `prefetch: { prefetchAll: true, defaultStrategy: "hover" }`.
+- Sitemap + robots.txt generated at build time via `@astrojs/sitemap`.
 
 ### Output formats
 
-Each worksheet is compiled to all three formats:
-* **PDF** — fonts embedded/subsetted, text selectable
-* **PNG** — rasterized at 300 PPI for print
-* **SVG** — glyphs converted to vector paths, fully self-contained
+Each worksheet compiles to PDF, PNG, or SVG.
 
-### Prototyping tool
+- **PDF** — fonts embedded/subsetted, text selectable, PDF outline
+  entries when `--include-answers` is set, `#set document(...)`
+  metadata (title, author "Pencil Ready", keywords, subject pointing
+  at https://pencilready.com).
+- **PNG** — rasterized at 300 PPI.
+- **SVG** — glyphs to vector paths, fully self-contained.
 
-`tools/gen.py` is a Python CLI that generates worksheets for development/testing. It takes params (operation, digit counts, problem count, etc.), produces a `.typ` file, and optionally compiles it.
+Multi-page output (`--pages > 1` or `--include-answers`) requires
+PDF. The server rejects the incompatible combinations with a
+readable error.
 
-### Target architecture
+### Deployment
 
-* **Rust binary** with typst embedded as a library (no shelling out)
-* **API server** (axum/actix) handles worksheet generation requests
-* **React frontend** for the user-facing UI
-* Flow: user picks options in React UI → POST to API → Rust generates typst source, compiles in-process → returns PDF/PNG/SVG
+- Dockerfile: `node:22-slim` frontend stage → `rust:1-slim-bookworm`
+  builder → `debian:bookworm-slim` runtime. Final image ~56 MB.
+- fly.io app `pencil-ready`, region `arn`, custom domain
+  `pencilready.com` + `www.pencilready.com` with auto-issued certs.
+- Single machine, `auto_stop_machines = "stop"` + `auto_start` so
+  idle traffic costs nothing.
 
 ## Layout rules
 
@@ -94,11 +132,19 @@ required.
 
 ### Fonts
 
-- **Digits**: `B612 Mono` (via `problem-font` in `shared.typ`) — monospaced so
-  columns align cleanly.
-- **Operator symbols**: `Noto Sans Math` (via `operator-font`) — better glyph
-  centering and coverage for math symbols (×, ÷, ·, :, etc.) than B612.
-- **Header/footer/labels**: `B612` (proportional) — cleaner for text.
+Constants live in `lib/problems/shared.typ`.
+
+- **Digits**: `Fira Code` (`problem-font`) — monospaced with the
+  plain-zero OpenType feature `cv11` enabled so column alignment is
+  unambiguous.
+- **Operator symbols**: `Fira Math` (`operator-font`) — coverage for
+  ×, ÷, ·, :, ± and proper math-spacing metrics.
+- **Body / header / footer**: `Roboto Slab` (`body-font`) — slab
+  serif that matches the printed-worksheet feel.
+- **Algebra variables**: `STIX Two Text` italic — classical LaTeX-
+  style variable italic, distinct from the sans digits.
+- **Web brand wordmark**: `Crimson Text SemiBold` — display face for
+  the "Pencil Ready" header only. Not embedded in PDFs.
 
 ### Locale
 
@@ -112,12 +158,29 @@ The explicit `--symbol` flag overrides locale for any worksheet.
 
 ## Visual regression
 
-See `stories/` and `crates/stories/`. Each story is a `.typ` snippet that
-renders a single component in isolation. Baselines are committed; diffs are
-computed as directional RGB images (red = removed, green = added pixels). A
-change to shared typst (font, tracking, sizes) automatically invalidates every
-baseline — which is the point.
+See `stories/` and `crates/stories/`. Each story is a `.typ` snippet
+that renders a single component in isolation. Baselines are committed
+as PNGs under `stories/baseline/`; diffs are computed as directional
+RGB images (red = removed, green = added pixels). A change to shared
+typst (font, tracking, sizes) automatically invalidates every baseline
+— which is the point.
+
+Make targets: `make stories-gen`, `stories-diff`, `stories-check`
+(regenerate + diff in one, non-zero exit on change), `stories-approve`
+(promote current to baseline).
+
+## Brand
+
+Logo, palette, and the pixel-pencil underline used on the web header
+are specced separately in [`pencilready-logo-spec.md`](./pencilready-logo-spec.md).
 
 ## TODO
 
-- **Problem box width**: currently computed as `max(2.2, digits * 0.55 + 0.6)` cm — magic numbers hand-tuned for Cascadia Code at 22pt. Needs to be derived from font metrics or made configurable when we support multiple font sizes. (Partially addressed: components now use `em`, so scaling works at the component level. The worksheet-level `box_width` formula in `template.rs` still uses `cm`.)
+- **Problem box width**: currently computed as
+  `max(2.2, digits * 0.55 + 0.6)` cm in `template.rs` — magic numbers
+  hand-tuned for the original Cascadia Code at 22pt. Per-cell
+  components use `em` correctly; the worksheet-level formula still
+  hard-codes `cm`. Worth deriving from measured font metrics the
+  next time we touch the template.
+- More worksheet types: decimal arithmetic, order of operations,
+  negative numbers, area/perimeter, unit conversion.
