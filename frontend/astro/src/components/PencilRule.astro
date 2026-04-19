@@ -1,0 +1,29 @@
+---
+/*
+ * Pixel-pencil divider. Stretches horizontally to fill its parent
+ * (preserveAspectRatio=none) — the yellow barrel absorbs all slack
+ * while the eraser, ferrule bands, and graphite tip stay proportional
+ * at the fixed 12-unit viewBox widths. Callers set height via utility
+ * classes (`h-0.5` for a 2px rule, `h-2` for the wordmark underline,
+ * etc.). See pencilready-logo-spec.md.
+ */
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<svg
+  preserveAspectRatio="none"
+  viewBox="0 0 288 12"
+  shape-rendering="crispEdges"
+  class:list={["w-full", className]}
+  aria-hidden="true"
+>
+  <rect x="0" y="0" width="12" height="12" fill="#E88E8A"></rect>
+  <rect x="12" y="0" width="6" height="12" fill="#3E8948"></rect>
+  <rect x="18" y="0" width="6" height="12" fill="#FDB600"></rect>
+  <rect x="24" y="0" width="6" height="12" fill="#3E8948"></rect>
+  <rect x="30" y="0" width="252" height="12" fill="#FDB600"></rect>
+  <rect x="282" y="0" width="6" height="12" fill="#1A1A1A"></rect>
+</svg>

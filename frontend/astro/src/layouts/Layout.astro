@@ -1,5 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
+import PencilRule from "../components/PencilRule.astro";
 import "../styles/global.css";
 
 interface Props {
@@ -80,26 +81,7 @@ const { title, description, canonical } = Astro.props;
                 <h1 class="text-[2.5em] leading-none relative z-10">
                     Pencil Ready
                 </h1>
-                <svg
-                    preserveAspectRatio="none"
-                    viewBox="0 0 288 12"
-                    shape-rendering="crispEdges"
-                    class="w-full h-2 -mt-2"
-                    aria-hidden="true"
-                >
-                    <rect x="0" y="0" width="12" height="12" fill="#E88E8A"
-                    ></rect>
-                    <rect x="12" y="0" width="6" height="12" fill="#3E8948"
-                    ></rect>
-                    <rect x="18" y="0" width="6" height="12" fill="#FDB600"
-                    ></rect>
-                    <rect x="24" y="0" width="6" height="12" fill="#3E8948"
-                    ></rect>
-                    <rect x="30" y="0" width="252" height="12" fill="#FDB600"
-                    ></rect>
-                    <rect x="282" y="0" width="6" height="12" fill="#1A1A1A"
-                    ></rect>
-                </svg>
+                <PencilRule class="h-2 -mt-2" />
             </a>
             <nav class="text-sm">
                 <a
@@ -113,18 +95,19 @@ const { title, description, canonical } = Astro.props;
         <main class="flex-1">
             <slot />
         </main>
-        <footer
-            class="border-t px-6 py-3 text-center text-xs text-muted-foreground"
-        >
-            <span class="font-semibold">Pencil Ready</span>
-            <span class="mx-2">—</span>
-            made with{" "}
-            <img
-                src="/rainbow-heart.svg"
-                alt="rainbow heart"
-                class="inline size-4 align-middle -mt-0.5"
-            />{" "}
-            in Oslo
+        <footer class="text-center text-xs text-muted-foreground">
+            <PencilRule class="h-0.5" />
+            <div class="px-6 py-3">
+                <span class="font-semibold">Pencil Ready</span>
+                <span class="mx-2">—</span>
+                made with{" "}
+                <img
+                    src="/rainbow-heart.svg"
+                    alt="rainbow heart"
+                    class="inline size-4 align-middle -mt-0.5"
+                />{" "}
+                in Oslo
+            </div>
         </footer>
     </body>
 </html>
