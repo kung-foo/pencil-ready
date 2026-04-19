@@ -188,8 +188,16 @@ function asEnum<T extends readonly string[]>(
     : undefined;
 }
 
-/** Build the API URL the server serves for a given config. */
-export function worksheetUrl(cfg: WorksheetConfig): string {
-  const qs = configToSearchParams(cfg).toString();
-  return `/api/worksheets/${cfg.kind}${qs ? `?${qs}` : ""}`;
+/** Build the API URL the server serves for a given config. Names are
+ * appended here (not in `configToSearchParams`) so they reach the server
+ * without polluting the shareable browser URL. */
+export function worksheetUrl(
+  cfg: WorksheetConfig,
+  names?: { student?: string; teacher?: string },
+): string {
+  const qs = configToSearchParams(cfg);
+  if (names?.student) qs.set("student_name", names.student);
+  if (names?.teacher) qs.set("teacher_name", names.teacher);
+  const s = qs.toString();
+  return `/api/worksheets/${cfg.kind}${s ? `?${s}` : ""}`;
 }

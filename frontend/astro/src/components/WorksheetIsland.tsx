@@ -11,6 +11,7 @@ import {
   type WorksheetConfig,
   type WorksheetKind,
 } from "@/lib/api";
+import { useNames } from "@/lib/useNames";
 import { useWorksheet } from "@/lib/useWorksheet";
 
 /**
@@ -36,7 +37,8 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
         : new URLSearchParams(window.location.search);
     return parseConfig(kind, search);
   });
-  const url = useMemo(() => worksheetUrl(cfg), [cfg]);
+  const [names, patchNames] = useNames();
+  const url = useMemo(() => worksheetUrl(cfg, names), [cfg, names]);
   const state = useWorksheet(url);
 
   const onChange = (next: WorksheetConfig) => {
@@ -62,7 +64,12 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
       data-theme="graph-paper"
     >
       <div className="space-y-3">
-        <WorksheetConfigPanel cfg={cfg} onChange={onChange} />
+        <WorksheetConfigPanel
+          cfg={cfg}
+          onChange={onChange}
+          names={names}
+          onNamesChange={patchNames}
+        />
         <DownloadButton state={state} />
         <PrintButton state={state} />
       </div>

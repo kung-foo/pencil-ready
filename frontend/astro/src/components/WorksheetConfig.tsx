@@ -1,3 +1,10 @@
+import { useEffect, useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,14 +34,19 @@ import {
   type WorksheetConfig,
   type WorksheetKind,
 } from "@/lib/api";
+import type { Names } from "@/lib/useNames";
 import { WORKSHEET_INFO } from "@/lib/worksheet-info";
 
 export function WorksheetConfigPanel({
   cfg,
   onChange,
+  names,
+  onNamesChange,
 }: {
   cfg: WorksheetConfig;
   onChange: (cfg: WorksheetConfig) => void;
+  names: Names;
+  onNamesChange: (patch: Partial<Names>) => void;
 }) {
   function patch<K extends keyof WorksheetConfig>(
     key: K,
@@ -142,6 +154,8 @@ export function WorksheetConfigPanel({
             />
           </div>
 
+          <PersonalizeSection names={names} onNamesChange={onNamesChange} />
+
           <Field label="Format">
             <div className="flex gap-2">
               {FORMATS.map((f) => (
@@ -167,6 +181,49 @@ export function WorksheetConfigPanel({
   );
 }
 
+function PersonalizeSection({
+  names,
+  onNamesChange,
+}: {
+  names: Names;
+  onNamesChange: (patch: Partial<Names>) => void;
+}) {
+  const summary = [names.student, names.teacher].filter(Boolean).join(" · ");
+
+  return (
+    <Accordion type="single" collapsible>
+      <AccordionItem value="personalize" className="border-b-0">
+        <AccordionTrigger className="py-2">
+          <span className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-2">
+            <span>Personalize</span>
+            {summary && (
+              <span className="truncate text-xs font-normal text-muted-foreground">
+                {summary}
+              </span>
+            )}
+          </span>
+        </AccordionTrigger>
+        <AccordionContent className="space-y-3">
+          <SubField label="Student name">
+            <DeferredNameInput
+              value={names.student ?? ""}
+              placeholder="e.g. Kira"
+              onCommit={(v) => onNamesChange({ student: v })}
+            />
+          </SubField>
+          <SubField label="Teacher name">
+            <DeferredNameInput
+              value={names.teacher ?? ""}
+              placeholder="e.g. Mr. Foo"
+              onCommit={(v) => onNamesChange({ teacher: v })}
+            />
+          </SubField>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
 function Field({
   label,
   children,
@@ -177,6 +234,60 @@ function Field({
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+/** Input that keeps its own draft while focused and only fires `onCommit`
+ * on blur — keeps keystrokes from hammering the worksheet API. Also
+ * commits on Enter so the preview refreshes without tabbing away. */
+function DeferredNameInput({
+  value,
+  placeholder,
+  onCommit,
+}: {
+  value: string;
+  placeholder?: string;
+  onCommit: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  // Sync when the source of truth changes externally (e.g. another input
+  // clears localStorage, or initial hydration lands after first render).
+  useEffect(() => setDraft(value), [value]);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed !== value) onCommit(trimmed);
+  };
+
+  return (
+    <Input
+      value={draft}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+    />
+  );
+}
+
+/** Smaller-label variant for nested "child" fields (e.g. inside an accordion). */
+function SubField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
       {children}
     </div>
   );
