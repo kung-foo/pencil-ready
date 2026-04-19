@@ -3,92 +3,96 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout
-  title="About — Pencil Ready"
-  description="Pencil Ready is a free, ad-free math worksheet generator for primary-school students. Configure a worksheet, download as PDF, print."
-  canonical="https://pencilready.com/about/"
+    title="About — Pencil Ready"
+    description="Pencil Ready is a free, ad-free math worksheet generator for primary-school students. Configure a worksheet, download as PDF, print."
+    canonical="https://pencilready.com/about/"
 >
-  <div class="p-4 md:p-8 max-w-2xl mx-auto">
-    <article
-      class="rounded-xl border bg-card text-card-foreground shadow p-6 md:p-10 space-y-8"
-    >
-    <header class="space-y-2">
-      <h1 class="text-3xl font-semibold">About Pencil Ready</h1>
-      <p class="text-muted-foreground text-lg">
-        Free, ad-free, printable math worksheets for 3rd–6th grade.
-      </p>
-    </header>
-
-    <section class="space-y-4">
-      <h2 class="text-xl font-semibold">Why this exists</h2>
-      <p>
-        Pencil Ready started as a tool for one 5th grader in Oslo. Her
-        dad — a software engineer — grew up learning math through
-        repetition and wanted the same practice surface for her. The
-        worksheet sites that used to do this job have since loaded
-        themselves down with ads and blocked anyone using an ad
-        blocker.
-      </p>
-      <p>
-        This is the alternative: a single page that generates a clean,
-        printable PDF on demand, with no ads, no tracking, no login,
-        and no usage limits. If it's useful for someone else's kid
-        too, that's the point.
-      </p>
-    </section>
-
-    <section class="space-y-4">
-      <h2 class="text-xl font-semibold">What's inside</h2>
-      <p>
-        Every worksheet is generated server-side by a Rust program
-        that hands a curated description to <a
-          href="https://typst.app"
-          class="underline underline-offset-2 hover:text-primary"
-          >Typst</a
-        >, a modern typesetting system. Typst does the heavy lifting
-        of laying out digits, operators, brackets, and fraction bars
-        at pixel-perfect print quality. The result is embedded,
-        subsetted fonts and vector geometry — same output whether you
-        print it on A4 in Oslo or US Letter in Indiana.
-      </p>
-      <p>
-        The UI you're using now is Astro with a small React island for
-        the interactive configurator. Each worksheet type has its own
-        URL that's pre-rendered to HTML at build time, so search
-        engines (and any browser with JavaScript turned off) can still
-        read the page.
-      </p>
-    </section>
-
-    <section class="space-y-4">
-      <h2 class="text-xl font-semibold">What's next</h2>
-      <p>
-        The worksheet catalog grows when a new topic comes up in the
-        curriculum. Things currently on the list: decimal arithmetic,
-        order of operations, negative numbers, area and perimeter,
-        unit conversion. If there's one you'd find useful, the
-        project's source lives on GitHub and you can file an issue
-        or open a pull request.
-      </p>
-    </section>
-
-    <section class="space-y-4">
-      <h2 class="text-xl font-semibold">Credits</h2>
-      <p>
-        Built with Rust, Typst, Astro, React, Tailwind, shadcn/ui,
-        and fly.io. Fonts: Roboto Slab (body), Fira Mono / Fira Code
-        (digits), Fira Math (operators), STIX Two Text (variables).
-        The rainbow heart is by my daughter.
-      </p>
-    </section>
-
-      <div class="pt-4 border-t">
-        <a
-          href="/"
-          class="inline-flex items-center gap-2 text-primary hover:underline underline-offset-4"
+    <div class="p-4 md:p-8 max-w-2xl mx-auto">
+        <article
+            class="rounded-xl border bg-card text-card-foreground shadow p-6 md:p-10 space-y-8"
         >
-          ← Back to worksheets
-        </a>
-      </div>
-    </article>
-  </div>
+            <header class="space-y-2">
+                <h1
+                    class="text-3xl font-semibold pb-0 border-b-2 border-pencil-no-2"
+                >
+                    About Pencil Ready
+                </h1>
+                <p class="text-muted-foreground text-lg">
+                    Free, printable math worksheets for 3rd–6th grade.
+                </p>
+            </header>
+
+            <section class="space-y-4">
+                <h2 class="text-xl font-semibold">Why this exists</h2>
+                <p>
+                    Pencil Ready started as a tool for one 5th grader in Oslo.
+                    Her dad — a software engineer — grew up learning math
+                    through repetition and wanted the same practice surface for
+                    her. The worksheet sites that used to do this job have since
+                    loaded themselves down with ads and blocked anyone using an
+                    ad blocker.
+                </p>
+                <p>
+                    This is the alternative: a single page that generates a
+                    clean, printable PDF on demand, with no ads, no tracking, no
+                    login, and no usage limits. If it's useful for someone
+                    else's kid too, that's the point.
+                </p>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-xl font-semibold">What's inside</h2>
+                <p>
+                    Every worksheet is generated server-side by a Rust program
+                    that hands a curated description to <a
+                        href="https://typst.app"
+                        class="underline underline-offset-2 hover:text-primary"
+                        >Typst</a
+                    >, a modern typesetting system. Typst does the heavy lifting
+                    of laying out digits, operators, brackets, and fraction bars
+                    at pixel-perfect print quality. The result is embedded,
+                    subsetted fonts and vector geometry — same output whether
+                    you print it on A4 in Oslo or US Letter in Indiana.
+                </p>
+                <p>
+                    The UI you're using now is Astro with a small React island
+                    for the interactive configurator. Each worksheet type has
+                    its own URL that's pre-rendered to HTML at build time, so
+                    search engines (and any browser with JavaScript turned off)
+                    can still read the page.
+                </p>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-xl font-semibold">What's next</h2>
+                <p>
+                    The worksheet catalog grows when a new topic comes up in the
+                    curriculum. Things currently on the list: decimal
+                    arithmetic, order of operations, negative numbers, area and
+                    perimeter, unit conversion. If there's one you'd find
+                    useful, the project's source lives on GitHub and you can
+                    file an issue or open a pull request.
+                </p>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-xl font-semibold">Credits</h2>
+                <p>
+                    Built with Rust, Typst, Astro, React, Tailwind, shadcn/ui,
+                    and fly.io. Fonts: Roboto Slab (body), Fira Mono / Fira Code
+                    (digits), Fira Math (operators), STIX Two Text (variables).
+                    The rainbow heart is by my daughter.
+                </p>
+            </section>
+
+            <div class="pt-4 border-t">
+                <a
+                    href="/"
+                    class="inline-flex items-center gap-2 text-primary hover:underline underline-offset-4"
+                >
+                    ← Back to worksheets
+                </a>
+            </div>
+        </article>
+    </div>
 </Layout>

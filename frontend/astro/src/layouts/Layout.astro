@@ -68,8 +68,38 @@ const { title, description, canonical } = Astro.props;
         <header
             class="border-b px-3 py-3 flex items-center justify-between gap-4"
         >
-            <a href="/" class="block leading-none">
-                <h1 class="text-[2.5em] leading-none">Pencil Ready</h1>
+            <!-- inline-flex column sizes the wrapper to the wordmark's
+                 natural width; the SVG inherits that width via
+                 items-stretch and stretches horizontally (yellow barrel
+                 absorbs the slack) because preserveAspectRatio is
+                 disabled. See pencilready-logo-spec.md. -->
+            <a
+                href="/"
+                class="inline-flex flex-col items-stretch leading-none isolate"
+            >
+                <h1 class="text-[2.5em] leading-none relative z-10">
+                    Pencil Ready
+                </h1>
+                <svg
+                    preserveAspectRatio="none"
+                    viewBox="0 0 288 12"
+                    shape-rendering="crispEdges"
+                    class="w-full h-2 -mt-2"
+                    aria-hidden="true"
+                >
+                    <rect x="0" y="0" width="12" height="12" fill="#E88E8A"
+                    ></rect>
+                    <rect x="12" y="0" width="6" height="12" fill="#3E8948"
+                    ></rect>
+                    <rect x="18" y="0" width="6" height="12" fill="#FDB600"
+                    ></rect>
+                    <rect x="24" y="0" width="6" height="12" fill="#3E8948"
+                    ></rect>
+                    <rect x="30" y="0" width="252" height="12" fill="#FDB600"
+                    ></rect>
+                    <rect x="282" y="0" width="6" height="12" fill="#1A1A1A"
+                    ></rect>
+                </svg>
             </a>
             <nav class="text-sm">
                 <a
