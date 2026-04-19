@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pencilready.com/sitemap-index.xml

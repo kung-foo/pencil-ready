@@ -1,19 +1,28 @@
 # syntax=docker/dockerfile:1.7
 
-# --- Frontend bundle stage ---
-# Builds the React SPA. Kept separate from the Rust build so the final
-# image pulls just the static bundle, not node_modules.
-FROM node:22-slim AS frontend
-WORKDIR /app/frontend
+# --- React SPA bundle stage ---
+FROM node:22-slim AS react
+WORKDIR /app/frontend/react
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Install deps first so the layer caches on pure code changes.
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY frontend/react/package.json frontend/react/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-COPY frontend/ ./
+COPY frontend/react/ ./
 RUN pnpm build
-# Result: /app/frontend/dist
+# Result: /app/frontend/react/dist
+
+# --- Astro bundle stage ---
+FROM node:22-slim AS astro
+WORKDIR /app/frontend/astro
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY frontend/astro/package.json frontend/astro/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY frontend/astro/ ./
+RUN pnpm build
+# Result: /app/frontend/astro/dist
 
 # --- Rust builder stage ---
 FROM rust:1-slim-bookworm AS builder
@@ -25,8 +34,6 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Build just the server binary. Cargo resolves the workspace from the root
-# manifest, so we need the full tree, not just the server crate.
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
@@ -41,16 +48,20 @@ RUN apt-get update \
 COPY --from=builder /usr/local/bin/pencil-ready-server /usr/local/bin/pencil-ready-server
 
 # Runtime assets: typst imports from /lib, loads bundled fonts, and reads
-# binary files (rainbow-heart.svg, etc.) from /assets. The server reads
-# these via PENCIL_READY_ROOT.
+# binary files (rainbow-heart.svg, etc.) from /assets. The server resolves
+# these relative to --root.
 WORKDIR /app
-COPY --from=builder  /app/lib           /app/lib
-COPY --from=builder  /app/fonts         /app/fonts
-COPY --from=builder  /app/assets        /app/assets
-COPY --from=frontend /app/frontend/dist /app/dist
+COPY --from=builder /app/lib    /app/lib
+COPY --from=builder /app/fonts  /app/fonts
+COPY --from=builder /app/assets /app/assets
 
-ENV PORT=8080
-ENV PENCIL_READY_ROOT=/app
-ENV PENCIL_READY_STATIC_DIR=/app/dist
+# Both frontends shipped; --framework at startup picks which one this
+# container serves. Running two replicas (one --framework react, one
+# --framework astro) lets both live side-by-side.
+COPY --from=react /app/frontend/react/dist /app/frontend/react/dist
+COPY --from=astro /app/frontend/astro/dist /app/frontend/astro/dist
+
 EXPOSE 8080
-CMD ["/usr/local/bin/pencil-ready-server"]
+# Default to Astro for now (pre-rendered per-type pages). Flip to
+# `--framework react` to serve the SPA instead.
+CMD ["/usr/local/bin/pencil-ready-server", "--framework", "astro", "--port", "8080"]

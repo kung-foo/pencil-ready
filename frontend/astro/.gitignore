@@ -1,0 +1,8 @@
+# Astro
+dist
+.astro
+node_modules
+
+# Tooling
+*.log
+tsconfig.tsbuildinfo

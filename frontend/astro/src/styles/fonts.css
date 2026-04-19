@@ -1,0 +1,48 @@
+/* @font-face declarations for the Astro build. WOFF2 only — universal
+   browser support since ~2016, ~60% smaller than the source TTFs.
+   Only the weights the UI renders: 400 (body), 500 (font-medium),
+   600 (font-semibold). */
+
+@font-face {
+  font-family: "Roboto Slab";
+  src: url("/fonts/RobotoSlab-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Roboto Slab";
+  src: url("/fonts/RobotoSlab-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Roboto Slab";
+  src: url("/fonts/RobotoSlab-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fira Mono";
+  src: url("/fonts/FiraMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fira Code";
+  src: url("/fonts/FiraCode-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "STIX Two Text";
+  src: url("/fonts/STIXTwoText-VariableFont_wght.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "STIX Two Text";
+  src: url("/fonts/STIXTwoText-Italic-VariableFont_wght.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}

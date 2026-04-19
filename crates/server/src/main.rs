@@ -18,12 +18,14 @@ use axum::{
     http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
+use clap::{Parser, ValueEnum};
 use pencil_ready_core::{
     BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
     generate,
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -611,15 +613,66 @@ async fn handle_algebra_two_step(
 )]
 struct ApiDoc;
 
+#[derive(Parser)]
+#[command(name = "pencil-ready-server", about = "Pencil Ready worksheet server")]
+struct Cli {
+    /// Listen port.
+    #[arg(long, default_value_t = 8080, env = "PORT")]
+    port: u16,
+    /// Which frontend to serve. Omit for API-only.
+    #[arg(long, value_enum)]
+    framework: Option<Framework>,
+    /// Project root for typst imports (lib/, fonts/, assets/).
+    #[arg(long, default_value = ".", env = "PENCIL_READY_ROOT")]
+    root: PathBuf,
+    /// Override the static-content directory. Defaults to
+    /// `<root>/frontend/<framework>/dist` when `--framework` is set.
+    #[arg(long, env = "PENCIL_READY_STATIC_DIR")]
+    static_dir: Option<PathBuf>,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Framework {
+    React,
+    Astro,
+}
+
+impl Framework {
+    fn dist_subpath(self) -> &'static str {
+        match self {
+            Framework::React => "frontend/react/dist",
+            Framework::Astro => "frontend/astro/dist",
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
-    let root = std::env::var("PENCIL_READY_ROOT").unwrap_or_else(|_| ".".into());
-    let root = PathBuf::from(root)
+    let cli = Cli::parse();
+
+    let root = cli
+        .root
         .canonicalize()
-        .expect("canonicalize project root (set PENCIL_READY_ROOT or cd to repo)");
-    let state = Arc::new(AppState { root });
+        .expect("canonicalize project root (set --root or cd to the repo)");
+    let state = Arc::new(AppState { root: root.clone() });
+
+    // Resolve the static directory from the explicit flag, or derive it
+    // from --framework against the project root. Either can be absent
+    // and the server runs API-only.
+    let static_dir = cli
+        .static_dir
+        .or_else(|| cli.framework.map(|f| root.join(f.dist_subpath())));
 
     let compression = CompressionLayer::new().gzip(true).br(true);
+
+    // Permissive CORS. Routes are all GET-only reads with no credentials,
+    // so the blast radius is the generated PDFs/PNGs/SVGs anyway. Enables
+    // the Astro dev server on :4321 (or any other frontend on a different
+    // origin) to fetch() worksheet bytes cleanly.
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     let (api_router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(handle_add))
@@ -640,21 +693,20 @@ async fn main() {
         .merge(SwaggerUi::new("/docs").url("/openapi.json", api))
         .merge(api_router);
 
-    // In production the SPA bundle lives at PENCIL_READY_STATIC_DIR (set by
-    // the Dockerfile). ServeDir handles real files; for anything it would
-    // return 404 for, a custom fallback serves index.html with HTTP 200 so
-    // React Router deep links (e.g. /worksheets/add) are treated as
-    // successful loads — not 404s. tower-http's ServeDir.not_found_service
-    // preserves the outer 404 status, which broke crawlers/caches.
-    app = match std::env::var("PENCIL_READY_STATIC_DIR") {
-        Ok(dir) => {
-            let dir = PathBuf::from(dir);
+    // One frontend per process. ServeDir handles real files; for anything
+    // it would return 404 for, a custom fallback serves index.html with
+    // HTTP 200 so client-side routing (React Router, Astro deep links)
+    // treats the response as a successful load. tower-http's
+    // ServeDir.not_found_service preserves the outer 404 status, which
+    // broke crawlers/caches.
+    app = match &static_dir {
+        Some(dir) => {
             let index_path = dir.join("index.html");
             let index_html = std::fs::read_to_string(&index_path)
-                .expect("index.html not readable from PENCIL_READY_STATIC_DIR");
+                .expect("index.html not readable from the configured static dir");
             let index_arc: Arc<str> = Arc::from(index_html);
-            println!("serving SPA from {}", dir.display());
-            app.fallback_service(ServeDir::new(&dir).fallback(
+            println!("serving frontend from {}", dir.display());
+            app.fallback_service(ServeDir::new(dir).fallback(
                 axum::routing::any(move || {
                     let html = index_arc.clone();
                     async move {
@@ -667,16 +719,15 @@ async fn main() {
                 }),
             ))
         }
-        Err(_) => {
+        None => {
             // No SPA bundle available — expose a cheap root for liveness.
             app.route("/", axum::routing::get(|| async { "hello world\n" }))
         }
     };
 
-    let app = app.layer(compression);
+    let app = app.layer(compression).layer(cors);
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".into());
-    let addr = format!("0.0.0.0:{port}");
+    let addr = format!("0.0.0.0:{}", cli.port);
     println!("listening on {addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

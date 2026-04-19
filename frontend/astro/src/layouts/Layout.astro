@@ -1,0 +1,76 @@
+---
+import { ClientRouter } from "astro:transitions";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  canonical?: string;
+}
+
+const { title, description, canonical } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-theme="graph-paper">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <link rel="icon" type="image/svg+xml" href="/rainbow-heart.svg" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap-index.xml" />
+    <!-- Critical font preloads. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/RobotoSlab-Regular.woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/RobotoSlab-SemiBold.woff2"
+      crossorigin
+    />
+    <!-- Client-side routing with a View Transitions swap. Doesn't touch
+         the generated per-route HTML — purely a progressive UX layer. -->
+    <ClientRouter />
+  </head>
+  <!-- Layout mirrors the React App shell: fixed-ish header + footer,
+       full-width flexible main. The per-page Astro file (e.g.
+       worksheets/[kind].astro) owns its inner grid. -->
+  <body class="min-h-screen flex flex-col">
+    <header class="border-b px-6 py-3">
+      <h1 class="text-lg font-semibold">Pencil Ready</h1>
+      <p class="text-xs text-muted-foreground">Worksheet configurator</p>
+    </header>
+    <main class="flex-1">
+      <slot />
+    </main>
+    <footer class="border-t px-6 py-3 text-center text-xs text-muted-foreground">
+      <span class="font-semibold">Pencil Ready</span>
+      <span class="mx-2">—</span>
+      made with{" "}
+      <img
+        src="/rainbow-heart.svg"
+        alt="rainbow heart"
+        class="inline size-4 align-middle -mt-0.5"
+      />{" "}
+      in Oslo
+      <span class="mx-2">—</span>
+      <a
+        href="https://pencilready.com"
+        class="hover:text-foreground hover:underline underline-offset-4"
+      >
+        pencilready.com
+      </a>
+    </footer>
+  </body>
+</html>

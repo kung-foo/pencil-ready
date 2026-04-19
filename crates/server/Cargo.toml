@@ -11,9 +11,10 @@ path = "src/main.rs"
 pencil-ready-core = { path = "../core" }
 anyhow.workspace = true
 axum.workspace = true
+clap.workspace = true
 tokio.workspace = true
 serde.workspace = true
-tower-http = { version = "0.6", features = ["compression-gzip", "compression-br", "fs"] }
+tower-http = { version = "0.6", features = ["compression-gzip", "compression-br", "fs", "cors"] }
 utoipa.workspace = true
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

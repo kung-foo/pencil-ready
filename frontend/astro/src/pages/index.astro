@@ -1,0 +1,44 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { WORKSHEET_KINDS } from "../lib/api";
+import { WORKSHEET_INFO } from "../lib/worksheet-info";
+---
+
+<Layout
+    title="Pencil Ready — printable math worksheets"
+    description="Free, printable math worksheets for 3rd–6th grade. Addition, subtraction, multiplication, long division, fractions, and two-step equations — configure the difficulty and download as PDF."
+    canonical="https://pencilready.com/"
+>
+    <div class="p-4 md:p-8 max-w-6xl mx-auto">
+        <h1 class="text-3xl font-semibold mb-2">Printable math worksheets</h1>
+        <p class="text-muted-foreground mb-8 max-w-2xl">
+            Choose a worksheet type below.
+        </p>
+
+        <!-- Responsive grid: single column on phones, two on tablets,
+         three on wide screens. Uses the same shadcn card tokens as the
+         per-type pages so the site feels cohesive. -->
+        <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {
+                WORKSHEET_KINDS.map((kind) => {
+                    const info = WORKSHEET_INFO[kind];
+                    return (
+                        <li>
+                            <a
+                                href={`/worksheets/${kind}/`}
+                                class="block h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
+                            >
+                                <div class="font-semibold mb-1">
+                                    {info.title}
+                                </div>
+                                <div class="text-sm text-muted-foreground">
+                                    {info.summary}
+                                </div>
+                            </a>
+                        </li>
+                    );
+                })
+            }
+        </ul>
+    </div>
+</Layout>

@@ -1,0 +1,81 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { WORKSHEET_KINDS, type WorksheetKind } from "../../lib/api";
+import { WORKSHEET_INFO } from "../../lib/worksheet-info";
+import { WorksheetIsland } from "../../components/WorksheetIsland";
+
+export function getStaticPaths() {
+  return WORKSHEET_KINDS.map((kind) => ({ params: { kind } }));
+}
+
+const { kind } = Astro.params as { kind: WorksheetKind };
+const info = WORKSHEET_INFO[kind];
+---
+
+<Layout
+  title={`${info.title} — Pencil Ready`}
+  description={info.summary}
+  canonical={`https://pencilready.com/worksheets/${kind}/`}
+>
+  <!--
+    Page layout mirrors the React WorksheetPage 1:1: the island covers the
+    first two grid tracks (config 320px + preview 1fr), and the help card
+    takes a 320px right track. `minmax(0,1fr)` on the middle track keeps
+    the preview A4 sizing from blowing out on very wide screens. The
+    breadcrumb is the one intentional difference — Astro gives each kind
+    its own URL so a breadcrumb makes sense here.
+  -->
+  <nav class="text-sm text-muted-foreground px-4 pt-4">
+    <a href="/" class="hover:text-primary underline underline-offset-2">
+      All worksheets
+    </a>
+    <span class="mx-1">/</span>
+    <span>{info.title}</span>
+  </nav>
+
+  <div class="flex flex-col gap-4 p-4 md:grid md:grid-cols-[minmax(0,1fr)_320px]">
+    <WorksheetIsland client:only="react" kind={kind} />
+
+    <aside>
+      <div class="rounded-xl border bg-card text-card-foreground shadow">
+        <div class="p-6 pb-0">
+          <h2 class="text-lg font-semibold">About this worksheet</h2>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-sm text-muted-foreground italic">{info.summary}</p>
+
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm font-semibold">
+              <span class="text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 7v14"/>
+                  <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+                </svg>
+              </span>
+              <span>Before you start</span>
+            </div>
+            <ul class="text-sm space-y-1.5 pl-6 list-disc marker:text-muted-foreground">
+              {info.prerequisites.map((p) => <li>{p}</li>)}
+            </ul>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm font-semibold">
+              <span class="text-muted-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/>
+                  <path d="M22 10v6"/>
+                  <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>
+                </svg>
+              </span>
+              <span>With mastery, the student learns</span>
+            </div>
+            <ul class="text-sm space-y-1.5 pl-6 list-disc marker:text-muted-foreground">
+              {info.learning.map((l) => <li>{l}</li>)}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</Layout>
