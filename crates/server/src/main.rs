@@ -8,14 +8,18 @@
 //! so the OpenAPI spec at /openapi.json stays in sync with the code.
 //! Swagger UI at /docs.
 
-use std::path::{Path, PathBuf};
+use std::io::IsTerminal;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::{Result, anyhow};
 use axum::{
-    extract::{Query, State},
+    body::Body,
+    extract::{Query, Request, State},
     http::{StatusCode, header},
+    middleware::{self, Next},
     response::{IntoResponse, Response},
 };
 use clap::Parser;
@@ -27,6 +31,9 @@ use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
+use tower_http::trace::TraceLayer;
+use tracing::{info, warn};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_swagger_ui::SwaggerUi;
@@ -38,6 +45,10 @@ use utoipa_swagger_ui::SwaggerUi;
 #[derive(Clone)]
 struct AppState {
     root: PathBuf,
+    /// Short region slug for the serving machine (e.g. `arn`, `sjc`).
+    /// Populated from `FLY_REGION` at boot; `None` for local dev. Both
+    /// the structured log and the PDF footer include it.
+    region: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -437,13 +448,41 @@ impl AlgebraTwoStepSpecific {
 // Rendering
 // ---------------------------------------------------------------------------
 
-fn render(root: &Path, built: Result<(OutputFormat, WorksheetParams)>) -> Response {
+fn render(
+    state: &AppState,
+    endpoint: &'static str,
+    built: Result<(OutputFormat, WorksheetParams)>,
+) -> Response {
     let (format, params) = match built {
         Ok(p) => p,
-        Err(e) => return (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response(),
+        Err(e) => {
+            warn!(endpoint, region = %region_display(&state.region), error = %e, "worksheet request rejected");
+            return (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response();
+        }
     };
-    match generate(&params, format, root) {
+
+    let start = Instant::now();
+    let result = generate(&params, format, &state.root);
+    let typst_ms = start.elapsed().as_millis() as u64;
+
+    match result {
         Ok(ws) => {
+            info!(
+                kind = params.kind_slug(),
+                format = format_slug(format),
+                region = %region_display(&state.region),
+                num_problems = params.num_problems,
+                cols = params.cols,
+                pages = params.pages,
+                paper = %params.paper,
+                seed = params.seed,
+                solve_first = params.solve_first,
+                include_answers = params.include_answers,
+                bytes = ws.bytes.len(),
+                typst_ms,
+                "worksheet rendered"
+            );
+
             let (ct, ext) = match format {
                 OutputFormat::Pdf => ("application/pdf", "pdf"),
                 OutputFormat::Png => ("image/png", "png"),
@@ -462,8 +501,30 @@ fn render(root: &Path, built: Result<(OutputFormat, WorksheetParams)>) -> Respon
             )
                 .into_response()
         }
-        Err(e) => (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response(),
+        Err(e) => {
+            warn!(
+                kind = params.kind_slug(),
+                format = format_slug(format),
+                region = %region_display(&state.region),
+                typst_ms,
+                error = %e,
+                "worksheet generation failed"
+            );
+            (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response()
+        }
     }
+}
+
+fn format_slug(f: OutputFormat) -> &'static str {
+    match f {
+        OutputFormat::Pdf => "pdf",
+        OutputFormat::Png => "png",
+        OutputFormat::Svg => "svg",
+    }
+}
+
+fn region_display(region: &Option<String>) -> &str {
+    region.as_deref().unwrap_or("local")
 }
 
 // ---------------------------------------------------------------------------
@@ -482,7 +543,7 @@ async fn handle_add(
     Query(shared): Query<SharedParams>,
     Query(p): Query<AddSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "add", p.build(shared))
 }
 
 #[utoipa::path(
@@ -497,7 +558,7 @@ async fn handle_subtract(
     Query(shared): Query<SharedParams>,
     Query(p): Query<SubtractSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "subtract", p.build(shared))
 }
 
 #[utoipa::path(
@@ -512,7 +573,7 @@ async fn handle_multiply(
     Query(shared): Query<SharedParams>,
     Query(p): Query<MultiplySpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "multiply", p.build(shared))
 }
 
 #[utoipa::path(
@@ -527,7 +588,7 @@ async fn handle_simple_divide(
     Query(shared): Query<SharedParams>,
     Query(p): Query<SimpleDivideSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "simple-divide", p.build(shared))
 }
 
 #[utoipa::path(
@@ -542,7 +603,7 @@ async fn handle_long_divide(
     Query(shared): Query<SharedParams>,
     Query(p): Query<LongDivideSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "long-divide", p.build(shared))
 }
 
 #[utoipa::path(
@@ -557,7 +618,7 @@ async fn handle_mult_drill(
     Query(shared): Query<SharedParams>,
     Query(p): Query<MultDrillSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "mult-drill", p.build(shared))
 }
 
 #[utoipa::path(
@@ -572,7 +633,7 @@ async fn handle_div_drill(
     Query(shared): Query<SharedParams>,
     Query(p): Query<DivDrillSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "div-drill", p.build(shared))
 }
 
 #[utoipa::path(
@@ -587,7 +648,7 @@ async fn handle_fraction_mult(
     Query(shared): Query<SharedParams>,
     Query(p): Query<FractionMultSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "fraction-mult", p.build(shared))
 }
 
 #[utoipa::path(
@@ -602,7 +663,51 @@ async fn handle_algebra_two_step(
     Query(shared): Query<SharedParams>,
     Query(p): Query<AlgebraTwoStepSpecific>,
 ) -> Response {
-    render(&s.root, p.build(shared))
+    render(&s, "algebra-two-step", p.build(shared))
+}
+
+/// Text substitution middleware: replaces `SERVER_REGION_PLACEHOLDER`
+/// inside `text/html` response bodies with a `(server:<region>)` tag (or
+/// an empty string for local dev). Layered *inside* compression so the
+/// body is still plaintext when we rewrite it.
+async fn region_rewrite(
+    State(s): State<Arc<AppState>>,
+    req: Request,
+    next: Next,
+) -> Response {
+    let response = next.run(req).await;
+
+    let is_html = response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|ct| ct.starts_with("text/html"));
+    if !is_html {
+        return response;
+    }
+
+    let (mut parts, body) = response.into_parts();
+    let bytes = match axum::body::to_bytes(body, usize::MAX).await {
+        Ok(b) => b,
+        Err(_) => return Response::from_parts(parts, Body::empty()),
+    };
+
+    let replacement = match s.region.as_deref() {
+        Some(r) => format!("(server:{r})"),
+        None => String::new(),
+    };
+
+    // Bail fast if the marker isn't present — most non-page HTML won't
+    // have it, and we save an allocation.
+    let haystack = match std::str::from_utf8(&bytes) {
+        Ok(s) if s.contains("SERVER_REGION_PLACEHOLDER") => s,
+        _ => return Response::from_parts(parts, Body::from(bytes)),
+    };
+    let rewritten = haystack.replace("SERVER_REGION_PLACEHOLDER", &replacement);
+    // Content-Length no longer matches; drop it so the transport layer
+    // re-computes or switches to chunked.
+    parts.headers.remove(header::CONTENT_LENGTH);
+    Response::from_parts(parts, Body::from(rewritten))
 }
 
 // ---------------------------------------------------------------------------
@@ -643,12 +748,19 @@ struct Cli {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    init_tracing();
 
     let root = cli
         .root
         .canonicalize()
         .expect("canonicalize project root (set --root or cd to the repo)");
-    let state = Arc::new(AppState { root: root.clone() });
+    // FLY_REGION is set on every Fly machine; absent locally.
+    let region = std::env::var("FLY_REGION").ok().filter(|s| !s.is_empty());
+    info!(region = %region_display(&region), "pencil-ready-server starting");
+    let state = Arc::new(AppState {
+        root: root.clone(),
+        region,
+    });
 
     // Resolve the static directory. Explicit flag wins; otherwise
     // default to the Astro build alongside the repo. --api-only bypasses
@@ -682,7 +794,7 @@ async fn main() {
         .routes(routes!(handle_div_drill))
         .routes(routes!(handle_fraction_mult))
         .routes(routes!(handle_algebra_two_step))
-        .with_state(state)
+        .with_state(state.clone())
         .split_for_parts();
 
     // SwaggerUi::url("/openapi.json", api) both serves the spec at that
@@ -723,10 +835,48 @@ async fn main() {
         }
     };
 
-    let app = app.layer(compression).layer(cors);
+    // Layer order (innermost → outermost):
+    //   1. region_rewrite — mutates text/html bodies before compression
+    //      sees them. Must be innermost so we operate on plaintext.
+    //   2. compression — gzips/brs the (possibly rewritten) body.
+    //   3. cors — adds headers.
+    //   4. TraceLayer — request spans wrap everything above.
+    let app = app
+        .layer(middleware::from_fn_with_state(state, region_rewrite))
+        .layer(compression)
+        .layer(cors)
+        .layer(TraceLayer::new_for_http());
 
     let addr = format!("0.0.0.0:{}", cli.port);
-    println!("listening on {addr}");
+    info!(port = cli.port, "pencil-ready-server listening");
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+/// Pretty output to a terminal, JSON when stderr is piped (Fly, systemd,
+/// containers). Override with `LOG_FORMAT=json|pretty`. Filter via
+/// `RUST_LOG=…` (defaults to info for this crate + warn for everything else).
+fn init_tracing() {
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new("warn,pencil_ready_server=info,tower_http=info")
+    });
+
+    let force = std::env::var("LOG_FORMAT").ok();
+    let json = match force.as_deref() {
+        Some("json") => true,
+        Some("pretty") => false,
+        _ => !std::io::stderr().is_terminal(),
+    };
+
+    if json {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(fmt::layer().json().flatten_event(true))
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(fmt::layer().with_target(false).compact())
+            .init();
+    }
 }

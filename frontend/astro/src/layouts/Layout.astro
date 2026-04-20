@@ -107,6 +107,13 @@ const { title, description, canonical } = Astro.props;
                     class="inline size-4 align-middle -mt-0.5"
                 />{" "}
                 in Oslo
+                {/* Rewritten at response time by the Rust server — see
+                    region_rewrite middleware. `pnpm dev` skips the Rust
+                    proxy, so guard on import.meta.env.DEV to keep the raw
+                    token out of dev-mode pages. */}
+                <span class="ml-1 text-muted-foreground/60">
+                    {import.meta.env.DEV ? "" : "SERVER_REGION_PLACEHOLDER"}
+                </span>
             </div>
         </footer>
     </body>

@@ -21,6 +21,8 @@ serde_json = "1"
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 utoipa = { version = "5", features = ["axum_extras"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Typst ecosystem — the compiler + export crates
 typst = "0.14"
