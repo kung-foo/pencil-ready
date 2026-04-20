@@ -15,7 +15,7 @@ use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
+    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, WorksheetParams, WorksheetType,
     compile_typst, generate, generate_typst_source,
 };
 
@@ -564,6 +564,8 @@ fn main() -> Result<()> {
         other => bail!("unknown format: {other} (choose: pdf, png, svg, all)"),
     };
 
+    let fonts = Fonts::load(&root).context("loading fonts from <root>/fonts")?;
+
     for format in &formats {
         let ext = match format {
             OutputFormat::Pdf => "pdf",
@@ -572,8 +574,8 @@ fn main() -> Result<()> {
         };
         let out_path = format!("{}.{}", global.output, ext);
 
-        let worksheet =
-            generate(&params, *format, &root).with_context(|| format!("generating {ext}"))?;
+        let worksheet = generate(&params, *format, &root, &fonts)
+            .with_context(|| format!("generating {ext}"))?;
 
         if let Some(parent) = std::path::Path::new(&out_path).parent() {
             std::fs::create_dir_all(parent)?;
@@ -749,8 +751,9 @@ fn run_all(global: GlobalArgs) -> Result<()> {
         .root
         .canonicalize()
         .context("could not resolve project root")?;
+    let fonts = Fonts::load(&root).context("loading fonts from <root>/fonts")?;
 
-    let bytes = compile_typst(&combined, OutputFormat::Pdf, &root)
+    let bytes = compile_typst(&combined, OutputFormat::Pdf, &root, &fonts)
         .context("compiling combined worksheet PDF")?;
 
     let out_path = format!("{}.pdf", global.output);

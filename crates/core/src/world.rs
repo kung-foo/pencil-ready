@@ -9,6 +9,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use typst::diag::{FileError, FileResult};
@@ -19,6 +20,29 @@ use typst::utils::LazyHash;
 use typst::{Library, LibraryExt};
 
 use crate::OutputFormat;
+
+/// Pre-loaded fonts, shared across all `MathWorld` instances in a process.
+///
+/// Loading ~20 fonts from disk takes tens of milliseconds and allocates
+/// tens of MB; doing it per request is expensive and — worse — doubles
+/// peak memory under concurrency. Load once at process start, clone the
+/// `Arc`s per compile.
+#[derive(Clone)]
+pub struct Fonts {
+    book: Arc<LazyHash<FontBook>>,
+    faces: Arc<[Font]>,
+}
+
+impl Fonts {
+    /// Scan `<root>/fonts/` and parse every `.ttf`/`.otf`. Call once.
+    pub fn load(root: &Path) -> Result<Self> {
+        let (book, faces) = load_fonts(root)?;
+        Ok(Self {
+            book: Arc::new(LazyHash::new(book)),
+            faces: faces.into(),
+        })
+    }
+}
 
 /// Our World implementation. Holds everything typst needs in memory.
 ///
@@ -36,17 +60,16 @@ struct MathWorld {
     files: HashMap<FileId, Bytes>,
     /// All source files (including imports from lib/).
     sources: HashMap<FileId, Source>,
-    /// Font metadata index — typst uses this to find fonts by name/style.
-    font_book: LazyHash<FontBook>,
-    /// The actual loaded fonts, indexed to match font_book entries.
-    fonts: Vec<Font>,
+    /// Shared, pre-loaded fonts — cheap to clone per world.
+    fonts: Fonts,
     /// The standard typst library (built-in functions).
     library: LazyHash<Library>,
 }
 
 impl MathWorld {
-    /// Build a new World from the generated .typ source and the project root.
-    fn new(typ_source: &str, root: &Path) -> Result<Self> {
+    /// Build a new World from the generated .typ source, the project
+    /// root (for `lib/*.typ` + `assets/*`), and pre-loaded fonts.
+    fn new(typ_source: &str, root: &Path, fonts: Fonts) -> Result<Self> {
         // Create the "main" source file with a virtual path.
         // Typst uses virtual paths (not real filesystem paths) internally.
         let main_id = FileId::new(None, VirtualPath::new("/main.typ"));
@@ -61,14 +84,10 @@ impl MathWorld {
         // Load assets (like rainbow-heart.svg) as raw bytes.
         load_binary_files(root, "assets", &mut files)?;
 
-        // Load fonts from fonts/ directory.
-        let (font_book, fonts) = load_fonts(root)?;
-
         Ok(Self {
             main_source,
             files,
             sources,
-            font_book: LazyHash::new(font_book),
             fonts,
             library: LazyHash::new(Library::default()),
         })
@@ -89,7 +108,7 @@ impl typst::World for MathWorld {
 
     /// Font metadata index — typst searches this to resolve font names.
     fn book(&self) -> &LazyHash<FontBook> {
-        &self.font_book
+        &self.fonts.book
     }
 
     /// Which file is the "main" entrypoint.
@@ -119,7 +138,7 @@ impl typst::World for MathWorld {
 
     /// Load a font by its index in the font book.
     fn font(&self, index: usize) -> Option<Font> {
-        self.fonts.get(index).cloned()
+        self.fonts.faces.get(index).cloned()
     }
 
     /// Current date — used by typst's `datetime.today()`.
@@ -250,15 +269,13 @@ fn visit_fonts(dir: &Path, book: &mut FontBook, fonts: &mut Vec<Font>) -> Result
 
 /// Compile a .typ source string and export to the requested format.
 /// This is the "inner" function that lib.rs's generate() calls.
-pub fn compile_and_export(typ_source: &str, format: OutputFormat, root: &Path) -> Result<Vec<u8>> {
-    // Typst memoizes compilation via the global `comemo` cache (shared
-    // across all `World`s in the process). Without periodic eviction the
-    // cache grows unbounded under load — on a 256 MB Fly machine that
-    // OOMs within minutes. Matches what the typst CLI does between
-    // compilations.
-    typst::comemo::evict(10);
-
-    let world = MathWorld::new(typ_source, root)?;
+pub fn compile_and_export(
+    typ_source: &str,
+    format: OutputFormat,
+    root: &Path,
+    fonts: &Fonts,
+) -> Result<Vec<u8>> {
+    let world = MathWorld::new(typ_source, root, fonts.clone())?;
 
     // typst::compile returns a Warned<SourceResult<Document>>.
     // .output is the SourceResult, which is Result<Document, EcoVec<Diagnostic>>.

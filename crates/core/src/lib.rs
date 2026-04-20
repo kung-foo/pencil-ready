@@ -16,6 +16,8 @@ mod subtract;
 mod template;
 mod world;
 
+pub use world::Fonts;
+
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -285,22 +287,31 @@ pub fn compile_typst(
     typ_source: &str,
     format: OutputFormat,
     root: &std::path::Path,
+    fonts: &Fonts,
 ) -> Result<Vec<u8>> {
-    world::compile_and_export(typ_source, format, root)
+    world::compile_and_export(typ_source, format, root, fonts)
 }
 
 pub fn generate(
     params: &WorksheetParams,
     format: OutputFormat,
     root: &std::path::Path,
+    fonts: &Fonts,
 ) -> Result<Worksheet> {
     if (params.pages > 1 || params.include_answers) && !matches!(format, OutputFormat::Pdf) {
         bail!(
             "pages > 1 or include_answers requires PDF output (PNG/SVG are single-image formats)"
         );
     }
+    // Typst memoizes compilation via the global `comemo` cache (shared
+    // across all `World`s in the process). Without periodic eviction the
+    // cache grows unbounded under load — on a 256 MB Fly machine that
+    // OOMs within minutes. Scoped here rather than inside `compile_typst`
+    // so callers measuring raw cache behavior (see examples/cache_growth)
+    // can render without side-effects.
+    typst::comemo::evict(10);
     let typ_source = generate_typst_source(params)?;
-    let bytes = world::compile_and_export(&typ_source, format, root)?;
+    let bytes = world::compile_and_export(&typ_source, format, root, fonts)?;
     Ok(Worksheet { bytes, format })
 }
 

@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
 use image::{GenericImageView, ImageBuffer, Rgba};
-use pencil_ready_core::{OutputFormat, compile_typst};
+use pencil_ready_core::{Fonts, OutputFormat, compile_typst};
 
 #[derive(Parser)]
 #[command(name = "stories", about = "Visual regression tool for Pencil Ready")]
@@ -73,10 +73,12 @@ fn cmd_generate(root: &Path) -> Result<()> {
     let out_dir = root.join("stories/current");
     std::fs::create_dir_all(&out_dir)?;
 
+    let fonts = Fonts::load(root).context("loading fonts from <root>/fonts")?;
+
     for (name, path) in &stories {
         let source = std::fs::read_to_string(path)
             .with_context(|| format!("reading {}", path.display()))?;
-        let bytes = compile_typst(&source, OutputFormat::Png, root)
+        let bytes = compile_typst(&source, OutputFormat::Png, root, &fonts)
             .with_context(|| format!("compiling {name}"))?;
         let out = out_dir.join(format!("{name}.png"));
         std::fs::write(&out, &bytes)?;

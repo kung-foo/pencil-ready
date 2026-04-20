@@ -24,7 +24,7 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Locale, OutputFormat, WorksheetParams, WorksheetType,
+    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, WorksheetParams, WorksheetType,
     generate,
 };
 use serde::Deserialize;
@@ -49,6 +49,9 @@ struct AppState {
     /// Populated from `FLY_REGION` at boot; `None` for local dev. Both
     /// the structured log and the PDF footer include it.
     region: Option<String>,
+    /// Fonts parsed once at startup. Shared (via `Arc`) with every
+    /// compile — avoids re-reading `fonts/` from disk per request.
+    fonts: Fonts,
 }
 
 // ---------------------------------------------------------------------------
@@ -462,7 +465,7 @@ fn render(
     };
 
     let start = Instant::now();
-    let result = generate(&params, format, &state.root);
+    let result = generate(&params, format, &state.root, &state.fonts);
     let typst_ms = start.elapsed().as_millis() as u64;
 
     match result {
@@ -756,10 +759,13 @@ async fn main() {
         .expect("canonicalize project root (set --root or cd to the repo)");
     // FLY_REGION is set on every Fly machine; absent locally.
     let region = std::env::var("FLY_REGION").ok().filter(|s| !s.is_empty());
+    // Parse all bundled fonts once; clone the Arcs per request.
+    let fonts = Fonts::load(&root).expect("load fonts from <root>/fonts");
     info!(region = %region_display(&region), "pencil-ready-server starting");
     let state = Arc::new(AppState {
         root: root.clone(),
         region,
+        fonts,
     });
 
     // Resolve the static directory. Explicit flag wins; otherwise
