@@ -30,12 +30,9 @@ import {
   CARRY_MODES,
   CARRY_MODE_LABELS,
   FORMATS,
-  WORKSHEET_KINDS,
   type WorksheetConfig,
-  type WorksheetKind,
 } from "@/lib/api";
 import type { Names } from "@/lib/useNames";
-import { WORKSHEET_INFO } from "@/lib/worksheet-info";
 
 export function WorksheetConfigPanel({
   cfg,
@@ -55,43 +52,12 @@ export function WorksheetConfigPanel({
     onChange({ ...cfg, [key]: value });
   }
 
-  function changeKind(kind: WorksheetKind) {
-    // Reset kind-specific fields when switching types; shared fields persist.
-    const { format, seed, solve_first, problems, cols } = cfg;
-    onChange({
-      kind,
-      format,
-      seed,
-      solve_first,
-      problems,
-      cols,
-    } as WorksheetConfig);
-  }
-
   return (
     <Card className="w-full">
       {/*<CardHeader>
         <CardTitle>Worksheet</CardTitle>
       </CardHeader>*/}
       <CardContent className="space-y-4">
-        <Field label="Type">
-          <Select
-            value={cfg.kind}
-            onValueChange={(v) => changeKind(v as WorksheetKind)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {WORKSHEET_KINDS.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {WORKSHEET_INFO[k].title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
         <KindSpecific cfg={cfg} onChange={onChange} />
 
         <div className="pt-2 border-t space-y-4">
