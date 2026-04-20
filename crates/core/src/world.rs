@@ -251,6 +251,13 @@ fn visit_fonts(dir: &Path, book: &mut FontBook, fonts: &mut Vec<Font>) -> Result
 /// Compile a .typ source string and export to the requested format.
 /// This is the "inner" function that lib.rs's generate() calls.
 pub fn compile_and_export(typ_source: &str, format: OutputFormat, root: &Path) -> Result<Vec<u8>> {
+    // Typst memoizes compilation via the global `comemo` cache (shared
+    // across all `World`s in the process). Without periodic eviction the
+    // cache grows unbounded under load — on a 256 MB Fly machine that
+    // OOMs within minutes. Matches what the typst CLI does between
+    // compilations.
+    typst::comemo::evict(10);
+
     let world = MathWorld::new(typ_source, root)?;
 
     // typst::compile returns a Warned<SourceResult<Document>>.
