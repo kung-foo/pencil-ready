@@ -18,7 +18,7 @@ use anyhow::{Result, anyhow};
 use axum::{
     body::Body,
     extract::{Query, Request, State},
-    http::{StatusCode, header},
+    http::{HeaderMap, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
 };
@@ -31,8 +31,8 @@ use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
-use tower_http::trace::TraceLayer;
-use tracing::{info, warn};
+use tower_http::trace::{DefaultOnResponse, TraceLayer};
+use tracing::{Level, info, info_span, warn};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -455,11 +455,22 @@ fn render(
     state: &AppState,
     endpoint: &'static str,
     built: Result<(OutputFormat, WorksheetParams)>,
+    headers: &HeaderMap,
 ) -> Response {
+    let ip = client_ip(headers);
+    let ua = user_agent(headers);
+
     let (format, params) = match built {
         Ok(p) => p,
         Err(e) => {
-            warn!(endpoint, region = %region_display(&state.region), error = %e, "worksheet request rejected");
+            warn!(
+                endpoint,
+                region = %region_display(&state.region),
+                ip = %ip,
+                ua = %ua,
+                error = %e,
+                "worksheet request rejected"
+            );
             return (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response();
         }
     };
@@ -483,6 +494,8 @@ fn render(
                 include_answers = params.include_answers,
                 bytes = ws.bytes.len(),
                 typst_ms,
+                ip = %ip,
+                ua = %ua,
                 "worksheet rendered"
             );
 
@@ -510,12 +523,37 @@ fn render(
                 format = format_slug(format),
                 region = %region_display(&state.region),
                 typst_ms,
+                ip = %ip,
+                ua = %ua,
                 error = %e,
                 "worksheet generation failed"
             );
             (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response()
         }
     }
+}
+
+/// Resolve the real client IP. Behind Fly's edge proxy, `Fly-Client-IP`
+/// is the canonical source; `X-Forwarded-For` is a fallback for generic
+/// reverse proxies; otherwise we don't know.
+fn client_ip(headers: &HeaderMap) -> String {
+    if let Some(v) = headers.get("fly-client-ip").and_then(|v| v.to_str().ok()) {
+        return v.to_string();
+    }
+    if let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
+        if let Some(first) = xff.split(',').next() {
+            return first.trim().to_string();
+        }
+    }
+    "-".to_string()
+}
+
+fn user_agent(headers: &HeaderMap) -> String {
+    headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("-")
+        .to_string()
 }
 
 fn format_slug(f: OutputFormat) -> &'static str {
@@ -545,8 +583,9 @@ async fn handle_add(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<AddSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "add", p.build(shared))
+    render(&s, "add", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -560,8 +599,9 @@ async fn handle_subtract(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<SubtractSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "subtract", p.build(shared))
+    render(&s, "subtract", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -575,8 +615,9 @@ async fn handle_multiply(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<MultiplySpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "multiply", p.build(shared))
+    render(&s, "multiply", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -590,8 +631,9 @@ async fn handle_simple_divide(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<SimpleDivideSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "simple-divide", p.build(shared))
+    render(&s, "simple-divide", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -605,8 +647,9 @@ async fn handle_long_divide(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<LongDivideSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "long-divide", p.build(shared))
+    render(&s, "long-divide", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -620,8 +663,9 @@ async fn handle_mult_drill(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<MultDrillSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "mult-drill", p.build(shared))
+    render(&s, "mult-drill", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -635,8 +679,9 @@ async fn handle_div_drill(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<DivDrillSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "div-drill", p.build(shared))
+    render(&s, "div-drill", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -650,8 +695,9 @@ async fn handle_fraction_mult(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<FractionMultSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "fraction-mult", p.build(shared))
+    render(&s, "fraction-mult", p.build(shared), &headers)
 }
 
 #[utoipa::path(
@@ -665,8 +711,9 @@ async fn handle_algebra_two_step(
     State(s): State<Arc<AppState>>,
     Query(shared): Query<SharedParams>,
     Query(p): Query<AlgebraTwoStepSpecific>,
+    headers: HeaderMap,
 ) -> Response {
-    render(&s, "algebra-two-step", p.build(shared))
+    render(&s, "algebra-two-step", p.build(shared), &headers)
 }
 
 /// Text substitution middleware: replaces `SERVER_REGION_PLACEHOLDER`
@@ -846,12 +893,25 @@ async fn main() {
     //      sees them. Must be innermost so we operate on plaintext.
     //   2. compression — gzips/brs the (possibly rewritten) body.
     //   3. cors — adds headers.
-    //   4. TraceLayer — request spans wrap everything above.
+    //   4. TraceLayer — request spans wrap everything above. One INFO
+    //      line per response with method/uri/ip/ua/status/latency.
+    let trace_layer = TraceLayer::new_for_http()
+        .make_span_with(|req: &Request<Body>| {
+            info_span!(
+                "http",
+                method = %req.method(),
+                uri = %req.uri(),
+                ip = %client_ip(req.headers()),
+                ua = %user_agent(req.headers()),
+            )
+        })
+        .on_response(DefaultOnResponse::new().level(Level::INFO));
+
     let app = app
         .layer(middleware::from_fn_with_state(state, region_rewrite))
         .layer(compression)
         .layer(cors)
-        .layer(TraceLayer::new_for_http());
+        .layer(trace_layer);
 
     let addr = format!("0.0.0.0:{}", cli.port);
     info!(port = cli.port, "pencil-ready-server listening");
