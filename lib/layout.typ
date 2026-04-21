@@ -32,7 +32,7 @@
   let num-problems = problems.len()
   // Ceiling division: handles partial last rows (e.g. 10 problems, 3 cols = 4 rows).
   let num-rows = calc.quo(num-problems + num-cols - 1, num-cols)
-  let header-height = 2.5cm
+  let header-height = 1.5cm
   let footer-height = 0.8cm
   let content-area = 98% - header-height - footer-height
   let debug-box = if debug { 1pt + red } else { none }
