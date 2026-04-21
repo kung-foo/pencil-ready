@@ -856,31 +856,35 @@ async fn main() {
         .merge(SwaggerUi::new("/docs").url("/openapi.json", api))
         .merge(api_router);
 
-    // One frontend per process. ServeDir handles real files; for anything
-    // it would return 404 for, a custom fallback serves index.html with
-    // HTTP 200 so client-side routing (React Router, Astro deep links)
-    // treats the response as a successful load. tower-http's
-    // ServeDir.not_found_service preserves the outer 404 status, which
-    // broke crawlers/caches.
+    // One frontend per process. Astro's static build emits a real file
+    // per route (`/worksheets/add/index.html`, etc.), so ServeDir
+    // resolves deep links directly — no SPA-style rewrite-to-index
+    // fallback needed. For anything Astro didn't generate (typos, scan
+    // traffic hitting `/wp-login.php`, etc.) we return the pre-rendered
+    // `404.html` with a real 404 status.
     app = match &static_dir {
         Some(dir) => {
-            let index_path = dir.join("index.html");
-            let index_html = std::fs::read_to_string(&index_path)
-                .expect("index.html not readable from the configured static dir");
-            let index_arc: Arc<str> = Arc::from(index_html);
             println!("serving frontend from {}", dir.display());
-            app.fallback_service(ServeDir::new(dir).fallback(
-                axum::routing::any(move || {
-                    let html = index_arc.clone();
-                    async move {
-                        (
-                            StatusCode::OK,
-                            [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
-                            html.as_ref().to_owned(),
-                        )
-                    }
-                }),
-            ))
+            let not_found_html = std::fs::read_to_string(dir.join("404.html")).ok();
+            let serve_dir = match not_found_html {
+                Some(html) => {
+                    let html: Arc<str> = Arc::from(html);
+                    ServeDir::new(dir).fallback(axum::routing::any(move || {
+                        let html = html.clone();
+                        async move {
+                            (
+                                StatusCode::NOT_FOUND,
+                                [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+                                html.as_ref().to_owned(),
+                            )
+                        }
+                    }))
+                }
+                None => ServeDir::new(dir).fallback(axum::routing::any(|| async {
+                    (StatusCode::NOT_FOUND, "not found\n")
+                })),
+            };
+            app.fallback_service(serve_dir)
         }
         None => {
             // No SPA bundle available — expose a cheap root for liveness.
