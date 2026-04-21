@@ -193,11 +193,10 @@ function asEnum<T extends readonly string[]>(
  * without polluting the shareable browser URL. */
 export function worksheetUrl(
   cfg: WorksheetConfig,
-  names?: { student?: string; teacher?: string },
+  names?: { student?: string },
 ): string {
   const qs = configToSearchParams(cfg);
   if (names?.student) qs.set("student_name", names.student);
-  if (names?.teacher) qs.set("teacher_name", names.teacher);
   const s = qs.toString();
   return `/api/worksheets/${cfg.kind}${s ? `?${s}` : ""}`;
 }

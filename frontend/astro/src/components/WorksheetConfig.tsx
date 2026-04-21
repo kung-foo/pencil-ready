@@ -154,7 +154,7 @@ function PersonalizeSection({
   names: Names;
   onNamesChange: (patch: Partial<Names>) => void;
 }) {
-  const summary = [names.student, names.teacher].filter(Boolean).join(" · ");
+  const summary = names.student ?? "";
 
   return (
     <Accordion type="single" collapsible>
@@ -175,13 +175,6 @@ function PersonalizeSection({
               value={names.student ?? ""}
               placeholder="e.g. Kira"
               onCommit={(v) => onNamesChange({ student: v })}
-            />
-          </SubField>
-          <SubField label="Teacher name">
-            <DeferredNameInput
-              value={names.teacher ?? ""}
-              placeholder="e.g. Mr. Foo"
-              onCommit={(v) => onNamesChange({ teacher: v })}
             />
           </SubField>
         </AccordionContent>

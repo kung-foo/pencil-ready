@@ -193,7 +193,6 @@ mod tests {
             solve_first: false,
             include_answers: false,
             student_name: None,
-            teacher_name: None,
         }
     }
 }

@@ -128,10 +128,6 @@ struct GlobalArgs {
     #[arg(long)]
     student_name: Option<String>,
 
-    /// Pre-fill the teacher name on the header.
-    #[arg(long)]
-    teacher_name: Option<String>,
-
     #[arg(long, default_value = ".")]
     root: PathBuf,
 }
@@ -548,7 +544,6 @@ fn main() -> Result<()> {
         solve_first: global.solve_first,
         include_answers: global.include_answers,
         student_name: global.student_name,
-        teacher_name: global.teacher_name,
     };
 
     let root = global
@@ -616,7 +611,6 @@ fn default_params_for(
         // answer key.
         include_answers: false,
         student_name: global.student_name.clone(),
-        teacher_name: global.teacher_name.clone(),
     }
 }
 

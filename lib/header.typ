@@ -20,7 +20,7 @@
       }))
 }
 
-#let worksheet-header(student-name: none, teacher-name: none, debug: false) = {
+#let worksheet-header(student-name: none, debug: false) = {
   let debug-box = if debug { 1pt + red } else { none }
 
   let name-field = if student-name != none {
@@ -29,21 +29,13 @@
     line(length: 10cm, stroke: 0.5pt)
   }
 
-  let teacher-field = if teacher-name != none {
-    handwritten-field(teacher-name, 10cm)
-  } else {
-    line(length: 10cm, stroke: 0.5pt)
-  }
-
-  box(height: 2.5cm, width: 100%, stroke: debug-box, {
+  box(height: 1.5cm, width: 100%, stroke: debug-box, {
     set text(size: 12pt)
     grid(
       columns: (auto, 1fr, auto, auto),
       column-gutter: 0.3cm,
-      row-gutter: 0.5cm,
       align: bottom,
       [*Name*:], name-field, [*Date*:], line(length: 4cm, stroke: 0.5pt),
-      [*Teacher*:], teacher-field, [], [],
     )
     v(0.3cm)
     line(length: 100%, stroke: 1.5pt)

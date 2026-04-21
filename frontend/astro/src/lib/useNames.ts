@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export type Names = { student?: string; teacher?: string };
+export type Names = { student?: string };
 
 const KEY = "pr.names";
 
