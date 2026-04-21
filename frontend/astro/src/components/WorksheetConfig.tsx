@@ -173,7 +173,7 @@ function PersonalizeSection({
           <SubField label="Student name">
             <DeferredNameInput
               value={names.student ?? ""}
-              placeholder="e.g. Kira"
+              placeholder="e.g. Math Hippo"
               onCommit={(v) => onNamesChange({ student: v })}
             />
           </SubField>

@@ -13,7 +13,7 @@ A pixelated horizontal #2 pencil, in two primary uses:
 |---------------|-----------|------------------------------------------------|
 | Eraser pink   | `#E88E8A` | Dusty coral, Ticonderoga-like                  |
 | Ferrule green | `#3E8948` | Forest green                                   |
-| Barrel yellow | `#FDB600` | "Chinese yellow" — canonical #2 pencil shade   |
+| Barrel yellow | `#FDB600` | Goldenrod — canonical #2 pencil shade          |
 | Graphite      | `#1A1A1A` | Near-black tip                                 |
 | Wood tan      | `#D9A066` | Tapered-tip variant only (V3, not used in site)|
 
