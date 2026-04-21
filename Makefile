@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh
 
 build:
 	cargo build
@@ -50,3 +50,20 @@ server-release:
 # serving the bundle + API on :8080 — same shape the Docker image uses.
 serve: frontend-build server-release
 	./target/release/pencil-ready-server --port 8080
+
+# --- Supply-chain: regenerate Cargo.lock with a 14-day cooldown on new
+# crate versions. Mirrors the `minimumReleaseAge` pnpm policy — buys
+# time for malicious or compromised releases to be yanked before they
+# land in our lockfile.
+#
+# `cargo-cooldown` runs cargo via a wrapper that filters version
+# candidates by publish age (COOLDOWN_MINUTES). Use this instead of
+# `cargo update` when bumping dependencies. Fetches the tool on first
+# run. 20160 minutes = 14 days.
+deps-refresh:
+	@command -v cargo-cooldown >/dev/null || cargo install --locked cargo-cooldown
+	rm -f Cargo.lock
+	COOLDOWN_MINUTES=20160 cargo-cooldown check
+	@echo
+	@echo "Cargo.lock regenerated. Review the diff before committing:"
+	@echo "  git diff Cargo.lock"

@@ -1,0 +1,5 @@
+# Supply-chain hygiene: block dependency versions that were published
+# less than two weeks ago. Buys time for a malicious or compromised
+# release to be caught and yanked before it lands in our lockfile.
+# Value is in minutes; 20160 = 14 * 24 * 60.
+minimumReleaseAge: 20160
