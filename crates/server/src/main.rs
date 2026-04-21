@@ -12,7 +12,7 @@ use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use anyhow::{Result, anyhow};
 use axum::{
@@ -31,8 +31,8 @@ use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
-use tower_http::trace::{DefaultOnResponse, TraceLayer};
-use tracing::{Level, info, info_span, warn};
+use tower_http::trace::TraceLayer;
+use tracing::{info, info_span, warn};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -897,8 +897,9 @@ async fn main() {
     //      sees them. Must be innermost so we operate on plaintext.
     //   2. compression — gzips/brs the (possibly rewritten) body.
     //   3. cors — adds headers.
-    //   4. TraceLayer — request spans wrap everything above. One INFO
-    //      line per response with method/uri/ip/ua/status/latency.
+    //   4. TraceLayer — request spans wrap everything above. 2xx/3xx/5xx
+    //      log at INFO; 4xx (mostly scan traffic hitting our 404 page)
+    //      drops to DEBUG so it doesn't flood the access log.
     let trace_layer = TraceLayer::new_for_http()
         .make_span_with(|req: &Request<Body>| {
             info_span!(
@@ -909,7 +910,24 @@ async fn main() {
                 ua = %user_agent(req.headers()),
             )
         })
-        .on_response(DefaultOnResponse::new().level(Level::INFO));
+        .on_response(
+            |response: &Response<Body>, latency: Duration, _span: &tracing::Span| {
+                let status = response.status();
+                if status.is_client_error() {
+                    tracing::debug!(
+                        status = status.as_u16(),
+                        latency_ms = latency.as_millis() as u64,
+                        "request"
+                    );
+                } else {
+                    tracing::info!(
+                        status = status.as_u16(),
+                        latency_ms = latency.as_millis() as u64,
+                        "request"
+                    );
+                }
+            },
+        );
 
     let app = app
         .layer(middleware::from_fn_with_state(state, region_rewrite))
