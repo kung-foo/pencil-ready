@@ -8,29 +8,29 @@
 
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking, problem-features, problem-line-height
 
-// `answer-rows` = how many rows of writing space to reserve below the line.
-//   1 for add/subtract (single answer line)
-//   ~partial products + 1 for multiply (e.g. 2×2 needs 3: two partials + sum)
+// `data` = [...operands, answer]. The last element is the final answer
+// (sum/difference/product/quotient); it's only rendered when mode != "blank".
 //
-// `numbers` = [...operands, answer]. The last element is the final answer
-// (sum/difference/product/quotient) and is only rendered when `solved` is
-// on; the operands are everything up to but not including the last element.
-#let vertical-problem(
-  numbers,
-  operator,
-  width: 2.8em,
-  answer-rows: 1,
-  debug: false,
-  solved: false,
-  // When `solved` is on, skip the worked steps (partial products for
-  // multi-row multiplication) and render only the final numeric answer.
-  // Used by answer-key pages so the result stays terse.
-  answer-only: false,
-  // When > 0, operand numbers are left-padded with "0" up to this many
-  // characters. Used by binary addition so each operand fills its full
-  // bit width (`str(n)` alone would drop leading zeros).
-  pad-width: 0,
-) = {
+// `opts` keys (with defaults):
+//   operator: typst content (e.g. `[#sym.plus]`). Required.
+//   width: cell width (default 2.8em).
+//   answer-rows: rows of writing space below the line. 1 for add/subtract
+//     (single answer line), ~partial products + 1 for multiply. Default 1.
+//   pad-width: when > 0, left-pad operand numbers with "0" up to this many
+//     characters. Used by binary addition. Default 0.
+//
+// `mode` = "blank" | "worked" | "answer-only". "answer-only" skips worked
+// steps (partial products) and renders just the final answer — used by
+// answer-key pages.
+#let vertical-problem(data, mode: "blank", opts: (:), debug: false) = {
+  let operator = opts.at("operator")
+  let width = opts.at("width", default: 2.8em)
+  let answer-rows = opts.at("answer-rows", default: 1)
+  let pad-width = opts.at("pad-width", default: 0)
+  let solved = mode != "blank"
+  let answer-only = mode == "answer-only"
+
+  let numbers = data
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
   let operand-count = numbers.len() - 1

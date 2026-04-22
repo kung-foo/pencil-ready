@@ -32,24 +32,25 @@
   )
 }
 
-// `answer-rows` = rows of solve space below the bracket. Typically 2× the
-// number of dividend digits (one row each for multiply + subtract/bring-down).
-#let long-division-problem(
-  numbers,
-  width: 3.9em,
-  answer-rows: 0,
-  debug: false,
-  solved: false,
-  // Answer-key mode: when solved, render only the quotient above the bar
-  // and skip the divide-multiply-subtract-bring-down work rows.
-  answer-only: false,
-) = {
+// `opts` keys:
+//   width: cell width (e.g. 3.9em). Required.
+//   answer-rows: rows of solve space below the bracket (typically 2×
+//     the number of dividend digits). Required.
+//
+// `mode` = "blank" | "worked" | "answer-only". "answer-only" renders
+// just the quotient above the bar and skips the work rows.
+#let long-division-problem(data, mode: "blank", opts: (:), debug: false) = {
+  let width = opts.at("width", default: 3.9em)
+  let answer-rows = opts.at("answer-rows", default: 0)
+  let solved = mode != "blank"
+  let answer-only = mode == "answer-only"
+
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
-  let dividend-str = str(numbers.at(0))
-  let divisor-str = str(numbers.at(1))
+  let dividend-str = str(data.at(0))
+  let divisor-str = str(data.at(1))
   // Optional quotient at index 2 — generator pushes it when available.
-  let quotient-str = if numbers.len() > 2 { str(numbers.at(2)) } else { "" }
+  let quotient-str = if data.len() > 2 { str(data.at(2)) } else { "" }
 
   // 1.3em per row ≈ one typeset line at this size.
   let work-space = 1.3em * answer-rows
@@ -118,7 +119,7 @@
         // The rem carries into the next step paired with the brought-down
         // digit, forming the next current.
         let dividend-digits = dividend-str.clusters().map(c => int(c))
-        let divisor = numbers.at(1)
+        let divisor = data.at(1)
         let n = dividend-digits.len()
 
         let steps = ()

@@ -5,4 +5,4 @@
 // partial products. Answer-rows stays at 3 so the box has the same height
 // as a blank (student-facing) cell — keeps the grid aligned between
 // problem and answer pages.
-#vertical-problem((37, 49, 1813), [#sym.times], answer-rows: 3, solved: true, answer-only: true)
+#vertical-problem((37, 49, 1813), mode: "answer-only", opts: (operator: [#sym.times], answer-rows: 3))

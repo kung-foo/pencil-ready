@@ -23,34 +23,34 @@ pub struct Fixture {
 // Long-div widths:   max(3.0, max_digits * 0.6  + 1.2) cm
 pub const FIXTURES: &[Fixture] = &[
     // --- vertical (add / subtract / simple-div) ---
-    Fixture { id: "vertical-add-d2-op2-blank",  label: "vertical 2-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((12, 34, 46),          [#sym.plus], width: 2.2cm,  answer-rows: 1)"# },
-    Fixture { id: "vertical-add-d3-op2-blank",  label: "vertical 3-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((123, 456, 579),       [#sym.plus], width: 2.25cm, answer-rows: 1)"# },
-    Fixture { id: "vertical-add-d4-op2-blank",  label: "vertical 4-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((1234, 5678, 6912),    [#sym.plus], width: 2.8cm,  answer-rows: 1)"# },
-    Fixture { id: "vertical-add-d5-op2-blank",  label: "vertical 5-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((12345, 67890, 80235), [#sym.plus], width: 3.35cm, answer-rows: 1)"# },
-    Fixture { id: "vertical-add-d2-op3-blank",  label: "vertical 2-digit × 3-operand (add, blank)",  snippet: r#"vertical-problem((12, 34, 56, 102),     [#sym.plus], width: 2.2cm,  answer-rows: 1)"# },
-    Fixture { id: "vertical-add-d3-op2-worked", label: "vertical 3-digit × 2-operand (add, worked)", snippet: r#"vertical-problem((123, 456, 579),       [#sym.plus], width: 2.25cm, answer-rows: 1, solved: true)"# },
+    Fixture { id: "vertical-add-d2-op2-blank",  label: "vertical 2-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((12, 34, 46),          opts: (operator: [#sym.plus], width: 2.2cm,  answer-rows: 1))"# },
+    Fixture { id: "vertical-add-d3-op2-blank",  label: "vertical 3-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((123, 456, 579),       opts: (operator: [#sym.plus], width: 2.25cm, answer-rows: 1))"# },
+    Fixture { id: "vertical-add-d4-op2-blank",  label: "vertical 4-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((1234, 5678, 6912),    opts: (operator: [#sym.plus], width: 2.8cm,  answer-rows: 1))"# },
+    Fixture { id: "vertical-add-d5-op2-blank",  label: "vertical 5-digit × 2-operand (add, blank)",  snippet: r#"vertical-problem((12345, 67890, 80235), opts: (operator: [#sym.plus], width: 3.35cm, answer-rows: 1))"# },
+    Fixture { id: "vertical-add-d2-op3-blank",  label: "vertical 2-digit × 3-operand (add, blank)",  snippet: r#"vertical-problem((12, 34, 56, 102),     opts: (operator: [#sym.plus], width: 2.2cm,  answer-rows: 1))"# },
+    Fixture { id: "vertical-add-d3-op2-worked", label: "vertical 3-digit × 2-operand (add, worked)", snippet: r#"vertical-problem((123, 456, 579),       mode: "worked", opts: (operator: [#sym.plus], width: 2.25cm, answer-rows: 1))"# },
 
     // --- vertical multiply (answer-rows = N+1 partials+sum) ---
-    Fixture { id: "multiply-d2x2-blank", label: "multiply 2×2-digit (blank)", snippet: r#"vertical-problem((23, 45, 1035),   [#sym.times], width: 2.2cm,  answer-rows: 3)"# },
-    Fixture { id: "multiply-d3x2-blank", label: "multiply 3×2-digit (blank)", snippet: r#"vertical-problem((123, 45, 5535),  [#sym.times], width: 2.25cm, answer-rows: 3)"# },
-    Fixture { id: "multiply-d3x3-blank", label: "multiply 3×3-digit (blank)", snippet: r#"vertical-problem((123, 456, 56088),[#sym.times], width: 2.25cm, answer-rows: 4)"# },
+    Fixture { id: "multiply-d2x2-blank", label: "multiply 2×2-digit (blank)", snippet: r#"vertical-problem((23, 45, 1035),   opts: (operator: [#sym.times], width: 2.2cm,  answer-rows: 3))"# },
+    Fixture { id: "multiply-d3x2-blank", label: "multiply 3×2-digit (blank)", snippet: r#"vertical-problem((123, 45, 5535),  opts: (operator: [#sym.times], width: 2.25cm, answer-rows: 3))"# },
+    Fixture { id: "multiply-d3x3-blank", label: "multiply 3×3-digit (blank)", snippet: r#"vertical-problem((123, 456, 56088),opts: (operator: [#sym.times], width: 2.25cm, answer-rows: 4))"# },
 
     // --- long division (answer-rows = ~2 × dividend digits) ---
-    Fixture { id: "long-div-d2-blank", label: "long-div 2-digit dividend (blank)", snippet: r#"long-division-problem((96, 4, 24),     width: 3.0cm, answer-rows: 4)"# },
-    Fixture { id: "long-div-d3-blank", label: "long-div 3-digit dividend (blank)", snippet: r#"long-division-problem((375, 5, 75),    width: 3.0cm, answer-rows: 6)"# },
-    Fixture { id: "long-div-d4-blank", label: "long-div 4-digit dividend (blank)", snippet: r#"long-division-problem((8192, 8, 1024), width: 3.6cm, answer-rows: 8)"# },
+    Fixture { id: "long-div-d2-blank", label: "long-div 2-digit dividend (blank)", snippet: r#"long-division-problem((96, 4, 24),     opts: (width: 3.0cm, answer-rows: 4))"# },
+    Fixture { id: "long-div-d3-blank", label: "long-div 3-digit dividend (blank)", snippet: r#"long-division-problem((375, 5, 75),    opts: (width: 3.0cm, answer-rows: 6))"# },
+    Fixture { id: "long-div-d4-blank", label: "long-div 4-digit dividend (blank)", snippet: r#"long-division-problem((8192, 8, 1024), opts: (width: 3.6cm, answer-rows: 8))"# },
 
     // --- horizontal drill ---
-    Fixture { id: "horizontal-drill-d1x1", label: "horizontal drill 1×1-digit (mult table)", snippet: r#"horizontal-problem((7, 3, 21),  [#sym.times])"# },
-    Fixture { id: "horizontal-drill-d2x1", label: "horizontal drill 2×1-digit",              snippet: r#"horizontal-problem((12, 7, 84), [#sym.times])"# },
+    Fixture { id: "horizontal-drill-d1x1", label: "horizontal drill 1×1-digit (mult table)", snippet: r#"horizontal-problem((7, 3, 21),  opts: (operator: [#sym.times]))"# },
+    Fixture { id: "horizontal-drill-d2x1", label: "horizontal drill 2×1-digit",              snippet: r#"horizontal-problem((12, 7, 84), opts: (operator: [#sym.times]))"# },
 
     // --- horizontal fraction ---
-    Fixture { id: "fraction-unit-d2",     label: "horizontal fraction (unit, 2-digit whole)",     snippet: r#"horizontal-fraction-problem((12, 1, 2), [#sym.times])"# },
-    Fixture { id: "fraction-non-unit-d2", label: "horizontal fraction (non-unit, 2-digit whole)", snippet: r#"horizontal-fraction-problem((15, 2, 3), [#sym.times])"# },
+    Fixture { id: "fraction-unit-d2",     label: "horizontal fraction (unit, 2-digit whole)",     snippet: r#"horizontal-fraction-problem((12, 1, 2), opts: (operator: [#sym.times]))"# },
+    Fixture { id: "fraction-non-unit-d2", label: "horizontal fraction (non-unit, 2-digit whole)", snippet: r#"horizontal-fraction-problem((15, 2, 3), opts: (operator: [#sym.times]))"# },
 
     // --- algebra two-step ---
-    Fixture { id: "algebra-small-form0", label: "algebra two-step (small, form 0)", snippet: r#"algebra-two-step-problem((4, 5, 4, 21, 0),    [#sym.dot.op])"# },
-    Fixture { id: "algebra-large-form0", label: "algebra two-step (large, form 0)", snippet: r#"algebra-two-step-problem((12, 87, 3, 123, 0), [#sym.dot.op])"# },
+    Fixture { id: "algebra-small-form0", label: "algebra two-step (small, form 0)", snippet: r#"algebra-two-step-problem((4, 5, 4, 21, 0),    opts: (operator: [#sym.dot.op]))"# },
+    Fixture { id: "algebra-large-form0", label: "algebra two-step (large, form 0)", snippet: r#"algebra-two-step-problem((12, 87, 3, 123, 0), opts: (operator: [#sym.dot.op]))"# },
 ];
 
 /// Preamble with the typst imports every fixture needs, plus a

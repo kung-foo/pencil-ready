@@ -9,14 +9,23 @@
 // Renders the natural-width problem content. The caller (worksheet grid
 // or story page) is responsible for any fill/alignment behavior.
 //
-// `numbers` = (a, b, answer). The answer is pre-computed by the generator
+// `data` = (a, b, answer). The answer is pre-computed by the generator
 // so this component doesn't need to know the operation.
-#let horizontal-problem(numbers, operator, debug: false, solved: false) = {
+//
+// `opts` keys (all required by callers today):
+//   operator: typst content (e.g. `[#sym.times]`)
+//
+// `mode` = "blank" | "worked" | "answer-only". Horizontal has no worked
+// steps to suppress, so "worked" and "answer-only" are equivalent here.
+#let horizontal-problem(data, mode: "blank", opts: (:), debug: false) = {
+  let operator = opts.at("operator")
+  let solved = mode != "blank"
+
   set text(font: problem-font, size: problem-text-size-horizontal, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
-  let a = str(numbers.at(0))
-  let b = str(numbers.at(1))
-  let answer = if numbers.len() > 2 { str(numbers.at(2)) } else { "" }
+  let a = str(data.at(0))
+  let b = str(data.at(1))
+  let answer = if data.len() > 2 { str(data.at(2)) } else { "" }
 
   // Fixed-width slot so solved and unsolved problems share the same bounding
   // box. When solved, the answer sits on the slot; otherwise the slot shows

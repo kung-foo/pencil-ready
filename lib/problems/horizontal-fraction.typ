@@ -9,12 +9,15 @@
 
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features, problem-line-height
 
-#let horizontal-fraction-problem(numbers, operator, debug: false, solved: false, answer-only: false) = {
-  // numbers = (whole, numerator, denominator)
-  // solved  = if true, fill in the worked answer (multiply-across + simplified)
-  //           as a demonstration example.
-  // answer-only = when solved, suppress the multiply-across intermediate
-  //               and show only the simplified integer answer.
+// `data` = (whole, numerator, denominator).
+// `opts.operator` = typst content (e.g. `[#sym.times]`).
+// `mode` = "blank" | "worked" | "answer-only". "worked" fills in the
+// multiply-across intermediate + simplified answer; "answer-only"
+// suppresses the multiply-across and shows only the simplified result.
+#let horizontal-fraction-problem(data, mode: "blank", opts: (:), debug: false) = {
+  let operator = opts.at("operator")
+  let solved = mode != "blank"
+  let answer-only = mode == "answer-only"
   // NOTE: do NOT set tracking on the outer text — math.frac inherits the
   // outer text settings and inserts a visible gap between digits of multi-
   // digit numerators/denominators (e.g. "10" rendered as "1 0"). Apply
@@ -28,10 +31,10 @@
   // inside math.frac — the outer text font doesn't propagate there).
   show math.equation: set text(font: "Fira Math", features: ())
   let debug-box = if debug { 1pt + red } else { none }
-  let whole-v = numbers.at(0)
+  let whole-v = data.at(0)
   let whole = str(whole-v)
-  let n = numbers.at(1)
-  let d = numbers.at(2)
+  let n = data.at(1)
+  let d = data.at(2)
 
   // Worked-answer values (only rendered when solved: true).
   let inter-num = whole-v * n
