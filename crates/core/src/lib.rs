@@ -233,13 +233,24 @@ impl Locale {
     }
 }
 
-/// Per-problem rendering choice. Scaffolding for the layout refactor;
-/// the wire format to typst is still three booleans (see template.rs).
+/// Per-problem rendering choice. Emitted to typst as a string tag
+/// ("blank" | "worked" | "answer-only"); `lib/layout.typ` derives
+/// the per-problem `solved` and `answer-only` flags from the tag.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RenderMode {
     Blank,
     Worked,
     AnswerOnly,
+}
+
+impl RenderMode {
+    pub(crate) fn as_tag(self) -> &'static str {
+        match self {
+            RenderMode::Blank => "blank",
+            RenderMode::Worked => "worked",
+            RenderMode::AnswerOnly => "answer-only",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

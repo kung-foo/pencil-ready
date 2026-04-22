@@ -183,29 +183,16 @@ fn render_inner_with_pad(
             .collect::<Vec<_>>()
             .join(",\n  ");
 
-        // On answer-key pages we force every problem into solved-and-
-        // answer-only mode (i.e. just the numeric answer, no partial
-        // products or worked steps). The normal `solve-first` knob is
-        // respected only on problem pages.
+        // On answer-key pages we force every problem into answer-only
+        // mode (just the numeric answer, no partial products or worked
+        // steps). The `solve-first` knob is respected only on problem
+        // pages, where it promotes problem 0 to a worked example.
         let modes = page_modes(*is_answer_page, params.solve_first, page.len());
-        let effective_solve_first = if matches!(modes.first(), Some(RenderMode::Worked)) {
-            "true"
-        } else {
-            "false"
-        };
-        let all_solved_str = if modes
+        let modes_arg = modes
             .iter()
-            .all(|m| matches!(m, RenderMode::Worked | RenderMode::AnswerOnly))
-        {
-            "true"
-        } else {
-            "false"
-        };
-        let answer_only_str = if modes.iter().all(|m| *m == RenderMode::AnswerOnly) {
-            "true"
-        } else {
-            "false"
-        };
+            .map(|m| format!("\"{}\"", m.as_tag()))
+            .collect::<Vec<_>>()
+            .join(", ");
 
         // PDF outline entries: when the document has both a problems section
         // and an answer-key section, emit a heading at the top of each to
@@ -232,9 +219,7 @@ fn render_inner_with_pad(
   debug: {debug_str},
   style: "{style}",
   answer-rows: {answer_rows},
-  solve-first: {effective_solve_first},
-  all-solved: {all_solved_str},
-  answer-only: {answer_only_str},
+  modes: ({modes_arg},),
   implicit: {implicit_str},
   variable: "{variable}",
   pad-width: {pad_width},

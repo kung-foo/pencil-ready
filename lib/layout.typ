@@ -1,13 +1,12 @@
-// Grid that lays problems out on a page. Three "solved" knobs:
+// Grid that lays problems out on a page. Per-problem render mode:
 //
-//   solve-first: the *first* problem is rendered with full work (worked
-//                example for the student to read).
-//   all-solved:  *every* problem is rendered with the answer filled in —
-//                used by the answer-key page generator.
-//   answer-only: when paired with solve-first or all-solved, suppress the
-//                worked steps (partial products, intermediate rows, etc.)
-//                and show just the final numeric answer. The answer-key
-//                pages turn this on so they read as a terse key.
+//   modes: a list of "blank" | "worked" | "answer-only", one entry per
+//          problem. "blank" = unsolved. "worked" = filled-in example
+//          with partial work shown. "answer-only" = just the final
+//          numeric answer (used on answer-key pages).
+//
+// Defaults to all-blank when the caller omits modes, so stories and
+// standalone invocations keep their existing behavior.
 #let worksheet-grid(
   problems,
   operator,
@@ -16,9 +15,7 @@
   debug: false,
   style: "vertical",
   answer-rows: 1,
-  solve-first: false,
-  all-solved: false,
-  answer-only: false,
+  modes: none,
   implicit: false,
   variable: "x",
   pad-width: 0,
@@ -38,8 +35,12 @@
   let debug-box = if debug { 1pt + red } else { none }
   let debug-grid = if debug { 1pt + blue } else { none }
 
-  // Whether this *specific* problem index should be rendered solved.
-  let is-solved(idx) = all-solved or (solve-first and idx == 0)
+  let resolved-modes = if modes == none {
+    range(num-problems).map(_ => "blank")
+  } else {
+    modes
+  }
+  let mode-at(idx) = resolved-modes.at(idx)
 
   block(height: content-area, width: 100%, stroke: debug-box, {
     grid(
@@ -59,7 +60,9 @@
       stroke: debug-grid,
       ..range(num-problems).map(idx => {
         let nums = problems.at(idx)
-        let solved = is-solved(idx)
+        let mode = mode-at(idx)
+        let solved = mode != "blank"
+        let answer-only = mode == "answer-only"
         if style == "long-division" {
           pad(left: 0.5cm, long-division-problem(nums, width: width, answer-rows: answer-rows, debug: debug, solved: solved, answer-only: answer-only))
         } else if style == "horizontal" {
