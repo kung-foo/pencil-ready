@@ -207,9 +207,7 @@ fn render_inner_with_pad(
         };
 
         page_blocks.push_str(&format!(
-            r#"{outline_heading}#worksheet-header(student-name: {student_name_arg}, debug: {debug_str})
-
-#worksheet-grid(
+            r#"{outline_heading}#worksheet-grid(
   (
   {problem_lines},
   ),
@@ -224,8 +222,6 @@ fn render_inner_with_pad(
   variable: "{variable}",
   pad-width: {pad_width},
 )
-
-#worksheet-footer(pencil-ready-content)
 "#
         ));
         if i + 1 < total_page_count {
@@ -250,7 +246,19 @@ fn render_inner_with_pad(
   keywords: ("math", "worksheet", "{doc_kind}", "pencilready.com"),
 )
 
-#set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
+// Header (1.5cm) and footer (0.8cm) are rendered as page chrome via
+// typst's page.header/footer callbacks, not body flow. That keeps
+// them pinned to the top/bottom margin bands regardless of how much
+// the grid fills. Top/bottom margins include the chrome height plus
+// a small breathing band (ascent/descent).
+#set page(
+  paper: "{paper}",
+  margin: (top: 3.2cm, bottom: 2.2cm, left: 1.5cm, right: 1.5cm),
+  header-ascent: 0.8cm,
+  footer-descent: 0.4cm,
+  header: pad(top: 0.7cm, worksheet-header(student-name: {student_name_arg}, debug: {debug_str})),
+  footer: pad(bottom: 0.7cm, worksheet-footer(pencil-ready-content)),
+)
 #set text(font: body-font, size: 10pt)
 
 // Headings exist only to populate the PDF outline (sidebar bookmarks)

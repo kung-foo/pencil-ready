@@ -29,9 +29,10 @@
   let num-problems = problems.len()
   // Ceiling division: handles partial last rows (e.g. 10 problems, 3 cols = 4 rows).
   let num-rows = calc.quo(num-problems + num-cols - 1, num-cols)
-  let header-height = 1.5cm
-  let footer-height = 0.8cm
-  let content-area = 98% - header-height - footer-height
+  // Header and footer are rendered as page chrome by template.rs
+  // (via typst's page.header / page.footer), so the grid fills the
+  // full body area.
+  let content-area = 100%
   let debug-box = if debug { 1pt + red } else { none }
   let debug-grid = if debug { 1pt + blue } else { none }
 
