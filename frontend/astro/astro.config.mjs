@@ -15,6 +15,7 @@ export default defineConfig({
   site: "https://pencilready.com",
   trailingSlash: "ignore",
   output: "static",
+  compressHTML: false,
   integrations: [
     react(),
     // Emits sitemap-index.xml + sitemap-0.xml at build time listing
