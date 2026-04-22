@@ -310,6 +310,17 @@ pub fn compile_typst(
     world::compile_and_export(typ_source, format, root, fonts)
 }
 
+/// Compile a .typ source and return the first page's natural bounding
+/// box in centimeters. Pair with `#set page(width: auto, height: auto,
+/// margin: 0pt)` to measure a single rendered component.
+pub fn measure_typst(
+    typ_source: &str,
+    root: &std::path::Path,
+    fonts: &Fonts,
+) -> Result<(f32, f32)> {
+    world::measure(typ_source, root, fonts)
+}
+
 pub fn generate(
     params: &WorksheetParams,
     format: OutputFormat,
