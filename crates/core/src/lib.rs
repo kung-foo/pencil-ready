@@ -233,6 +233,15 @@ impl Locale {
     }
 }
 
+/// Per-problem rendering choice. Scaffolding for the layout refactor;
+/// the wire format to typst is still three booleans (see template.rs).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RenderMode {
+    Blank,
+    Worked,
+    AnswerOnly,
+}
+
 #[derive(Debug, Clone)]
 pub struct WorksheetParams {
     pub worksheet: WorksheetType,

@@ -2,7 +2,21 @@
 
 use anyhow::{Result, bail};
 
-use crate::WorksheetParams;
+use crate::{RenderMode, WorksheetParams};
+
+fn page_modes(is_answer_page: bool, solve_first: bool, len: usize) -> Vec<RenderMode> {
+    if is_answer_page {
+        vec![RenderMode::AnswerOnly; len]
+    } else if solve_first {
+        let mut v = vec![RenderMode::Blank; len];
+        if let Some(slot) = v.first_mut() {
+            *slot = RenderMode::Worked;
+        }
+        v
+    } else {
+        vec![RenderMode::Blank; len]
+    }
+}
 
 /// Render a vertical-style worksheet (add, subtract, multiply, simple divide).
 pub fn render(
@@ -114,7 +128,6 @@ fn render_inner_with_pad(
     };
 
     let debug_str = if params.debug { "true" } else { "false" };
-    let solve_first_str = if params.solve_first { "true" } else { "false" };
     let implicit_str = if implicit { "true" } else { "false" };
     let cols = params.cols;
     let paper = &params.paper;
@@ -174,10 +187,24 @@ fn render_inner_with_pad(
         // answer-only mode (i.e. just the numeric answer, no partial
         // products or worked steps). The normal `solve-first` knob is
         // respected only on problem pages.
-        let (effective_solve_first, all_solved_str, answer_only_str) = if *is_answer_page {
-            ("false", "true", "true")
+        let modes = page_modes(*is_answer_page, params.solve_first, page.len());
+        let effective_solve_first = if matches!(modes.first(), Some(RenderMode::Worked)) {
+            "true"
         } else {
-            (solve_first_str, "false", "false")
+            "false"
+        };
+        let all_solved_str = if modes
+            .iter()
+            .all(|m| matches!(m, RenderMode::Worked | RenderMode::AnswerOnly))
+        {
+            "true"
+        } else {
+            "false"
+        };
+        let answer_only_str = if modes.iter().all(|m| *m == RenderMode::AnswerOnly) {
+            "true"
+        } else {
+            "false"
         };
 
         // PDF outline entries: when the document has both a problems section
@@ -261,5 +288,37 @@ fn header_name_arg(name: Option<&str>) -> String {
             format!("\"{escaped}\"")
         }
         _ => "none".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn page_modes_plain_problem_page() {
+        assert_eq!(
+            page_modes(false, false, 3),
+            vec![RenderMode::Blank, RenderMode::Blank, RenderMode::Blank],
+        );
+    }
+
+    #[test]
+    fn page_modes_solve_first_problem_page() {
+        assert_eq!(
+            page_modes(false, true, 3),
+            vec![RenderMode::Worked, RenderMode::Blank, RenderMode::Blank],
+        );
+    }
+
+    #[test]
+    fn page_modes_answer_page_ignores_solve_first() {
+        let expected = vec![
+            RenderMode::AnswerOnly,
+            RenderMode::AnswerOnly,
+            RenderMode::AnswerOnly,
+        ];
+        assert_eq!(page_modes(true, false, 3), expected);
+        assert_eq!(page_modes(true, true, 3), expected);
     }
 }
