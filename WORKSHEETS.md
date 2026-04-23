@@ -246,7 +246,7 @@ Same locale rules as the multiplication drill — `--locale us` shows `×`,
 ### Layout component
 
 ```typst
-horizontal-fraction-problem((30, 7, 10), opts: (operator: [#sym.times]))
+fraction-multiplication-problem((30, 7, 10), opts: (operator: [#sym.times]))
 ```
 
 The equation is rendered in math mode with Fira Math pinned as the math

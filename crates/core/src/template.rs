@@ -206,30 +206,25 @@ fn render_inner_with_pad(
             ""
         };
 
-        // Per-style dispatch: pick the component function and build the
-        // opts dict with exactly the keys that component uses. Keeping
-        // opts minimal per component makes emitted .typ easier to read
-        // during debugging.
-        let (component_name, opts_body) = match style {
-            "vertical" => (
-                "vertical-problem",
-                format!("operator: {operator_arg}, width: {box_width}cm, answer-rows: {answer_rows}, pad-width: {pad_width}"),
+        // Component name is per-worksheet (e.g. addition-basic-problem,
+        // multiplication-drill-problem) — the wrapper files under
+        // lib/problems/<folder>/ expose distinct aliases even when two
+        // worksheets share the same underlying layout primitive.
+        //
+        // opts keys remain layout-shaped, since vertical-stack vs
+        // horizontal-inline vs each one-off layout read different keys.
+        let component_name = params.worksheet.component_typst_name();
+        let opts_body = match style {
+            "vertical" => format!(
+                "operator: {operator_arg}, width: {box_width}cm, answer-rows: {answer_rows}, pad-width: {pad_width}"
             ),
-            "long-division" => (
-                "long-division-problem",
-                format!("width: {box_width}cm, answer-rows: {answer_rows}"),
+            "long-division" => format!(
+                "width: {box_width}cm, answer-rows: {answer_rows}"
             ),
-            "horizontal" => (
-                "horizontal-problem",
-                format!("operator: {operator_arg}"),
-            ),
-            "horizontal-fraction" => (
-                "horizontal-fraction-problem",
-                format!("operator: {operator_arg}"),
-            ),
-            "algebra-two-step" => (
-                "algebra-two-step-problem",
-                format!("operator: {operator_arg}, implicit: {implicit_str}, variable: \"{variable}\""),
+            "horizontal" => format!("operator: {operator_arg}"),
+            "horizontal-fraction" => format!("operator: {operator_arg}"),
+            "algebra-two-step" => format!(
+                "operator: {operator_arg}, implicit: {implicit_str}, variable: \"{variable}\""
             ),
             other => bail!("unknown worksheet style: {other}"),
         };
@@ -262,12 +257,18 @@ fn render_inner_with_pad(
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
 // Problem components are passed to worksheet-grid by reference, so
-// they must be in scope at the call site.
-#import "/lib/problems/vertical.typ": vertical-problem
-#import "/lib/problems/long-division.typ": long-division-problem
-#import "/lib/problems/horizontal.typ": horizontal-problem
-#import "/lib/problems/horizontal-fraction.typ": horizontal-fraction-problem
-#import "/lib/problems/algebra-two-step.typ": algebra-two-step-problem
+// they must be in scope at the call site. Each worksheet has its own
+// wrapper file under lib/problems/<folder>/ exposing a distinct alias
+// even when two worksheets share the same underlying layout primitive.
+#import "/lib/problems/addition/basic.typ": addition-basic-problem
+#import "/lib/problems/subtraction/basic.typ": subtraction-basic-problem
+#import "/lib/problems/multiplication/basic.typ": multiplication-basic-problem
+#import "/lib/problems/multiplication/drill.typ": multiplication-drill-problem
+#import "/lib/problems/division/simple.typ": division-simple-problem
+#import "/lib/problems/division/long.typ": division-long-problem
+#import "/lib/problems/division/drill.typ": division-drill-problem
+#import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
+#import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 
 #set document(
   title: "{doc_title}",

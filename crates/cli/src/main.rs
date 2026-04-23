@@ -734,11 +734,15 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/shared.typ": body-font
 // Problem components passed to worksheet-grid by reference must be
 // in scope at the call site. (Mirrors template.rs's preamble.)
-#import "/lib/problems/vertical.typ": vertical-problem
-#import "/lib/problems/long-division.typ": long-division-problem
-#import "/lib/problems/horizontal.typ": horizontal-problem
-#import "/lib/problems/horizontal-fraction.typ": horizontal-fraction-problem
-#import "/lib/problems/algebra-two-step.typ": algebra-two-step-problem
+#import "/lib/problems/addition/basic.typ": addition-basic-problem
+#import "/lib/problems/subtraction/basic.typ": subtraction-basic-problem
+#import "/lib/problems/multiplication/basic.typ": multiplication-basic-problem
+#import "/lib/problems/multiplication/drill.typ": multiplication-drill-problem
+#import "/lib/problems/division/simple.typ": division-simple-problem
+#import "/lib/problems/division/long.typ": division-long-problem
+#import "/lib/problems/division/drill.typ": division-drill-problem
+#import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
+#import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)

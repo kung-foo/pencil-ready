@@ -14,7 +14,7 @@
 // `mode` = "blank" | "worked" | "answer-only". "worked" fills in the
 // multiply-across intermediate + simplified answer; "answer-only"
 // suppresses the multiply-across and shows only the simplified result.
-#let horizontal-fraction-problem(data, mode: "blank", opts: (:), debug: false) = {
+#let fraction-multiplication-problem(data, mode: "blank", opts: (:), debug: false) = {
   let operator = opts.at("operator")
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"

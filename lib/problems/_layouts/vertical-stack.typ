@@ -22,7 +22,7 @@
 // `mode` = "blank" | "worked" | "answer-only". "answer-only" skips worked
 // steps (partial products) and renders just the final answer — used by
 // answer-key pages.
-#let vertical-problem(data, mode: "blank", opts: (:), debug: false) = {
+#let vertical-stack-problem(data, mode: "blank", opts: (:), debug: false) = {
   let operator = opts.at("operator")
   let width = opts.at("width", default: 2.8em)
   let answer-rows = opts.at("answer-rows", default: 1)

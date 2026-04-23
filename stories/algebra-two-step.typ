@@ -1,4 +1,4 @@
-#import "/lib/problems/algebra-two-step.typ": algebra-two-step-problem
+#import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #set page(width: auto, height: auto, margin: 0.3cm)
 
 // Canonical form, explicit × operator, 11×x to exercise multi-digit coefficient.

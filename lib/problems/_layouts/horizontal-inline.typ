@@ -17,7 +17,7 @@
 //
 // `mode` = "blank" | "worked" | "answer-only". Horizontal has no worked
 // steps to suppress, so "worked" and "answer-only" are equivalent here.
-#let horizontal-problem(data, mode: "blank", opts: (:), debug: false) = {
+#let horizontal-inline-problem(data, mode: "blank", opts: (:), debug: false) = {
   let operator = opts.at("operator")
   let solved = mode != "blank"
 

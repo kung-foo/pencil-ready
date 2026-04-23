@@ -195,6 +195,24 @@ pub enum WorksheetType {
     },
 }
 
+impl WorksheetType {
+    /// Name of the typst component function this worksheet renders
+    /// with. Matches the wrapper files under `lib/problems/<folder>/`.
+    pub(crate) fn component_typst_name(&self) -> &'static str {
+        match self {
+            WorksheetType::Add { .. } => "addition-basic-problem",
+            WorksheetType::Subtract { .. } => "subtraction-basic-problem",
+            WorksheetType::Multiply { .. } => "multiplication-basic-problem",
+            WorksheetType::SimpleDivision { .. } => "division-simple-problem",
+            WorksheetType::LongDivision { .. } => "division-long-problem",
+            WorksheetType::MultiplicationDrill { .. } => "multiplication-drill-problem",
+            WorksheetType::DivisionDrill { .. } => "division-drill-problem",
+            WorksheetType::FractionMultiply { .. } => "fraction-multiplication-problem",
+            WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
+        }
+    }
+}
+
 /// Regional defaults for operator symbols in horizontal layouts.
 ///
 /// Vertical/bracket layouts use universal notation regardless of locale.

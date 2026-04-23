@@ -174,7 +174,7 @@ fn visit_typ_sources(
         if path.is_dir() {
             visit_typ_sources(root, &path, sources)?;
         } else if path.extension().is_some_and(|e| e == "typ") {
-            // Build the virtual path relative to root: "/lib/problems/vertical.typ"
+            // Build the virtual path relative to root: "/lib/problems/addition/basic.typ"
             let rel = path.strip_prefix(root).unwrap_or(&path);
             let vpath = format!("/{}", rel.to_string_lossy());
             let id = FileId::new(None, VirtualPath::new(&vpath));

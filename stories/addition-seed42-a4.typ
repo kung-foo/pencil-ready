@@ -2,7 +2,7 @@
 #import "/lib/layout.typ": worksheet-grid
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
-#import "/lib/problems/vertical.typ": vertical-problem
+#import "/lib/problems/addition/basic.typ": addition-basic-problem
 
 #set document(
   title: "Addition",
@@ -36,7 +36,7 @@
   (78, 55, 133),
   (20, 25, 45),
   ),
-  vertical-problem,
+  addition-basic-problem,
   num-cols: 4,
   debug: false,
   opts: (operator: [#sym.plus], width: 2.25cm, answer-rows: 1, pad-width: 0),
