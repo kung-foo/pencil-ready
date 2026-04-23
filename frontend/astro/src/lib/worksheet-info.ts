@@ -1,4 +1,51 @@
-import type { WorksheetKind } from "@/lib/api";
+import { WORKSHEET_KINDS, type WorksheetKind } from "@/lib/api";
+
+/** Homepage grouping. Ordered by rough curriculum progression — the
+ * list order drives render order, and each section's `kinds` array
+ * drives the per-section card order. Must cover every kind in
+ * `WORKSHEET_KINDS` exactly once (enforced by the homepage's build). */
+export const WORKSHEET_SECTIONS: ReadonlyArray<{
+  title: string;
+  kinds: ReadonlyArray<WorksheetKind>;
+}> = [
+  {
+    title: "Arithmetic",
+    kinds: ["add", "subtract", "multiply", "simple-divide"],
+  },
+  {
+    title: "Fact drills",
+    kinds: ["mult-drill", "div-drill"],
+  },
+  {
+    title: "Long-form",
+    kinds: ["long-divide"],
+  },
+  {
+    title: "Fractions",
+    kinds: ["fraction-simplify", "fraction-mult"],
+  },
+  {
+    title: "Pre-algebra",
+    kinds: ["algebra-two-step"],
+  },
+];
+
+// Coverage check: every worksheet kind must appear in exactly one
+// section. Runs at module load so a missing / duplicated kind fails
+// the Astro build rather than producing an invisibly-broken homepage.
+{
+  const flat = WORKSHEET_SECTIONS.flatMap((s) => s.kinds);
+  const seen = new Set(flat);
+  const missing = WORKSHEET_KINDS.filter((k) => !seen.has(k));
+  if (missing.length > 0) {
+    throw new Error(
+      `WORKSHEET_SECTIONS missing kinds: ${missing.join(", ")}`,
+    );
+  }
+  if (flat.length !== seen.size) {
+    throw new Error("WORKSHEET_SECTIONS has duplicate kinds");
+  }
+}
 
 export type WorksheetInfo = {
   /** Plain-English title, matches the server's title() output. */
