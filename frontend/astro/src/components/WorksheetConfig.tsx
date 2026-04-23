@@ -410,14 +410,14 @@ function KindSpecific({
           <Field label="Divisor">
             <Input
               value={cfg.divisor ?? ""}
-              placeholder="2-10"
+              placeholder="2-9"
               onChange={(e) => patch("divisor", e.target.value)}
             />
           </Field>
           <Field label="Max quotient">
             <Input
               value={cfg.max_quotient ?? ""}
-              placeholder="2-10"
+              placeholder="2-9"
               onChange={(e) => patch("max_quotient", e.target.value)}
             />
           </Field>

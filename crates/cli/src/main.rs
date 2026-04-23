@@ -273,11 +273,11 @@ enum Command {
         cols: u32,
 
         /// Which divisors to drill, comma-separated. e.g. "2,3" or "1-10"
-        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(2, 10)])]
+        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(2, 9)])]
         divisor: Vec<DigitRange>,
 
         /// Range of the quotient. e.g. "1-10" or "1-12"
-        #[arg(long, default_value = "2-10")]
+        #[arg(long, default_value = "2-9")]
         max_quotient: DigitRange,
 
         /// Number of problems (0 = all problems from the enumerated table).
@@ -690,8 +690,8 @@ fn run_all(global: GlobalArgs) -> Result<()> {
         (
             "div-drill",
             WorksheetType::DivisionDrill {
-                divisor: vec![DigitRange::new(2, 10)],
-                max_quotient: DigitRange::new(2, 10),
+                divisor: vec![DigitRange::new(2, 9)],
+                max_quotient: DigitRange::new(2, 9),
             },
             0,
             3,

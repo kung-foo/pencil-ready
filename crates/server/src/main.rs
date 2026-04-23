@@ -328,10 +328,10 @@ impl MultDrillSpecific {
 #[into_params(parameter_in = Query)]
 struct DivDrillSpecific {
     #[serde(default)]
-    #[param(value_type = String, example = "2-10")]
+    #[param(value_type = String, example = "2-9")]
     divisor: Option<String>,
     #[serde(default)]
-    #[param(value_type = String, example = "2-10")]
+    #[param(value_type = String, example = "2-9")]
     max_quotient: Option<String>,
     #[serde(default)]
     count: Option<u32>,
@@ -341,11 +341,11 @@ impl DivDrillSpecific {
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
         let divisor = match self.divisor {
             Some(s) => parse_digits_csv(&s, "divisor")?,
-            None => vec![DigitRange::new(2, 10)],
+            None => vec![DigitRange::new(2, 9)],
         };
         let max_quotient = match self.max_quotient {
             Some(s) => parse_digit_range(&s, "max_quotient")?,
-            None => DigitRange::new(2, 10),
+            None => DigitRange::new(2, 9),
         };
         let (fmt, mut params) = shared.fold(
             WorksheetType::DivisionDrill {

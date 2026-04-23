@@ -168,8 +168,8 @@ Uses the same horizontal layout and locale-sensitive symbol (÷ in US,
 
 ### Parameters
 
-- `divisor: list[range]` — which divisors to drill (default: `2-10`).
-- `max_quotient: range` — range of the quotient (default: `2-10`).
+- `divisor: list[range]` — which divisors to drill (default: `2-9`).
+- `max_quotient: range` — range of the quotient (default: `2-9`).
 - `count: u32` — number of problems (0 = all enumerated pairs).
 
 ### Problem generation
