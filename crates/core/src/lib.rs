@@ -282,6 +282,47 @@ impl WorksheetType {
             }
         }
     }
+
+    /// Worst-case operand digit count implied by the worksheet config,
+    /// computed WITHOUT generating any problems. Feeds `cell_size_cm`
+    /// for `Document::validate` — we want an upper bound, not an
+    /// exact figure.
+    pub fn max_digits_bound(&self) -> u32 {
+        match self {
+            WorksheetType::Add { digits, .. }
+            | WorksheetType::Subtract { digits, .. }
+            | WorksheetType::Multiply { digits } => {
+                digits.iter().map(|r| r.max).max().unwrap_or(2)
+            }
+            WorksheetType::LongDivision { digits, .. } => digits.max,
+            WorksheetType::MultiplicationDrill { multiplicand, multiplier } => {
+                let a = multiplicand.iter().map(|r| r.max).max().unwrap_or(1);
+                a.max(multiplier.max)
+            }
+            WorksheetType::DivisionDrill { divisor, max_quotient } => {
+                let a = divisor.iter().map(|r| r.max).max().unwrap_or(1);
+                a.max(max_quotient.max)
+            }
+            // A simple-division problem is dividend÷divisor = quotient
+            // where quotient ≤ max_quotient and divisor is 1-digit.
+            // The widest operand is the product (dividend), up to
+            // ~9 * max_quotient — at most 3 digits for sane inputs.
+            WorksheetType::SimpleDivision { max_quotient } => template::digit_count(9 * *max_quotient),
+            // Fraction-mult's width is driven by the whole-number LHS.
+            WorksheetType::FractionMultiply { max_whole, .. } => template::digit_count(*max_whole),
+            // Algebra's width bound is the largest numeric literal in
+            // the LHS / intermediate / solution lines — worst case the
+            // a*x+b product or `c` itself.
+            WorksheetType::AlgebraTwoStep {
+                a_range,
+                b_range,
+                x_range,
+                ..
+            } => template::digit_count(
+                (a_range.max * x_range.max).max(b_range.max).max(a_range.max),
+            ),
+        }
+    }
 }
 
 /// Shared with Add/Subtract/Multiply/SimpleDivision. Vertical-stack
@@ -460,6 +501,78 @@ impl RenderMode {
     }
 }
 
+/// Page-level surroundings of a worksheet. Everything the grid doesn't
+/// care about lives here — paper size, student name overlay, whether
+/// to emit an answer-key section, debug borders.
+///
+/// Step 6 type. Step 6 (b) + (c) will have generators stop dealing
+/// with these directly — they'll return a `Sheet`, and `lib::generate`
+/// will assemble `Document { sheet, cols, chrome }`.
+#[derive(Debug, Clone)]
+pub struct Chrome {
+    pub student_name: Option<String>,
+    pub paper: Paper,
+    pub include_answers: bool,
+    pub debug: bool,
+}
+
+impl Chrome {
+    /// Copy the chrome-relevant fields out of a flat `WorksheetParams`.
+    /// Temporary shim while Sheet/Document migration is in progress;
+    /// once generators return `Sheet`, callers will build `Chrome`
+    /// directly without going through `WorksheetParams`.
+    pub fn from_params(p: &WorksheetParams) -> Self {
+        Self {
+            student_name: p.student_name.clone(),
+            paper: p.paper,
+            include_answers: p.include_answers,
+            debug: p.debug,
+        }
+    }
+
+    /// Body content area (grid region) in cm on the configured paper.
+    /// Delegates to the free `content_area_cm` — same numbers, method
+    /// shape matches the doc's § "Content-area derivation".
+    pub fn content_area_cm(&self) -> (f32, f32) {
+        content_area_cm(self.paper)
+    }
+}
+
+/// A worksheet ready to validate and render. Borrowed-ref version —
+/// lives only for the duration of a single `lib::generate` call.
+/// Post-slice-(c), `sheet: &Sheet` will replace the bare `worksheet`
+/// + `opts` fields (generators will populate `Sheet` first).
+#[derive(Debug)]
+pub struct Document<'a> {
+    pub worksheet: &'a WorksheetType,
+    pub cols: u32,
+    pub chrome: Chrome,
+}
+
+impl Document<'_> {
+    /// Check the user-supplied `cols` fits on the configured paper for
+    /// the worst-case operand digit count. A too-tight grid overflows
+    /// the content area width — better to fail with a clear message
+    /// than silently crop.
+    pub fn validate(&self) -> Result<()> {
+        let max_digits = self.worksheet.max_digits_bound();
+        let (cell_w, _) = self.worksheet.cell_size_cm(max_digits);
+        let (area_w, _) = self.chrome.content_area_cm();
+        let max_cols = (area_w / cell_w).floor() as u32;
+        if self.cols > max_cols {
+            bail!(
+                "{} cols is too wide for {} on {}: at {max_digits} digits \
+                 each cell is {cell_w:.2}cm but content area is only \
+                 {area_w:.2}cm wide (max {max_cols} cols)",
+                self.cols,
+                self.worksheet.component_typst_name(),
+                self.chrome.paper,
+            );
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct WorksheetParams {
     pub worksheet: WorksheetType,
@@ -558,6 +671,16 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
     if params.pages == 0 {
         bail!("pages must be at least 1");
     }
+
+    // Fail loudly if `cols` is wider than the paper can hold at the
+    // worst-case digit count — prevents the grid silently truncating
+    // problems off the right edge of the page.
+    Document {
+        worksheet: &params.worksheet,
+        cols: params.cols,
+        chrome: Chrome::from_params(params),
+    }
+    .validate()?;
 
     let is_drill = matches!(
         &params.worksheet,
@@ -801,6 +924,54 @@ mod tests {
         let (w, h) = content_area_cm(Paper::Letter);
         assert!((w - 18.59).abs() < 0.01);
         assert!((h - 22.54).abs() < 0.01);
+    }
+
+    #[test]
+    fn max_digits_bound_examples() {
+        assert_eq!(
+            WorksheetType::Add {
+                digits: vec![DigitRange::new(2, 4), DigitRange::fixed(3)],
+                carry: CarryMode::Any,
+                binary: false,
+            }
+            .max_digits_bound(),
+            4
+        );
+        assert_eq!(
+            WorksheetType::LongDivision {
+                digits: DigitRange::fixed(3),
+                remainder: true,
+            }
+            .max_digits_bound(),
+            3
+        );
+    }
+
+    #[test]
+    fn document_validate_rejects_too_many_cols() {
+        // Default A4 content width = 18cm. A 3-digit add cell is 2.6cm,
+        // so max cols = floor(18 / 2.6) = 6. Asking for 7 should error.
+        let worksheet = WorksheetType::Add {
+            digits: vec![DigitRange::fixed(3), DigitRange::fixed(3)],
+            carry: CarryMode::Any,
+            binary: false,
+        };
+        let doc = Document {
+            worksheet: &worksheet,
+            cols: 7,
+            chrome: Chrome {
+                student_name: None,
+                paper: Paper::A4,
+                include_answers: false,
+                debug: false,
+            },
+        };
+        let err = doc.validate().unwrap_err().to_string();
+        assert!(err.contains("too wide"), "unexpected error: {err}");
+
+        // 6 cols should fit.
+        let ok_doc = Document { cols: 6, ..doc };
+        assert!(ok_doc.validate().is_ok());
     }
 
     #[test]
