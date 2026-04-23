@@ -12,14 +12,28 @@
 
 use crate::{WorksheetParams, WorksheetType};
 
-impl WorksheetParams {
-    /// Plain-English title suitable for page headers or UI labels.
-    pub fn title(&self) -> String {
-        let mut t = base_name(&self.worksheet, Form::Title).to_string();
-        if self.solve_first {
+impl WorksheetType {
+    /// Plain-English title. Adds " (worked example)" when `solve_first`
+    /// is on.
+    pub fn title(&self, solve_first: bool) -> String {
+        let mut t = base_name(self, Form::Title).to_string();
+        if solve_first {
             t.push_str(" (worked example)");
         }
         t
+    }
+
+    /// Kind-only slug, no solved/seed suffixes — suitable for PDF
+    /// metadata keywords that shouldn't drift per generation.
+    pub fn kind_slug(&self) -> &'static str {
+        base_name(self, Form::Slug)
+    }
+}
+
+impl WorksheetParams {
+    /// Plain-English title suitable for page headers or UI labels.
+    pub fn title(&self) -> String {
+        self.worksheet.title(self.solve_first)
     }
 
     /// Filename-safe slug. Callers prefix (e.g. "pencil-ready-") and append
@@ -38,7 +52,7 @@ impl WorksheetParams {
     /// Kind-only slug, no solved/seed suffixes — suitable for PDF
     /// metadata keywords that shouldn't drift per generation.
     pub fn kind_slug(&self) -> &'static str {
-        base_name(&self.worksheet, Form::Slug)
+        self.worksheet.kind_slug()
     }
 }
 

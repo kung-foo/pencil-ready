@@ -503,60 +503,136 @@ impl RenderMode {
 
 /// Page-level surroundings of a worksheet. Everything the grid doesn't
 /// care about lives here — paper size, student name overlay, whether
-/// to emit an answer-key section, debug borders.
-///
-/// Step 6 type. Step 6 (b) + (c) will have generators stop dealing
-/// with these directly — they'll return a `Sheet`, and `lib::generate`
-/// will assemble `Document { sheet, cols, chrome }`.
+/// to emit an answer-key section, debug borders. `solve_first` lives
+/// here per LAYOUT_REFACTOR.md § "Open questions": kept as a chrome
+/// convenience flag; `Document::render` translates it to per-problem
+/// modes at emission time.
 #[derive(Debug, Clone)]
 pub struct Chrome {
     pub student_name: Option<String>,
     pub paper: Paper,
     pub include_answers: bool,
     pub debug: bool,
+    pub solve_first: bool,
 }
 
 impl Chrome {
     /// Copy the chrome-relevant fields out of a flat `WorksheetParams`.
-    /// Temporary shim while Sheet/Document migration is in progress;
-    /// once generators return `Sheet`, callers will build `Chrome`
-    /// directly without going through `WorksheetParams`.
     pub fn from_params(p: &WorksheetParams) -> Self {
         Self {
             student_name: p.student_name.clone(),
             paper: p.paper,
             include_answers: p.include_answers,
             debug: p.debug,
+            solve_first: p.solve_first,
         }
     }
 
     /// Body content area (grid region) in cm on the configured paper.
-    /// Delegates to the free `content_area_cm` — same numbers, method
-    /// shape matches the doc's § "Content-area derivation".
     pub fn content_area_cm(&self) -> (f32, f32) {
         content_area_cm(self.paper)
     }
 }
 
-/// A worksheet ready to validate and render. Borrowed-ref version —
-/// lives only for the duration of a single `lib::generate` call.
-/// Post-slice-(c), `sheet: &Sheet` will replace the bare `worksheet`
-/// + `opts` fields (generators will populate `Sheet` first).
-#[derive(Debug)]
-pub struct Document<'a> {
-    pub worksheet: &'a WorksheetType,
-    pub cols: u32,
-    pub chrome: Chrome,
+/// Per-component knobs fed into `worksheet-grid` at emission time.
+/// Flat bag — which keys a given component reads is up to the typst
+/// side. `Document::render` emits only the keys that the current
+/// worksheet's component uses.
+///
+/// TODO: revisit this shape. Today it's flat with every possible key,
+/// but most keys are dead for any given worksheet:
+///   - `operator`        — everyone except long-div
+///   - `width_cm`        — vertical-stack + long-div
+///   - `answer_rows`     — vertical-stack + long-div
+///   - `pad_width`       — vertical-stack (binary add only)
+///   - `implicit`        — algebra-two-step only
+///   - `variable`        — algebra-two-step only
+///
+/// A variant enum (`ComponentOpts::VerticalStack { .. }`,
+/// `::LongDivision { .. }`, `::HorizontalInline { .. }`,
+/// `::AlgebraTwoStep { .. }`, …) would encode the shape honestly —
+/// each variant carries only its relevant keys, `Document::render`
+/// matches once. The redundancy with `WorksheetType`'s discriminator
+/// is real but represents a different dimension (which layout
+/// primitive, not which problems).
+#[derive(Debug, Clone)]
+pub struct ComponentOpts {
+    /// Typst expression yielding the operator content (e.g.
+    /// `"sym.plus"`). Empty string for long-division.
+    pub operator: String,
+    /// Cell width for the vertical-stack / long-division layouts.
+    /// Other components ignore it.
+    pub width_cm: f64,
+    /// Rows of writing space below the answer line (vertical +
+    /// long-division).
+    pub answer_rows: u32,
+    /// Left-pad operands with "0" up to this many digits. Binary
+    /// addition only; 0 elsewhere.
+    pub pad_width: u32,
+    /// Implicit coefficient-variable juxtaposition (`4x` vs `4·x`).
+    /// Algebra two-step only.
+    pub implicit: bool,
+    /// Variable glyph in algebra problems. Validated to a single
+    /// unicode scalar upstream.
+    pub variable: String,
 }
 
-impl Document<'_> {
+/// Pure data a generator produces. Zero awareness of chrome or paging
+/// — just the problems, the worksheet type, and the component options.
+#[derive(Debug, Clone)]
+pub struct Sheet {
+    pub worksheet: WorksheetType,
+    pub problems: Vec<Vec<u32>>,
+    pub opts: ComponentOpts,
+}
+
+/// A worksheet ready to validate and render. Owns its `Sheet`. The
+/// `num_problems` / `pages` fields are transitional until step 7
+/// switches pagination to an overflow-based model — at that point
+/// both become derived from `cols`, `cell_size_cm`, and `content_area_cm`.
+#[derive(Debug, Clone)]
+pub struct Document {
+    pub sheet: Sheet,
+    pub cols: u32,
+    pub chrome: Chrome,
+    /// Number of problems per page.
+    pub num_problems: u32,
+    /// Number of problem pages.
+    pub pages: u32,
+}
+
+impl Document {
+    /// Build a Document from legacy `WorksheetParams` — runs the
+    /// appropriate per-worksheet generator to produce the `Sheet`,
+    /// wraps it up, and runs `validate()`.
+    pub fn from_params(params: &WorksheetParams) -> Result<Self> {
+        let sheet = match &params.worksheet {
+            WorksheetType::Add { .. } => add::generate(params)?,
+            WorksheetType::Subtract { .. } => subtract::generate(params)?,
+            WorksheetType::Multiply { .. } => multiply::generate(params)?,
+            WorksheetType::SimpleDivision { .. } => divide::generate_simple(params)?,
+            WorksheetType::LongDivision { .. } => divide::generate_long(params)?,
+            WorksheetType::MultiplicationDrill { .. } => mult_drill::generate(params)?,
+            WorksheetType::DivisionDrill { .. } => div_drill::generate(params)?,
+            WorksheetType::FractionMultiply { .. } => fraction_mult::generate(params)?,
+            WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
+        };
+        let doc = Document {
+            sheet,
+            cols: params.cols,
+            chrome: Chrome::from_params(params),
+            num_problems: params.num_problems,
+            pages: params.pages,
+        };
+        doc.validate()?;
+        Ok(doc)
+    }
+
     /// Check the user-supplied `cols` fits on the configured paper for
-    /// the worst-case operand digit count. A too-tight grid overflows
-    /// the content area width — better to fail with a clear message
-    /// than silently crop.
+    /// the worst-case operand digit count.
     pub fn validate(&self) -> Result<()> {
-        let max_digits = self.worksheet.max_digits_bound();
-        let (cell_w, _) = self.worksheet.cell_size_cm(max_digits);
+        let max_digits = self.sheet.worksheet.max_digits_bound();
+        let (cell_w, _) = self.sheet.worksheet.cell_size_cm(max_digits);
         let (area_w, _) = self.chrome.content_area_cm();
         let max_cols = (area_w / cell_w).floor() as u32;
         if self.cols > max_cols {
@@ -565,11 +641,16 @@ impl Document<'_> {
                  each cell is {cell_w:.2}cm but content area is only \
                  {area_w:.2}cm wide (max {max_cols} cols)",
                 self.cols,
-                self.worksheet.component_typst_name(),
+                self.sheet.worksheet.component_typst_name(),
                 self.chrome.paper,
             );
         }
         Ok(())
+    }
+
+    /// Emit the complete typst source for this document.
+    pub fn render(&self) -> Result<String> {
+        document::render_document(self)
     }
 }
 
@@ -672,16 +753,6 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
         bail!("pages must be at least 1");
     }
 
-    // Fail loudly if `cols` is wider than the paper can hold at the
-    // worst-case digit count — prevents the grid silently truncating
-    // problems off the right edge of the page.
-    Document {
-        worksheet: &params.worksheet,
-        cols: params.cols,
-        chrome: Chrome::from_params(params),
-    }
-    .validate()?;
-
     let is_drill = matches!(
         &params.worksheet,
         WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. }
@@ -706,28 +777,25 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
         );
     }
 
-    let typ_source = match &params.worksheet {
-        WorksheetType::Add { digits, .. } => {
-            validate_digit_ranges(digits)?;
-            add::generate_typ(params)?
-        }
+    // Per-worksheet range / shape validation. These are cheap checks
+    // on the config itself, separate from the paper-fit check in
+    // `Document::validate()` and from generator-internal checks.
+    match &params.worksheet {
+        WorksheetType::Add { digits, .. } => validate_digit_ranges(digits)?,
         WorksheetType::Subtract { digits, .. } => {
             validate_digit_ranges(digits)?;
             if digits.len() > 2 {
                 bail!("subtract supports max 2 operands, got {}", digits.len());
             }
-            subtract::generate_typ(params)?
         }
         WorksheetType::Multiply { digits } => {
             validate_digit_ranges(digits)?;
             if digits.len() > 2 {
                 bail!("multiply supports max 2 operands, got {}", digits.len());
             }
-            multiply::generate_typ(params)?
         }
         WorksheetType::SimpleDivision { max_quotient } => {
             validate_max_quotient(*max_quotient)?;
-            divide::generate_simple(params)?
         }
         WorksheetType::LongDivision { digits, .. } => {
             validate_digit_range(*digits, "long division dividend")?;
@@ -738,7 +806,6 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
                     digits.max
                 );
             }
-            divide::generate_long(params)?
         }
         WorksheetType::MultiplicationDrill {
             multiplicand,
@@ -762,7 +829,6 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
                     multiplier.max
                 );
             }
-            mult_drill::generate_typ(params)?
         }
         WorksheetType::DivisionDrill {
             divisor,
@@ -786,7 +852,6 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
                     max_quotient.max
                 );
             }
-            div_drill::generate_typ(params)?
         }
         WorksheetType::FractionMultiply {
             denominators,
@@ -807,7 +872,6 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
                     "whole range must be 2-99 with min ≤ max, got {min_whole}-{max_whole}"
                 );
             }
-            fraction_mult::generate_typ(params)?
         }
         WorksheetType::AlgebraTwoStep {
             a_range,
@@ -820,10 +884,18 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
                 bail!("a-range must be 2-12, got {}-{}", a_range.min, a_range.max);
             }
             if b_range.max > 99 || b_range.min > b_range.max {
-                bail!("b-range must be 0-99 with min ≤ max, got {}-{}", b_range.min, b_range.max);
+                bail!(
+                    "b-range must be 0-99 with min ≤ max, got {}-{}",
+                    b_range.min,
+                    b_range.max
+                );
             }
             if x_range.max > 99 || x_range.min > x_range.max {
-                bail!("x-range must be 0-99 with min ≤ max, got {}-{}", x_range.min, x_range.max);
+                bail!(
+                    "x-range must be 0-99 with min ≤ max, got {}-{}",
+                    x_range.min,
+                    x_range.max
+                );
             }
             // Variable must be exactly one unicode scalar (a single letter,
             // symbol, or single-codepoint emoji like 🍌). Compound emoji
@@ -831,10 +903,14 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
             if variable.chars().count() != 1 {
                 bail!("variable must be a single character, got {:?}", variable);
             }
-            algebra_two_step::generate_typ(params)?
         }
     };
-    Ok(typ_source)
+
+    // One centralized path from params → Sheet → Document → .typ:
+    // generators return pure data; Document::from_params assembles
+    // the Document (including `Document::validate()` for paper-fit)
+    // and Document::render emits the source.
+    Document::from_params(params)?.render()
 }
 
 /// When a generator's unique-problem pool is smaller than `target`
@@ -951,26 +1027,44 @@ mod tests {
     fn document_validate_rejects_too_many_cols() {
         // Default A4 content width = 18cm. A 3-digit add cell is 2.6cm,
         // so max cols = floor(18 / 2.6) = 6. Asking for 7 should error.
-        let worksheet = WorksheetType::Add {
-            digits: vec![DigitRange::fixed(3), DigitRange::fixed(3)],
-            carry: CarryMode::Any,
-            binary: false,
+        let sheet = Sheet {
+            worksheet: WorksheetType::Add {
+                digits: vec![DigitRange::fixed(3), DigitRange::fixed(3)],
+                carry: CarryMode::Any,
+                binary: false,
+            },
+            problems: vec![],
+            opts: ComponentOpts {
+                operator: "sym.plus".to_string(),
+                width_cm: 2.6,
+                answer_rows: 1,
+                pad_width: 0,
+                implicit: false,
+                variable: "x".to_string(),
+            },
+        };
+        let chrome = Chrome {
+            student_name: None,
+            paper: Paper::A4,
+            include_answers: false,
+            debug: false,
+            solve_first: false,
         };
         let doc = Document {
-            worksheet: &worksheet,
+            sheet: sheet.clone(),
             cols: 7,
-            chrome: Chrome {
-                student_name: None,
-                paper: Paper::A4,
-                include_answers: false,
-                debug: false,
-            },
+            chrome: chrome.clone(),
+            num_problems: 12,
+            pages: 1,
         };
         let err = doc.validate().unwrap_err().to_string();
         assert!(err.contains("too wide"), "unexpected error: {err}");
 
         // 6 cols should fit.
-        let ok_doc = Document { cols: 6, ..doc };
+        let ok_doc = Document {
+            cols: 6,
+            ..doc
+        };
         assert!(ok_doc.validate().is_ok());
     }
 

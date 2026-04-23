@@ -4,9 +4,9 @@
 //!   56 ÷ 7 = ___  (instead of 7 × 8 = ___)
 
 use crate::document;
-use crate::{DigitRange, WorksheetParams, WorksheetType};
+use crate::{ComponentOpts, DigitRange, Sheet, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
+pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let (divisor_ranges, max_quotient) = match &params.worksheet {
         WorksheetType::DivisionDrill { divisor, max_quotient } => {
             (divisor, *max_quotient)
@@ -15,8 +15,23 @@ pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     };
 
     let problems = generate_problems(params, divisor_ranges, max_quotient);
-    let default_symbol = params.locale.divide_symbol();
-    document::render_horizontal(default_symbol, &problems, params)
+    let operator = params
+        .symbol
+        .clone()
+        .unwrap_or_else(|| params.locale.divide_symbol().to_string());
+    let max_digits = document::max_digits(&problems);
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            operator,
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows: 1,
+            pad_width: 0,
+            implicit: false,
+            variable: "x".to_string(),
+        },
+    })
 }
 
 fn generate_problems(

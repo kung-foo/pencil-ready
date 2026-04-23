@@ -1,21 +1,37 @@
 //! Multiplication worksheet.
 
 use crate::document;
-use crate::{WorksheetParams, WorksheetType};
+use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
+pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let problems = generate_problems(params);
     // Space needed below the line for partial products + final answer.
     //   1-digit multiplier → 1 row (just the product)
     //   N-digit multiplier (N ≥ 2) → N partials + 1 final sum = N+1 rows
-    let max_multiplier = problems
-        .iter()
-        .map(|nums| nums[1])
-        .max()
-        .unwrap_or(0);
-    let mult_digits = if max_multiplier == 0 { 1 } else { max_multiplier.ilog10() + 1 };
+    let max_multiplier = problems.iter().map(|nums| nums[1]).max().unwrap_or(0);
+    let mult_digits = if max_multiplier == 0 {
+        1
+    } else {
+        max_multiplier.ilog10() + 1
+    };
     let answer_rows = if mult_digits <= 1 { 1 } else { mult_digits + 1 };
-    document::render("sym.times", &problems, params, answer_rows)
+    let max_digits = document::max_digits(&problems);
+    let operator = params
+        .symbol
+        .clone()
+        .unwrap_or_else(|| "sym.times".to_string());
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            operator,
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows,
+            pad_width: 0,
+            implicit: false,
+            variable: "x".to_string(),
+        },
+    })
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {

@@ -1,10 +1,17 @@
-//! Shared .typ template rendering.
+//! Typst source emission. Takes a `Document` (owning a `Sheet` +
+//! `Chrome` + `cols` + pagination fields) and returns the complete
+//! `.typ` source — preamble, chrome via page.header/page.footer, then
+//! a `#worksheet-grid(...)` call per page plus optional answer pages.
+//!
+//! Nothing in here generates problems, validates digit ranges, or
+//! knows about RNGs — all of that lives in the per-worksheet
+//! generators (add.rs, multiply.rs, …) which populate `Sheet`.
 
 use anyhow::{Result, bail};
 
 use crate::{
-    FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM, HEADER_PAD_TOP_CM, MARGINS_CM,
-    RenderMode, WorksheetParams,
+    ComponentOpts, Document, FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM,
+    HEADER_PAD_TOP_CM, MARGINS_CM, RenderMode, WorksheetType,
 };
 
 fn page_modes(is_answer_page: bool, solve_first: bool, len: usize) -> Vec<RenderMode> {
@@ -21,90 +28,93 @@ fn page_modes(is_answer_page: bool, solve_first: bool, len: usize) -> Vec<Render
     }
 }
 
-/// Render a vertical-style worksheet (add, subtract, multiply, simple divide).
-pub fn render(
-    default_operator: &str,
-    problems: &[Vec<u32>],
-    params: &WorksheetParams,
-    answer_rows: u32,
-) -> Result<String> {
-    render_inner(default_operator, problems, params, "vertical", answer_rows)
+/// Cell width in cm for the vertical-stack and horizontal-inline
+/// primitives (and the long-division layout). Drives the `width`
+/// opts key emitted for those components. Formulas match what
+/// `render_inner_with_pad` computed pre-refactor.
+pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
+    match worksheet {
+        WorksheetType::LongDivision { .. } => f64::max(3.0, max_digits as f64 * 0.6 + 1.2),
+        WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => {
+            f64::max(6.0, max_digits as f64 * 1.2 + 4.0)
+        }
+        // Fraction + algebra set their widths internally; the value
+        // emitted here is a grid hint, not consumed by the component.
+        WorksheetType::FractionMultiply { .. } => 6.0,
+        WorksheetType::AlgebraTwoStep { .. } => 6.0,
+        _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
+    }
 }
 
-/// Vertical worksheet with a fixed operand display-width (left-pad with
-/// zeros up to `pad_width` characters). Used by binary addition so each
-/// operand fills its full bit width.
-pub fn render_padded(
-    default_operator: &str,
-    problems: &[Vec<u32>],
-    params: &WorksheetParams,
-    answer_rows: u32,
-    pad_width: u32,
-) -> Result<String> {
-    render_inner_with_pad(
-        default_operator, problems, params, "vertical", answer_rows, false, "x", pad_width,
-    )
+/// Max operand digit count across the actual generated problems.
+/// Feeds `box_width_cm` — the UI-level formula wants the real max, not
+/// the `WorksheetType::max_digits_bound` worst-case upper bound used
+/// by `Document::validate`.
+pub(crate) fn max_digits(problems: &[Vec<u32>]) -> u32 {
+    problems
+        .iter()
+        .flat_map(|nums| nums.iter().map(|n| digit_count(*n)))
+        .max()
+        .unwrap_or(2)
 }
 
-/// Render a horizontal-style worksheet (drills: A × B = ___).
-pub fn render_horizontal(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> Result<String> {
-    render_inner(default_operator, problems, params, "horizontal", 1)
+pub fn digit_count(n: u32) -> u32 {
+    if n == 0 { 1 } else { n.ilog10() + 1 }
 }
 
-/// Render a horizontal fraction worksheet (whole × num/den = ___).
-pub fn render_horizontal_fraction(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams) -> Result<String> {
-    render_inner_full(default_operator, problems, params, "horizontal-fraction", 1, false, "x")
+fn header_name_arg(name: Option<&str>) -> String {
+    match name {
+        Some(n) if !n.is_empty() => {
+            let escaped = n.replace('\\', "\\\\").replace('"', "\\\"");
+            format!("\"{escaped}\"")
+        }
+        _ => "none".to_string(),
+    }
 }
 
-/// Render an algebra two-step worksheet (ax + b = c, solve for x).
-pub fn render_algebra_two_step(default_operator: &str, problems: &[Vec<u32>], params: &WorksheetParams, implicit: bool, variable: &str) -> Result<String> {
-    render_inner_full(default_operator, problems, params, "algebra-two-step", 1, implicit, variable)
+/// Format a ComponentOpts dict as a typst expression, emitting only
+/// the keys the current worksheet's component reads. Keeps the emitted
+/// source tight (and easier to eyeball during debugging).
+fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
+    let operator_arg = if opts.operator.is_empty() {
+        "[]".to_string()
+    } else {
+        format!("[#{}]", opts.operator)
+    };
+    match worksheet {
+        WorksheetType::Add { .. }
+        | WorksheetType::Subtract { .. }
+        | WorksheetType::Multiply { .. }
+        | WorksheetType::SimpleDivision { .. } => format!(
+            "operator: {operator_arg}, width: {w}cm, answer-rows: {r}, pad-width: {p}",
+            w = opts.width_cm,
+            r = opts.answer_rows,
+            p = opts.pad_width,
+        ),
+        WorksheetType::LongDivision { .. } => format!(
+            "width: {w}cm, answer-rows: {r}",
+            w = opts.width_cm,
+            r = opts.answer_rows,
+        ),
+        WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => {
+            format!("operator: {operator_arg}")
+        }
+        WorksheetType::FractionMultiply { .. } => format!("operator: {operator_arg}"),
+        WorksheetType::AlgebraTwoStep { .. } => format!(
+            "operator: {operator_arg}, implicit: {i}, variable: \"{v}\"",
+            i = opts.implicit,
+            v = opts.variable,
+        ),
+    }
 }
 
-/// Render a long-division-style worksheet.
-pub fn render_long_division(
-    problems: &[Vec<u32>],
-    params: &WorksheetParams,
-    answer_rows: u32,
-) -> Result<String> {
-    render_inner("", problems, params, "long-division", answer_rows)
-}
+pub(crate) fn render_document(doc: &Document) -> Result<String> {
+    let sheet = &doc.sheet;
+    let chrome = &doc.chrome;
 
-fn render_inner(
-    default_operator: &str,
-    problems: &[Vec<u32>],
-    params: &WorksheetParams,
-    style: &str,
-    answer_rows: u32,
-) -> Result<String> {
-    render_inner_full(default_operator, problems, params, style, answer_rows, false, "x")
-}
-
-fn render_inner_full(
-    default_operator: &str,
-    problems: &[Vec<u32>],
-    params: &WorksheetParams,
-    style: &str,
-    answer_rows: u32,
-    implicit: bool,
-    variable: &str,
-) -> Result<String> {
-    render_inner_with_pad(default_operator, problems, params, style, answer_rows, implicit, variable, 0)
-}
-
-fn render_inner_with_pad(
-    default_operator: &str,
-    problems: &[Vec<u32>],
-    params: &WorksheetParams,
-    style: &str,
-    answer_rows: u32,
-    implicit: bool,
-    variable: &str,
-    pad_width: u32,
-) -> Result<String> {
-    let expected = params.total_problems() as usize;
+    let expected = (doc.num_problems * doc.pages) as usize;
     // Drills with num_problems=0 allow any count. Others must match exactly.
-    if params.num_problems > 0 && problems.len() < expected {
+    if doc.num_problems > 0 && sheet.problems.len() < expected {
         bail!(
             "no valid problems for the given constraints — the combination \
              of digits / carry / borrow / mode rules out every candidate. \
@@ -112,55 +122,29 @@ fn render_inner_with_pad(
         );
     }
 
-    let operator = params.symbol.as_deref().unwrap_or(default_operator);
-
-    let max_digits = problems
-        .iter()
-        .flat_map(|nums| nums.iter().map(|n| digit_count(*n)))
-        .max()
-        .unwrap_or(2);
-
-    let box_width = match style {
-        "long-division" => f64::max(3.0, max_digits as f64 * 0.6 + 1.2),
-        "horizontal" => f64::max(6.0, max_digits as f64 * 1.2 + 4.0),
-        // horizontal-fraction: width is computed by the component itself,
-        // but we still need to provide something to the grid.
-        "horizontal-fraction" => 6.0,
-        "algebra-two-step" => 6.0,
-        _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
-    };
-
-    let debug_str = if params.debug { "true" } else { "false" };
-    let implicit_str = if implicit { "true" } else { "false" };
-    let cols = params.cols;
-    let paper_name = params.paper.typst_name();
+    let debug_str = if chrome.debug { "true" } else { "false" };
+    let cols = doc.cols;
+    let paper_name = chrome.paper.typst_name();
 
     // Header student name: either `none` or a typst string literal.
     // Escape backslashes and double quotes so arbitrary UTF-8 names drop
     // straight into the generated .typ source.
-    let student_name_arg = header_name_arg(params.student_name.as_deref());
+    let student_name_arg = header_name_arg(chrome.student_name.as_deref());
 
     // Chunk problems across pages.
-    let per_page = if params.num_problems > 0 {
-        params.num_problems as usize
+    let per_page = if doc.num_problems > 0 {
+        doc.num_problems as usize
     } else {
-        problems.len() // drills with num_problems=0: all on one page
+        sheet.problems.len() // drills with num_problems=0: all on one page
     };
-    let pages: Vec<&[Vec<u32>]> = problems.chunks(per_page).collect();
-
-    // Only include operator markup if we have one (long division doesn't).
-    let operator_arg = if operator.is_empty() {
-        "[]".to_string()
-    } else {
-        format!("[#{operator}]")
-    };
+    let pages: Vec<&[Vec<u32>]> = sheet.problems.chunks(per_page).collect();
 
     // Flatten into a sequence of (problems, is_answer_key_page) tuples so we
     // can render problem pages first and answer pages at the end — each page
     // of problems gets a matching answer page.
     let mut page_sequence: Vec<(&[Vec<u32>], bool)> =
         pages.iter().map(|p| (*p, false)).collect();
-    if params.include_answers {
+    if chrome.include_answers {
         for page in &pages {
             page_sequence.push((*page, true));
         }
@@ -169,9 +153,10 @@ fn render_inner_with_pad(
     // Render each page's problem list + a worksheet-grid + optional pagebreak.
     let mut page_blocks = String::new();
     let total_page_count = page_sequence.len();
-    // Index of the first answer page (== problems.len() when include_answers
-    // is true; unused otherwise). Used to attach "Answer Key" outline entry.
     let first_answer_idx = pages.len();
+    let component_name = sheet.worksheet.component_typst_name();
+    let opts_text = opts_body(&sheet.worksheet, &sheet.opts);
+
     for (i, (page, is_answer_page)) in page_sequence.iter().enumerate() {
         let problem_lines: String = page
             .iter()
@@ -187,14 +172,11 @@ fn render_inner_with_pad(
             .join(",\n  ");
 
         // On answer-key pages we force every problem into answer-only
-        // mode (just the numeric answer, no partial products or worked
-        // steps). The `solve-first` knob is respected only on problem
+        // mode. The `solve-first` knob is respected only on problem
         // pages, where it promotes problem 0 to a worked example.
-        let modes = page_modes(*is_answer_page, params.solve_first, page.len());
-        // Typst tuple-vs-array: `(x,)` is a 1-tuple-as-array; `(,)` is a
-        // syntax error. Emit `()` for the empty case so a zero-problem
-        // page (unreachable today, but a cheap footgun to defuse)
-        // produces valid source.
+        let modes = page_modes(*is_answer_page, chrome.solve_first, page.len());
+        // Typst `(x,)` is a 1-tuple-as-array; `(,)` is a syntax error.
+        // Emit `()` for empty so a zero-problem page produces valid source.
         let modes_arg = if modes.is_empty() {
             "()".to_string()
         } else {
@@ -206,39 +188,14 @@ fn render_inner_with_pad(
             format!("({inner},)")
         };
 
-        // PDF outline entries: when the document has both a problems section
-        // and an answer-key section, emit a heading at the top of each to
-        // produce sidebar bookmarks. The preamble's show-rule suppresses the
-        // visual rendering — only the PDF-outline entry remains.
-        let outline_heading = if params.include_answers && i == 0 {
+        // PDF outline entries — sidebar bookmarks. The preamble's
+        // show-rule suppresses the visual rendering.
+        let outline_heading = if chrome.include_answers && i == 0 {
             "#heading(outlined: true, bookmarked: true, level: 1)[Problems]\n"
         } else if *is_answer_page && i == first_answer_idx {
             "#heading(outlined: true, bookmarked: true, level: 1)[Answer Key]\n"
         } else {
             ""
-        };
-
-        // Component name is per-worksheet (e.g. addition-basic-problem,
-        // multiplication-drill-problem) — the wrapper files under
-        // lib/problems/<folder>/ expose distinct aliases even when two
-        // worksheets share the same underlying layout primitive.
-        //
-        // opts keys remain layout-shaped, since vertical-stack vs
-        // horizontal-inline vs each one-off layout read different keys.
-        let component_name = params.worksheet.component_typst_name();
-        let opts_body = match style {
-            "vertical" => format!(
-                "operator: {operator_arg}, width: {box_width}cm, answer-rows: {answer_rows}, pad-width: {pad_width}"
-            ),
-            "long-division" => format!(
-                "width: {box_width}cm, answer-rows: {answer_rows}"
-            ),
-            "horizontal" => format!("operator: {operator_arg}"),
-            "horizontal-fraction" => format!("operator: {operator_arg}"),
-            "algebra-two-step" => format!(
-                "operator: {operator_arg}, implicit: {implicit_str}, variable: \"{variable}\""
-            ),
-            other => bail!("unknown worksheet style: {other}"),
         };
 
         page_blocks.push_str(&format!(
@@ -250,7 +207,7 @@ fn render_inner_with_pad(
   num-cols: {cols},
   debug: {debug_str},
   modes: {modes_arg},
-  opts: ({opts_body}),
+  opts: ({opts_text}),
 )
 "#
         ));
@@ -261,11 +218,10 @@ fn render_inner_with_pad(
 
     // PDF metadata — shows up in the reader's Document Properties panel
     // and gets indexed when the file is ingested by content systems.
-    let doc_title = params.title();
-    let doc_kind = params.kind_slug();
+    let doc_title = sheet.worksheet.title(chrome.solve_first);
+    let doc_kind = sheet.worksheet.kind_slug();
 
-    // Interpolate chrome dimensions from Rust constants so the emitted
-    // typst stays in sync with the pagination math elsewhere.
+    // Interpolate chrome dimensions from Rust constants.
     let margin_top = MARGINS_CM.top;
     let margin_bottom = MARGINS_CM.bottom;
     let margin_left = MARGINS_CM.left;
@@ -303,10 +259,9 @@ fn render_inner_with_pad(
 
 // Header (HEADER_HEIGHT_CM) and footer (FOOTER_HEIGHT_CM) render as
 // page chrome via typst's page.header / page.footer callbacks, not
-// body flow. That keeps them pinned to the top/bottom margin bands
-// regardless of how the grid fills. Margin / ascent / descent /
-// header-pad / footer-pad values are interpolated from Rust constants
-// (MARGINS_CM, HEADER_ASCENT_CM, …) — single source of truth.
+// body flow. Margin / ascent / descent / header-pad / footer-pad
+// values are interpolated from Rust constants (MARGINS_CM,
+// HEADER_ASCENT_CM, …) — single source of truth.
 #set page(
   paper: "{paper_name}",
   margin: (top: {margin_top}cm, bottom: {margin_bottom}cm, left: {margin_left}cm, right: {margin_right}cm),
@@ -324,20 +279,6 @@ fn render_inner_with_pad(
 
 {page_blocks}"#
     ))
-}
-
-pub fn digit_count(n: u32) -> u32 {
-    if n == 0 { 1 } else { n.ilog10() + 1 }
-}
-
-fn header_name_arg(name: Option<&str>) -> String {
-    match name {
-        Some(n) if !n.is_empty() => {
-            let escaped = n.replace('\\', "\\\\").replace('"', "\\\"");
-            format!("\"{escaped}\"")
-        }
-        _ => "none".to_string(),
-    }
 }
 
 #[cfg(test)]

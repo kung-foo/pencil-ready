@@ -1,11 +1,27 @@
 //! Subtraction worksheet.
 
 use crate::document;
-use crate::{BorrowMode, WorksheetParams, WorksheetType};
+use crate::{BorrowMode, ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
+pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let problems = generate_problems(params);
-    document::render("sym.minus", &problems, params, 1)
+    let max_digits = document::max_digits(&problems);
+    let operator = params
+        .symbol
+        .clone()
+        .unwrap_or_else(|| "sym.minus".to_string());
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            operator,
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows: 1,
+            pad_width: 0,
+            implicit: false,
+            variable: "x".to_string(),
+        },
+    })
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
