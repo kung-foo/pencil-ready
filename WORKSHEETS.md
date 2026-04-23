@@ -253,6 +253,70 @@ The equation is rendered in math mode with Fira Math pinned as the math
 font — the default math font inherits the outer text's letter-spacing and
 breaks multi-digit numerators/denominators (e.g. "10") into "1 0".
 
+## Fraction Simplification
+
+Rewrite each fraction in its simplest form. Covers three answer
+shapes within one layout: reduce a fraction, convert an improper
+fraction to a mixed number, or recognize that it's already in lowest
+terms and copy it unchanged.
+
+```
+ 6                11                7
+ ─ = ___          ── = ___         ── = ___
+ 8                 4                17
+
+        3                     3                 7
+       ─                    2 ─                ──
+       4                     4                 17
+```
+
+Single-row `num/den = ___` layout per problem. The answer slot is a
+visible underline when blank; when solved, it holds one of:
+
+- a reduced proper fraction (e.g. 6/8 → 3/4)
+- a mixed number (e.g. 11/4 → 2 3/4)
+- the same fraction if already coprime (e.g. 7/17 → 7/17)
+- a pure whole number (only when `include_whole` is set)
+
+### Parameters
+
+- `denominators: list[u32]` — allowed denominators of the **printed**
+  fraction. Default `2,3,4,5,6,8,10,12`. The *reduced* denominator is
+  derived — denominators listed here don't have to be coprime with
+  anything; they drive the problem LHS.
+- `max_numerator: u32` — maximum printed numerator (default 20).
+  Setting this larger than the largest denominator lets improper
+  fractions appear.
+- `proper_only: bool` — if true, only proper fractions (num < den)
+  appear; answers are always fractions, never mixed numbers. Default
+  false — a good worksheet mixes proper and improper.
+- `include_whole: bool` — if true, allow problems whose reduced form
+  collapses to a pure whole number (e.g. 12/4 → 3). Default false —
+  these read more like division than simplification.
+- `solve_first: bool` — render the first problem filled in with its
+  simplified form. There's no intermediate "work" step to show.
+
+### Problem generation
+
+1. Enumerate every `(num, den)` pair where `den ∈ denominators` and
+   `1 ≤ num ≤ max_numerator`.
+2. Skip improper pairs when `proper_only`.
+3. Skip pairs whose reduced denominator is 1 (the answer is a whole
+   number) unless `include_whole`.
+4. Shuffle and take `num_problems`.
+5. If the pool is smaller than requested, pad via
+   `pad_with_duplicates` so the page still fills.
+
+### Layout component
+
+```typst
+fraction-simplification-problem((6, 8))                  // blank
+fraction-simplification-problem((20, 6), mode: "worked") // 3 1/3
+```
+
+No operator or locale-specific symbol — the fraction bar and `=` are
+universal.
+
 ## Algebra: Two-Step
 
 Solve a two-step linear equation of the form `ax + b = c` for `x`. Teaches

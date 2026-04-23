@@ -22,3 +22,6 @@ tools/
 .envrc
 .mcp.json
 .gitmodules
+
+# playwright-cli debug snapshots (local only)
+.playwright-cli/

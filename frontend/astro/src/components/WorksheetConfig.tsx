@@ -445,6 +445,45 @@ function KindSpecific({
         </div>
       );
 
+    case "fraction-simplify":
+      return (
+        <div className="space-y-4">
+          <Field label="Denominators">
+            <Input
+              value={cfg.denominators ?? ""}
+              placeholder="2,3,4,5,6,8,10,12"
+              onChange={(e) => patch("denominators", e.target.value)}
+            />
+          </Field>
+          <Field label="Max numerator">
+            <Input
+              type="number"
+              value={cfg.max_numerator ?? ""}
+              placeholder="20"
+              onChange={(e) =>
+                patch("max_numerator", Number(e.target.value) || undefined)
+              }
+            />
+          </Field>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="proper_only">Proper fractions only</Label>
+            <Switch
+              id="proper_only"
+              checked={cfg.proper_only ?? false}
+              onCheckedChange={(v) => patch("proper_only", v)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="include_whole">Allow whole-number answers</Label>
+            <Switch
+              id="include_whole"
+              checked={cfg.include_whole ?? false}
+              onCheckedChange={(v) => patch("include_whole", v)}
+            />
+          </div>
+        </div>
+      );
+
     case "algebra-two-step":
       return (
         <div className="space-y-4">

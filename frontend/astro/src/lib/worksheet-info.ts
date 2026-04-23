@@ -120,6 +120,21 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
       "Recognize which (whole, fraction) pairs produce clean whole answers.",
     ],
   },
+  "fraction-simplify": {
+    title: "Fraction simplification",
+    summary:
+      "Rewrite each fraction in simplest form — reduce, convert improper fractions to mixed numbers, or recognize when it's already reduced.",
+    prerequisites: [
+      "Read a fraction as numerator over denominator.",
+      "Times-table fluency (to spot common factors quickly).",
+      "Division with remainder (for the improper → mixed-number conversion).",
+    ],
+    learning: [
+      "Find the greatest common factor of the numerator and denominator and divide both by it.",
+      "Convert an improper fraction to a mixed number via division with remainder.",
+      "Recognize when a fraction is already in lowest terms and write it unchanged.",
+    ],
+  },
   "algebra-two-step": {
     title: "Two-step equations",
     summary: "Solve ax + b = c for x by isolating the variable.",

@@ -82,6 +82,8 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::DivisionDrill { .. }, Form::Slug) => "division-drill",
         (WorksheetType::FractionMultiply { .. }, Form::Title) => "Fraction multiplication",
         (WorksheetType::FractionMultiply { .. }, Form::Slug) => "fraction-multiplication",
+        (WorksheetType::FractionSimplify { .. }, Form::Title) => "Fraction simplification",
+        (WorksheetType::FractionSimplify { .. }, Form::Slug) => "fraction-simplification",
         (WorksheetType::AlgebraTwoStep { .. }, Form::Title) => "Two-step equations",
         (WorksheetType::AlgebraTwoStep { .. }, Form::Slug) => "two-step-equations",
     }

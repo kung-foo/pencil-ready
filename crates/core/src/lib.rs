@@ -8,6 +8,7 @@ mod algebra_two_step;
 mod div_drill;
 mod divide;
 mod fraction_mult;
+mod fraction_simplify;
 mod meta;
 mod mult_drill;
 mod multiply;
@@ -183,6 +184,20 @@ pub enum WorksheetType {
         /// If true, numerator is always 1 (unit fractions only).
         unit_only: bool,
     },
+    FractionSimplify {
+        /// Allowed denominators of the printed fraction.
+        denominators: Vec<u32>,
+        /// Maximum numerator of the printed fraction. Setting it larger
+        /// than the largest denominator lets improper fractions appear.
+        max_numerator: u32,
+        /// If true, allow numerator >= denominator (answers become mixed
+        /// numbers). Default true.
+        include_improper: bool,
+        /// If true, allow problems whose reduced denominator collapses
+        /// to 1 (answer is a pure whole number, e.g. 12/4 → 3). Default
+        /// false — these feel more like division than simplification.
+        include_whole: bool,
+    },
     AlgebraTwoStep {
         /// Coefficient range (default 2-12).
         a_range: DigitRange,
@@ -214,6 +229,7 @@ impl WorksheetType {
             WorksheetType::MultiplicationDrill { .. } => "multiplication-drill-problem",
             WorksheetType::DivisionDrill { .. } => "division-drill-problem",
             WorksheetType::FractionMultiply { .. } => "fraction-multiplication-problem",
+            WorksheetType::FractionSimplify { .. } => "fraction-simplification-problem",
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
         }
     }
@@ -274,6 +290,11 @@ impl WorksheetType {
             // dominates). 2-row vertical layout gives 2.8cm height.
             WorksheetType::FractionMultiply { .. } => (6.0, 2.8),
 
+            // Fraction simplification: LHS fraction + `=` + answer slot
+            // on a single row. Width fixed — largest answers fit a 2-digit
+            // mixed number (e.g. "2 7/12"). Height is the fraction stack.
+            WorksheetType::FractionSimplify { .. } => (5.0, 2.6),
+
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).
             WorksheetType::AlgebraTwoStep {
@@ -316,6 +337,16 @@ impl WorksheetType {
             WorksheetType::SimpleDivision { max_quotient } => document::digit_count(9 * *max_quotient),
             // Fraction-mult's width is driven by the whole-number LHS.
             WorksheetType::FractionMultiply { max_whole, .. } => document::digit_count(*max_whole),
+            // Simplify's width is capped by max_numerator (the widest
+            // operand printed on the LHS) and the largest denominator.
+            WorksheetType::FractionSimplify {
+                max_numerator,
+                denominators,
+                ..
+            } => {
+                let max_den = denominators.iter().copied().max().unwrap_or(2);
+                document::digit_count((*max_numerator).max(max_den))
+            }
             // Algebra's width bound is the largest numeric literal in
             // the LHS / intermediate / solution lines — worst case the
             // a*x+b product or `c` itself.
@@ -625,6 +656,7 @@ impl Document {
             WorksheetType::MultiplicationDrill { .. } => mult_drill::generate(params)?,
             WorksheetType::DivisionDrill { .. } => div_drill::generate(params)?,
             WorksheetType::FractionMultiply { .. } => fraction_mult::generate(params)?,
+            WorksheetType::FractionSimplify { .. } => fraction_simplify::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
         };
         let chrome = Chrome::from_params(params);
@@ -925,6 +957,23 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 bail!(
                     "whole range must be 2-99 with min ≤ max, got {min_whole}-{max_whole}"
                 );
+            }
+        }
+        WorksheetType::FractionSimplify {
+            denominators,
+            max_numerator,
+            ..
+        } => {
+            if denominators.is_empty() {
+                bail!("denominators must have at least one value");
+            }
+            for &d in denominators {
+                if d < 2 || d > 12 {
+                    bail!("denominator must be 2-12, got {d}");
+                }
+            }
+            if *max_numerator < 2 || *max_numerator > 99 {
+                bail!("max-numerator must be 2-99, got {max_numerator}");
             }
         }
         WorksheetType::AlgebraTwoStep {

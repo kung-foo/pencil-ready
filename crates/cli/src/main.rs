@@ -345,6 +345,41 @@ enum Command {
         unit_only: bool,
     },
 
+    /// Fraction simplification (num/den = ___, simplest form)
+    ///
+    /// Answer is one of: reduced proper fraction, mixed number, the
+    /// same fraction (already in lowest terms), or a whole number
+    /// (only with --include-whole).
+    FractionSimplify {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "12")]
+        problems: u32,
+
+        #[arg(long, default_value = "3")]
+        cols: u32,
+
+        /// Allowed denominators of the printed fraction, comma-separated.
+        #[arg(long, value_delimiter = ',', default_values_t = [2, 3, 4, 5, 6, 8, 10, 12])]
+        denominators: Vec<u32>,
+
+        /// Maximum numerator of the printed fraction. Larger than the
+        /// largest denominator lets improper fractions appear.
+        #[arg(long, default_value = "20")]
+        max_numerator: u32,
+
+        /// Exclude improper fractions — only proper (num < den) problems.
+        /// Default off: a good worksheet mixes proper and improper.
+        #[arg(long)]
+        proper_only: bool,
+
+        /// Include problems whose answer is a pure whole number
+        /// (e.g. 12/4 → 3). Default off.
+        #[arg(long)]
+        include_whole: bool,
+    },
+
     /// Generate a multi-page PDF with one of each worksheet type.
     ///
     /// All worksheets use their defaults plus --solve-first and --seed 42
@@ -509,6 +544,25 @@ fn resolve(command: Command) -> Resolved {
                 min_whole,
                 max_whole,
                 unit_only,
+            },
+        },
+        Command::FractionSimplify {
+            global,
+            problems,
+            cols,
+            denominators,
+            max_numerator,
+            proper_only,
+            include_whole,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::FractionSimplify {
+                denominators,
+                max_numerator,
+                include_improper: !proper_only,
+                include_whole,
             },
         },
         Command::All { .. } => unreachable!("Command::All is handled before resolve()"),
@@ -702,6 +756,17 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             3,
         ),
         (
+            "fraction-simplify",
+            WorksheetType::FractionSimplify {
+                denominators: vec![2, 3, 4, 5, 6, 8, 10, 12],
+                max_numerator: 20,
+                include_improper: true,
+                include_whole: false,
+            },
+            12,
+            3,
+        ),
+        (
             "algebra-two-step",
             WorksheetType::AlgebraTwoStep {
                 a_range: DigitRange::new(2, 10),
@@ -741,6 +806,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/division/long.typ": division-long-problem
 #import "/lib/problems/division/drill.typ": division-drill-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
+#import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
