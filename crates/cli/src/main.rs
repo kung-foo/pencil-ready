@@ -15,9 +15,13 @@ use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, WorksheetParams, WorksheetType,
-    compile_typst, generate, generate_typst_source,
+    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, Paper, WorksheetParams,
+    WorksheetType, compile_typst, generate, generate_typst_source,
 };
+
+fn parse_paper(s: &str) -> Result<Paper, String> {
+    s.parse()
+}
 
 #[derive(Clone, Copy, Default, ValueEnum)]
 enum CliCarryMode {
@@ -89,8 +93,9 @@ struct GlobalArgs {
     #[arg(long, default_value = "1")]
     pages: u32,
 
-    #[arg(long, default_value = "a4")]
-    paper: String,
+    /// Paper size. Accepts "a4" (default) or "us-letter" (alias: "letter").
+    #[arg(long, default_value = "a4", value_parser = parse_paper)]
+    paper: Paper,
 
     #[arg(long)]
     seed: Option<u64>,
@@ -598,7 +603,7 @@ fn default_params_for(
         worksheet,
         num_problems,
         cols,
-        paper: global.paper.clone(),
+        paper: global.paper,
         debug: global.debug,
         // Ignore any --seed the caller passed: `all` must be reproducible.
         seed: Some(42),

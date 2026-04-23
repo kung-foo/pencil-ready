@@ -2,7 +2,10 @@
 
 use anyhow::{Result, bail};
 
-use crate::{RenderMode, WorksheetParams};
+use crate::{
+    FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM, HEADER_PAD_TOP_CM, MARGINS_CM,
+    RenderMode, WorksheetParams,
+};
 
 fn page_modes(is_answer_page: bool, solve_first: bool, len: usize) -> Vec<RenderMode> {
     if is_answer_page {
@@ -130,7 +133,7 @@ fn render_inner_with_pad(
     let debug_str = if params.debug { "true" } else { "false" };
     let implicit_str = if implicit { "true" } else { "false" };
     let cols = params.cols;
-    let paper = &params.paper;
+    let paper_name = params.paper.typst_name();
 
     // Header student name: either `none` or a typst string literal.
     // Escape backslashes and double quotes so arbitrary UTF-8 names drop
@@ -260,6 +263,18 @@ fn render_inner_with_pad(
     // and gets indexed when the file is ingested by content systems.
     let doc_title = params.title();
     let doc_kind = params.kind_slug();
+
+    // Interpolate chrome dimensions from Rust constants so the emitted
+    // typst stays in sync with the pagination math elsewhere.
+    let margin_top = MARGINS_CM.top;
+    let margin_bottom = MARGINS_CM.bottom;
+    let margin_left = MARGINS_CM.left;
+    let margin_right = MARGINS_CM.right;
+    let header_ascent = HEADER_ASCENT_CM;
+    let footer_descent = FOOTER_DESCENT_CM;
+    let header_pad_top = HEADER_PAD_TOP_CM;
+    let footer_pad_bottom = FOOTER_PAD_BOTTOM_CM;
+
     Ok(format!(
         r#"#import "/lib/header.typ": worksheet-header
 #import "/lib/layout.typ": worksheet-grid
@@ -286,18 +301,19 @@ fn render_inner_with_pad(
   keywords: ("math", "worksheet", "{doc_kind}", "pencilready.com"),
 )
 
-// Header (1.5cm) and footer (0.8cm) are rendered as page chrome via
-// typst's page.header/footer callbacks, not body flow. That keeps
-// them pinned to the top/bottom margin bands regardless of how much
-// the grid fills. Top/bottom margins include the chrome height plus
-// a small breathing band (ascent/descent).
+// Header (HEADER_HEIGHT_CM) and footer (FOOTER_HEIGHT_CM) render as
+// page chrome via typst's page.header / page.footer callbacks, not
+// body flow. That keeps them pinned to the top/bottom margin bands
+// regardless of how the grid fills. Margin / ascent / descent /
+// header-pad / footer-pad values are interpolated from Rust constants
+// (MARGINS_CM, HEADER_ASCENT_CM, …) — single source of truth.
 #set page(
-  paper: "{paper}",
-  margin: (top: 3.2cm, bottom: 2.2cm, left: 1.5cm, right: 1.5cm),
-  header-ascent: 0.8cm,
-  footer-descent: 0.4cm,
-  header: pad(top: 0.7cm, worksheet-header(student-name: {student_name_arg}, debug: {debug_str})),
-  footer: pad(bottom: 0.7cm, worksheet-footer(pencil-ready-content, debug: {debug_str})),
+  paper: "{paper_name}",
+  margin: (top: {margin_top}cm, bottom: {margin_bottom}cm, left: {margin_left}cm, right: {margin_right}cm),
+  header-ascent: {header_ascent}cm,
+  footer-descent: {footer_descent}cm,
+  header: pad(top: {header_pad_top}cm, worksheet-header(student-name: {student_name_arg}, debug: {debug_str})),
+  footer: pad(bottom: {footer_pad_bottom}cm, worksheet-footer(pencil-ready-content, debug: {debug_str})),
 )
 #set text(font: body-font, size: 10pt)
 

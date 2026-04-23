@@ -333,6 +333,113 @@ impl Locale {
     }
 }
 
+/// Physical paper size. Owns the page dimensions so nothing else has
+/// to string-match "a4" vs "us-letter". Switching paper is a single
+/// field change: all downstream layout math keys off
+/// `Paper::dimensions_cm()` and `content_area_cm(paper)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema)]
+pub enum Paper {
+    #[default]
+    #[serde(rename = "a4")]
+    A4,
+    /// US-Letter, 8.5 × 11 in. Accepts both `"us-letter"` (canonical,
+    /// matches typst's `#set page(paper: "us-letter")`) and `"letter"`
+    /// (alias for query-string convenience) on the wire.
+    #[serde(rename = "us-letter", alias = "letter")]
+    Letter,
+}
+
+impl Paper {
+    /// (width, height) in centimeters.
+    pub fn dimensions_cm(self) -> (f32, f32) {
+        match self {
+            Paper::A4 => (21.0, 29.7),       // 210 × 297 mm
+            Paper::Letter => (21.59, 27.94), // 8.5 × 11 in
+        }
+    }
+
+    /// String passed to typst's `#set page(paper: ...)`.
+    pub fn typst_name(self) -> &'static str {
+        match self {
+            Paper::A4 => "a4",
+            Paper::Letter => "us-letter",
+        }
+    }
+}
+
+impl std::fmt::Display for Paper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.typst_name())
+    }
+}
+
+impl std::str::FromStr for Paper {
+    type Err = String;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "a4" | "A4" => Ok(Paper::A4),
+            "us-letter" | "letter" | "Letter" => Ok(Paper::Letter),
+            _ => Err(format!(
+                "unknown paper size {s:?}; expected \"a4\" or \"us-letter\""
+            )),
+        }
+    }
+}
+
+/// Page-chrome geometry — the header/footer bands live in the page
+/// margins (via typst's `page.header` / `page.footer`) rather than in
+/// body flow, so these constants MUST stay in sync with:
+///   - `lib/header.typ`'s `box(height: 1.5cm, ...)`
+///   - `lib/footer.typ`'s `box(height: 0.8cm, ...)`
+///   - `crates/core/src/template.rs`'s `#set page(margin: ..., header-ascent: ..., footer-descent: ...)` emission.
+///
+/// Template.rs interpolates these into the generated typst source so
+/// the Rust side is the single source of truth; changing a value here
+/// changes the emitted page layout too.
+#[derive(Debug, Clone, Copy)]
+pub struct Margins {
+    pub top: f32,
+    pub bottom: f32,
+    pub left: f32,
+    pub right: f32,
+}
+
+pub const MARGINS_CM: Margins = Margins {
+    top: 3.2,
+    bottom: 2.2,
+    left: 1.5,
+    right: 1.5,
+};
+
+/// Height of `worksheet-header`'s box in `lib/header.typ`.
+pub const HEADER_HEIGHT_CM: f32 = 1.5;
+/// Height of `worksheet-footer`'s box in `lib/footer.typ`.
+pub const FOOTER_HEIGHT_CM: f32 = 0.8;
+/// typst `header-ascent` — distance from page top to the top of the
+/// header box within the top margin.
+pub const HEADER_ASCENT_CM: f32 = 0.8;
+/// typst `footer-descent` — distance from page bottom to the bottom of
+/// the footer box within the bottom margin.
+pub const FOOTER_DESCENT_CM: f32 = 0.4;
+/// `pad(top: ...)` applied around `worksheet-header` in the page.header
+/// callback — pushes the header content down so the Name/Date row
+/// doesn't kiss the top margin.
+pub const HEADER_PAD_TOP_CM: f32 = 0.7;
+/// `pad(bottom: ...)` applied around `worksheet-footer`.
+pub const FOOTER_PAD_BOTTOM_CM: f32 = 0.7;
+
+/// Body content area (grid region) on the given paper, in cm. Driven
+/// entirely by paper dimensions + `MARGINS_CM`; chrome lives in the
+/// margins via `page.header` / `page.footer` so the body area already
+/// excludes it. Used by pagination in step 7.
+pub fn content_area_cm(paper: Paper) -> (f32, f32) {
+    let (pw, ph) = paper.dimensions_cm();
+    (
+        pw - MARGINS_CM.left - MARGINS_CM.right,
+        ph - MARGINS_CM.top - MARGINS_CM.bottom,
+    )
+}
+
 /// Per-problem rendering choice. Emitted to typst as a string tag
 /// ("blank" | "worked" | "answer-only"); `lib/layout.typ` derives
 /// the per-problem `solved` and `answer-only` flags from the tag.
@@ -358,7 +465,7 @@ pub struct WorksheetParams {
     pub worksheet: WorksheetType,
     pub num_problems: u32,
     pub cols: u32,
-    pub paper: String,
+    pub paper: Paper,
     pub debug: bool,
     pub seed: Option<u64>,
     /// Explicit symbol override. Takes precedence over locale.
@@ -670,6 +777,32 @@ mod tests {
     /// `cell-sizes.toml` fixtures. When this fails: re-run `cargo run
     /// --example measure_cells` and update the mirror in lib.rs in
     /// the same commit.
+    #[test]
+    fn paper_basics() {
+        use std::str::FromStr;
+        assert_eq!(Paper::default(), Paper::A4);
+        assert_eq!(Paper::A4.typst_name(), "a4");
+        assert_eq!(Paper::Letter.typst_name(), "us-letter");
+        assert_eq!(Paper::A4.dimensions_cm(), (21.0, 29.7));
+        assert_eq!(Paper::Letter.dimensions_cm(), (21.59, 27.94));
+        assert_eq!(Paper::from_str("a4").unwrap(), Paper::A4);
+        assert_eq!(Paper::from_str("us-letter").unwrap(), Paper::Letter);
+        assert_eq!(Paper::from_str("letter").unwrap(), Paper::Letter);
+        assert!(Paper::from_str("legal").is_err());
+    }
+
+    #[test]
+    fn content_area_cm_matches_hand_math() {
+        // A4 body = 21 − 1.5 − 1.5 wide, 29.7 − 3.2 − 2.2 tall.
+        let (w, h) = content_area_cm(Paper::A4);
+        assert!((w - 18.0).abs() < 0.01);
+        assert!((h - 24.3).abs() < 0.01);
+        // Letter body = 21.59 − 3.0 wide, 27.94 − 5.4 tall.
+        let (w, h) = content_area_cm(Paper::Letter);
+        assert!((w - 18.59).abs() < 0.01);
+        assert!((h - 22.54).abs() < 0.01);
+    }
+
     #[test]
     fn cell_size_cm_matches_toml_fixtures() {
         // addition-basic-d3-op2-blank: 3-digit operands → 2.6 × 3.5

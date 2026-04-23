@@ -83,7 +83,7 @@ mod tests {
             worksheet: ws,
             num_problems: 12,
             cols: 4,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: None,
             symbol: None,

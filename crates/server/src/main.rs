@@ -24,8 +24,8 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, WorksheetParams, WorksheetType,
-    generate,
+    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, Paper, WorksheetParams,
+    WorksheetType, generate,
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
@@ -83,10 +83,10 @@ struct SharedParams {
     /// Pages (PDF only).
     #[serde(default)]
     pages: Option<u32>,
-    /// Paper size passed to typst.
+    /// Paper size. Accepts "a4" (default) or "us-letter" (alias: "letter").
     #[serde(default)]
-    #[param(example = "a4")]
-    paper: Option<String>,
+    #[param(value_type = String, example = "a4")]
+    paper: Option<Paper>,
     /// Regional defaults for operator symbols.
     #[serde(default)]
     locale: Option<Locale>,
@@ -119,7 +119,7 @@ impl SharedParams {
             worksheet,
             num_problems: self.problems.unwrap_or(default_problems),
             cols: self.cols.unwrap_or(default_cols),
-            paper: self.paper.unwrap_or_else(|| "a4".into()),
+            paper: self.paper.unwrap_or_default(),
             debug: self.debug.unwrap_or(false),
             seed: self.seed,
             symbol: self.symbol,

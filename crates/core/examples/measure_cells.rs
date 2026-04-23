@@ -34,20 +34,13 @@ fn build_source(snippet: &str) -> String {
     )
 }
 
-// A4 content area after standard margins + header + footer. Used
-// ONLY to print the diagnostic `cols_a4`/`rows_a4` columns below;
-// does NOT feed the emitted toml.
-//
-// TODO(step 5): these constants are stale — they use pre-chrome-
-// refactor margins. The current template emits
-//   margin: (top: 3.2cm, bottom: 2.2cm, left: 1.5cm, right: 1.5cm)
-// with header-ascent 0.8cm and footer-descent 0.4cm, which gives a
-// different content-area height. Re-derive from `Chrome::content_area_cm`
-// / `MARGINS_CM` / `HEADER_HEIGHT_CM` / `FOOTER_HEIGHT_CM` once those
-// constants land in step 5 of LAYOUT_REFACTOR.md. Until then the
-// diagnostic cols/rows are approximate.
-const A4_CONTENT_W_CM: f32 = 21.0 - 1.5 - 1.5; // paper w - margin l - margin r
-const A4_CONTENT_H_CM: f32 = 29.7 - 1.5 - 1.0 - 1.5 - 0.8; // - margins - header - footer
+// A4 content area after standard margins. Used ONLY to print the
+// diagnostic `cols_a4` / `rows_a4` columns below; does NOT feed the
+// emitted toml. Shared with the rest of the pipeline via
+// `pencil_ready_core::content_area_cm(Paper::A4)`.
+fn a4_content_cm() -> (f32, f32) {
+    pencil_ready_core::content_area_cm(pencil_ready_core::Paper::A4)
+}
 
 struct Row {
     id: &'static str,
@@ -72,14 +65,15 @@ fn main() -> Result<()> {
     let png_dir = root.join("out/components");
     std::fs::create_dir_all(&png_dir)?;
 
+    let (a4_w, a4_h) = a4_content_cm();
     let mut rows: Vec<Row> = Vec::with_capacity(FIXTURES.len());
     for f in FIXTURES {
         let src = build_source(f.snippet);
         let (mw, mh) = measure_typst(&src, &root, &fonts)
             .with_context(|| format!("measuring fixture {}", f.id))?;
         let (dw, dh) = (ceil_mm(mw), ceil_mm(mh));
-        let cols_a4 = (A4_CONTENT_W_CM / dw).floor() as u32;
-        let rows_a4 = (A4_CONTENT_H_CM / dh).floor() as u32;
+        let cols_a4 = (a4_w / dw).floor() as u32;
+        let rows_a4 = (a4_h / dh).floor() as u32;
 
         // Tight-cropped PNG of the component — "isolated component
         // rendering" from LAYOUT_REFACTOR.md. Same source as the
@@ -99,7 +93,7 @@ fn main() -> Result<()> {
     // --- Printed table ---
     println!();
     println!("A4 portrait content area: {:.2} cm wide × {:.2} cm tall",
-             A4_CONTENT_W_CM, A4_CONTENT_H_CM);
+             a4_w, a4_h);
     println!();
     println!("{:<28} {:>7} {:>7}   {:>7} {:>7}   {:>4} {:>4}",
              "id", "meas w", "meas h", "decl w", "decl h", "cols", "rows");

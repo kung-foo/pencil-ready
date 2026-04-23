@@ -110,7 +110,7 @@ mod tests {
             worksheet: WorksheetType::MultiplicationDrill { multiplicand, multiplier },
             num_problems: 40,
             cols: 2,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,

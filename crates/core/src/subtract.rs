@@ -184,7 +184,7 @@ mod tests {
             worksheet: WorksheetType::Subtract { digits, borrow },
             num_problems: 20,
             cols: 4,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,

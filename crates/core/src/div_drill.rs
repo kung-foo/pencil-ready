@@ -102,7 +102,7 @@ mod tests {
             worksheet: WorksheetType::DivisionDrill { divisor, max_quotient },
             num_problems: 0,
             cols: 3,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,
