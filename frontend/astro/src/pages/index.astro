@@ -1,7 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { WORKSHEET_KINDS } from "../lib/api";
-import { WORKSHEET_INFO } from "../lib/worksheet-info";
+import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
 ---
 
 <Layout
@@ -15,30 +14,45 @@ import { WORKSHEET_INFO } from "../lib/worksheet-info";
             Choose a worksheet type below.
         </p>
 
-        <!-- Responsive grid: single column on phones, two on tablets,
-         three on wide screens. Uses the same shadcn card tokens as the
-         per-type pages so the site feels cohesive. -->
-        <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <!--
+          Sectioned layout: one heading + card grid per topic cluster.
+          Section order is curriculum-progression (arithmetic → drills →
+          long-form → fractions → pre-algebra); within each, order
+          matches classroom sequencing. The card grid reuses the same
+          shadcn card tokens as the per-type pages for visual cohesion.
+          Sections stack vertically on mobile — no extra breakpoints
+          needed for the section structure itself.
+        -->
+        <div class="space-y-10">
             {
-                WORKSHEET_KINDS.map((kind) => {
-                    const info = WORKSHEET_INFO[kind];
-                    return (
-                        <li>
-                            <a
-                                href={`/worksheets/${kind}/`}
-                                class="block h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
-                            >
-                                <h3 class="font-semibold mb-1">
-                                    {info.title}
-                                </h3>
-                                <div class="text-sm text-muted-foreground">
-                                    {info.summary}
-                                </div>
-                            </a>
-                        </li>
-                    );
-                })
+                WORKSHEET_SECTIONS.map((section) => (
+                    <section>
+                        <h2 class="text-xl font-semibold mb-4 pb-1 border-b border-pencil-no-2">
+                            {section.title}
+                        </h2>
+                        <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {section.kinds.map((kind) => {
+                                const info = WORKSHEET_INFO[kind];
+                                return (
+                                    <li>
+                                        <a
+                                            href={`/worksheets/${kind}/`}
+                                            class="block h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
+                                        >
+                                            <h3 class="font-semibold mb-1">
+                                                {info.title}
+                                            </h3>
+                                            <div class="text-sm text-muted-foreground">
+                                                {info.summary}
+                                            </div>
+                                        </a>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </section>
+                ))
             }
-        </ul>
+        </div>
     </div>
 </Layout>

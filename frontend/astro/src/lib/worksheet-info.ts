@@ -1,4 +1,51 @@
-import type { WorksheetKind } from "@/lib/api";
+import { WORKSHEET_KINDS, type WorksheetKind } from "@/lib/api";
+
+/** Homepage grouping. Ordered by rough curriculum progression — the
+ * list order drives render order, and each section's `kinds` array
+ * drives the per-section card order. Must cover every kind in
+ * `WORKSHEET_KINDS` exactly once (enforced by the homepage's build). */
+export const WORKSHEET_SECTIONS: ReadonlyArray<{
+  title: string;
+  kinds: ReadonlyArray<WorksheetKind>;
+}> = [
+  {
+    title: "Arithmetic",
+    kinds: ["add", "subtract", "multiply", "simple-divide"],
+  },
+  {
+    title: "Fact drills",
+    kinds: ["mult-drill", "div-drill"],
+  },
+  {
+    title: "Long-form",
+    kinds: ["long-divide"],
+  },
+  {
+    title: "Fractions",
+    kinds: ["fraction-simplify", "fraction-mult"],
+  },
+  {
+    title: "Pre-algebra",
+    kinds: ["algebra-two-step"],
+  },
+];
+
+// Coverage check: every worksheet kind must appear in exactly one
+// section. Runs at module load so a missing / duplicated kind fails
+// the Astro build rather than producing an invisibly-broken homepage.
+{
+  const flat = WORKSHEET_SECTIONS.flatMap((s) => s.kinds);
+  const seen = new Set(flat);
+  const missing = WORKSHEET_KINDS.filter((k) => !seen.has(k));
+  if (missing.length > 0) {
+    throw new Error(
+      `WORKSHEET_SECTIONS missing kinds: ${missing.join(", ")}`,
+    );
+  }
+  if (flat.length !== seen.size) {
+    throw new Error("WORKSHEET_SECTIONS has duplicate kinds");
+  }
+}
 
 export type WorksheetInfo = {
   /** Plain-English title, matches the server's title() output. */
@@ -118,6 +165,21 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
       "Multiply across: (whole × numerator) / denominator.",
       "Simplify to a whole number when the denominator divides the numerator.",
       "Recognize which (whole, fraction) pairs produce clean whole answers.",
+    ],
+  },
+  "fraction-simplify": {
+    title: "Fraction simplification",
+    summary:
+      "Rewrite each fraction in simplest form — reduce, convert improper fractions to mixed numbers, or recognize when it's already reduced.",
+    prerequisites: [
+      "Read a fraction as numerator over denominator.",
+      "Times-table fluency (to spot common factors quickly).",
+      "Division with remainder (for the improper → mixed-number conversion).",
+    ],
+    learning: [
+      "Find the greatest common factor of the numerator and denominator and divide both by it.",
+      "Convert an improper fraction to a mixed number via division with remainder.",
+      "Recognize when a fraction is already in lowest terms and write it unchanged.",
     ],
   },
   "algebra-two-step": {

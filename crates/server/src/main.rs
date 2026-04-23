@@ -394,6 +394,45 @@ impl FractionMultSpecific {
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+struct FractionSimplifySpecific {
+    /// Allowed denominators of the printed fraction, comma-separated.
+    #[serde(default)]
+    #[param(value_type = String, example = "2,3,4,5,6,8,10,12")]
+    denominators: Option<String>,
+    /// Maximum numerator of the printed fraction.
+    #[serde(default)]
+    max_numerator: Option<u32>,
+    /// When true, only proper fractions (num < den) appear. Polarity
+    /// is flipped so the default (mixed proper + improper) is the
+    /// false case and round-trips cleanly through the URL encoder.
+    #[serde(default)]
+    proper_only: Option<bool>,
+    /// Include problems whose answer is a pure whole number.
+    #[serde(default)]
+    include_whole: Option<bool>,
+}
+
+impl FractionSimplifySpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let denominators = match self.denominators {
+            Some(s) => parse_u32_csv(&s, "denominators")?,
+            None => vec![2, 3, 4, 5, 6, 8, 10, 12],
+        };
+        Ok(shared.fold(
+            WorksheetType::FractionSimplify {
+                denominators,
+                max_numerator: self.max_numerator.unwrap_or(20),
+                include_improper: !self.proper_only.unwrap_or(false),
+                include_whole: self.include_whole.unwrap_or(false),
+            },
+            12,
+            3,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct AlgebraTwoStepSpecific {
     #[serde(default)]
     #[param(value_type = String, example = "2-10")]
@@ -700,6 +739,22 @@ async fn handle_fraction_mult(
 
 #[utoipa::path(
     get,
+    path = "/api/worksheets/fraction-simplify",
+    params(SharedParams, FractionSimplifySpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_fraction_simplify(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionSimplifySpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-simplify", p.build(shared), &headers)
+}
+
+#[utoipa::path(
+    get,
     path = "/api/worksheets/algebra-two-step",
     params(SharedParams, AlgebraTwoStepSpecific),
     responses((status = 200, description = "Worksheet bytes")),
@@ -853,6 +908,7 @@ async fn main() {
         .routes(routes!(handle_mult_drill))
         .routes(routes!(handle_div_drill))
         .routes(routes!(handle_fraction_mult))
+        .routes(routes!(handle_fraction_simplify))
         .routes(routes!(handle_algebra_two_step))
         .with_state(state.clone())
         .split_for_parts();

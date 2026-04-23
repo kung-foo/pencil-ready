@@ -41,6 +41,7 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         // Fraction + algebra set their widths internally; the value
         // emitted here is a grid hint, not consumed by the component.
         WorksheetType::FractionMultiply { .. } => 6.0,
+        WorksheetType::FractionSimplify { .. } => 5.0,
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
         _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
     }
@@ -100,6 +101,10 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
             format!("operator: {operator_arg}")
         }
         WorksheetType::FractionMultiply { .. } => format!("operator: {operator_arg}"),
+        // Simplification has no operator / no opts — the fraction bar
+        // and `=` are universal. `:` interpolates into `(:)` which is
+        // typst's empty-dict literal (as opposed to `()`, an empty array).
+        WorksheetType::FractionSimplify { .. } => ":".to_string(),
         WorksheetType::AlgebraTwoStep { .. } => format!(
             "operator: {operator_arg}, implicit: {i}, variable: \"{v}\"",
             i = opts.implicit,
@@ -249,6 +254,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/division/long.typ": division-long-problem
 #import "/lib/problems/division/drill.typ": division-drill-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
+#import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 
 #set document(
