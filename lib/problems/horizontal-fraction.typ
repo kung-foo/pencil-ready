@@ -66,7 +66,7 @@
   // 3-column grid keeps the `=` signs aligned across both rows.
   // Row 1: [whole × n/d] [=] [intermediate slot]
   // Row 2: [          ] [=] [integer      slot]
-  box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
+  let content = box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
     columns: (auto, auto, auto),
     column-gutter: 0.3em,
     row-gutter: problem-line-height,
@@ -74,4 +74,9 @@
     lhs, sym.eq, row1-right,
     [], sym.eq, row2-right,
   ))
+
+  // Self-pad + self-align so the worksheet-grid doesn't have to know
+  // anything style-specific about this component. 0.3cm left/right
+  // breathing room; right+top to keep the answer-column rhythm.
+  align(right + top, pad(left: 0.3cm, right: 0.3cm, content))
 }
