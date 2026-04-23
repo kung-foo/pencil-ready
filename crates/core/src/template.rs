@@ -287,7 +287,7 @@ fn render_inner_with_pad(
   header-ascent: 0.8cm,
   footer-descent: 0.4cm,
   header: pad(top: 0.7cm, worksheet-header(student-name: {student_name_arg}, debug: {debug_str})),
-  footer: pad(bottom: 0.7cm, worksheet-footer(pencil-ready-content)),
+  footer: pad(bottom: 0.7cm, worksheet-footer(pencil-ready-content, debug: {debug_str})),
 )
 #set text(font: body-font, size: 10pt)
 
