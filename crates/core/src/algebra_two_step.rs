@@ -8,7 +8,7 @@
 //!   form = 1 → const-first plus     `b + ax = c`
 //!   form = 2 → canonical minus      `ax - b = c` (only when a*x ≥ b)
 
-use crate::template;
+use crate::document;
 use crate::{WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
@@ -26,7 +26,7 @@ pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     // convention (elementary `×` → pre-algebra `·` → algebra implicit).
     // The explicit --symbol flag still overrides this.
     let symbol = "sym.dot.op";
-    template::render_algebra_two_step(symbol, &problems, params, implicit, variable)
+    document::render_algebra_two_step(symbol, &problems, params, implicit, variable)
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {

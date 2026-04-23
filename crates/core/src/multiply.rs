@@ -1,6 +1,6 @@
 //! Multiplication worksheet.
 
-use crate::template;
+use crate::document;
 use crate::{WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
@@ -15,7 +15,7 @@ pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
         .unwrap_or(0);
     let mult_digits = if max_multiplier == 0 { 1 } else { max_multiplier.ilog10() + 1 };
     let answer_rows = if mult_digits <= 1 { 1 } else { mult_digits + 1 };
-    template::render("sym.times", &problems, params, answer_rows)
+    document::render("sym.times", &problems, params, answer_rows)
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {

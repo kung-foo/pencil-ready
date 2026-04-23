@@ -1,6 +1,6 @@
 //! Addition worksheet.
 
-use crate::template;
+use crate::document;
 use crate::{CarryMode, WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
@@ -16,9 +16,9 @@ pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
             WorksheetType::Add { digits, .. } => digits.iter().map(|d| d.max).max().unwrap_or(0),
             _ => unreachable!(),
         };
-        template::render_padded("sym.plus", &problems, params, 1, pad_width)
+        document::render_padded("sym.plus", &problems, params, 1, pad_width)
     } else {
-        template::render("sym.plus", &problems, params, 1)
+        document::render("sym.plus", &problems, params, 1)
     }
 }
 

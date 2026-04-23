@@ -1,6 +1,6 @@
 //! Division worksheets (simple + long).
 
-use crate::template;
+use crate::document;
 use crate::{WorksheetParams, WorksheetType};
 
 /// Simple division: times-table recall. Divisor (2-9) × quotient (1-max_quotient).
@@ -11,7 +11,7 @@ pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<String> {
     };
 
     let problems = generate_simple_problems(params, max_quotient);
-    template::render("sym.div", &problems, params, 1)
+    document::render("sym.div", &problems, params, 1)
 }
 
 /// Long division: algorithm practice. Dividend has N digits, divisor is 1 digit (2-9).
@@ -30,7 +30,7 @@ pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<String> {
         .max()
         .unwrap_or(1);
     let answer_rows = 2 * max_dividend_digits;
-    template::render_long_division(&problems, params, answer_rows)
+    document::render_long_division(&problems, params, answer_rows)
 }
 
 fn generate_simple_problems(params: &WorksheetParams, max_quotient: u32) -> Vec<Vec<u32>> {

@@ -13,7 +13,7 @@ mod mult_drill;
 mod multiply;
 mod subtract;
 
-mod template;
+mod document;
 mod world;
 
 pub use world::Fonts;
@@ -307,9 +307,9 @@ impl WorksheetType {
             // where quotient ≤ max_quotient and divisor is 1-digit.
             // The widest operand is the product (dividend), up to
             // ~9 * max_quotient — at most 3 digits for sane inputs.
-            WorksheetType::SimpleDivision { max_quotient } => template::digit_count(9 * *max_quotient),
+            WorksheetType::SimpleDivision { max_quotient } => document::digit_count(9 * *max_quotient),
             // Fraction-mult's width is driven by the whole-number LHS.
-            WorksheetType::FractionMultiply { max_whole, .. } => template::digit_count(*max_whole),
+            WorksheetType::FractionMultiply { max_whole, .. } => document::digit_count(*max_whole),
             // Algebra's width bound is the largest numeric literal in
             // the LHS / intermediate / solution lines — worst case the
             // a*x+b product or `c` itself.
@@ -318,7 +318,7 @@ impl WorksheetType {
                 b_range,
                 x_range,
                 ..
-            } => template::digit_count(
+            } => document::digit_count(
                 (a_range.max * x_range.max).max(b_range.max).max(a_range.max),
             ),
         }
@@ -432,7 +432,7 @@ impl std::str::FromStr for Paper {
 /// body flow, so these constants MUST stay in sync with:
 ///   - `lib/header.typ`'s `box(height: 1.5cm, ...)`
 ///   - `lib/footer.typ`'s `box(height: 0.8cm, ...)`
-///   - `crates/core/src/template.rs`'s `#set page(margin: ..., header-ascent: ..., footer-descent: ...)` emission.
+///   - `crates/core/src/document.rs`'s `#set page(margin: ..., header-ascent: ..., footer-descent: ...)` emission.
 ///
 /// Template.rs interpolates these into the generated typst source so
 /// the Rust side is the single source of truth; changing a value here

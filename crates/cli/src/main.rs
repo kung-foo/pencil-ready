@@ -738,7 +738,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
 // Problem components passed to worksheet-grid by reference must be
-// in scope at the call site. (Mirrors template.rs's preamble.)
+// in scope at the call site. (Mirrors document.rs's preamble.)
 #import "/lib/problems/addition/basic.typ": addition-basic-problem
 #import "/lib/problems/subtraction/basic.typ": subtraction-basic-problem
 #import "/lib/problems/multiplication/basic.typ": multiplication-basic-problem

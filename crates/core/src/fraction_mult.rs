@@ -2,14 +2,14 @@
 //!
 //! Always produces whole-integer answers (no remainders).
 
-use crate::template;
+use crate::document;
 use crate::{WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let problems = generate_problems(params);
     // Locale-aware multiply symbol (× for US, · for Norway).
     let symbol = params.locale.multiply_symbol();
-    template::render_horizontal_fraction(symbol, &problems, params)
+    document::render_horizontal_fraction(symbol, &problems, params)
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {

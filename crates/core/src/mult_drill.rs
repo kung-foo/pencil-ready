@@ -1,6 +1,6 @@
 //! Multiplication drill — horizontal times-table recall.
 
-use crate::template;
+use crate::document;
 use crate::{DigitRange, WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
@@ -14,7 +14,7 @@ pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
     let problems = generate_problems(params, multiplicand, multiplier);
     // Locale determines the default symbol; --symbol overrides it.
     let default_symbol = params.locale.multiply_symbol();
-    template::render_horizontal(default_symbol, &problems, params)
+    document::render_horizontal(default_symbol, &problems, params)
 }
 
 fn generate_problems(

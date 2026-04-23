@@ -3,7 +3,7 @@
 //! Same facts as multiplication drill but reversed:
 //!   56 ÷ 7 = ___  (instead of 7 × 8 = ___)
 
-use crate::template;
+use crate::document;
 use crate::{DigitRange, WorksheetParams, WorksheetType};
 
 pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
@@ -16,7 +16,7 @@ pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
 
     let problems = generate_problems(params, divisor_ranges, max_quotient);
     let default_symbol = params.locale.divide_symbol();
-    template::render_horizontal(default_symbol, &problems, params)
+    document::render_horizontal(default_symbol, &problems, params)
 }
 
 fn generate_problems(

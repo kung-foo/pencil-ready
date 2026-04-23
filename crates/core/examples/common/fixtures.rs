@@ -16,7 +16,7 @@ pub struct Fixture {
 
 // Vertical and long-division take an explicit `width`; their internal
 // grids use a 1fr column that collapses to 0 under `width: auto`, so
-// we pass widths matching template.rs's current formula. Components
+// we pass widths matching document.rs's current formula. Components
 // without a `width` parameter size themselves naturally.
 //
 // Vertical widths:   max(2.2, max_digits * 0.55 + 0.6) cm
