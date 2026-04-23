@@ -32,29 +32,33 @@
   )
 }
 
-// `answer-rows` = rows of solve space below the bracket. Typically 2× the
-// number of dividend digits (one row each for multiply + subtract/bring-down).
-#let long-division-problem(
-  numbers,
-  width: 3.9em,
-  answer-rows: 0,
-  debug: false,
-  solved: false,
-  // Answer-key mode: when solved, render only the quotient above the bar
-  // and skip the divide-multiply-subtract-bring-down work rows.
-  answer-only: false,
-) = {
+// `opts` keys:
+//   width: cell width (e.g. 3.9em). Required.
+//   answer-rows: rows of solve space below the bracket (typically 2×
+//     the number of dividend digits). Required.
+//
+// `mode` = "blank" | "worked" | "answer-only". "answer-only" renders
+// just the quotient above the bar and skips the work rows.
+#let division-long-problem(data, mode: "blank", opts: (:), debug: false) = {
+  // Required keys — a silent `answer-rows: 0` would render zero work
+  // space and be easy to miss in review, so fail loudly if a caller
+  // forgets.
+  let width = opts.at("width")
+  let answer-rows = opts.at("answer-rows")
+  let solved = mode != "blank"
+  let answer-only = mode == "answer-only"
+
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
-  let dividend-str = str(numbers.at(0))
-  let divisor-str = str(numbers.at(1))
+  let dividend-str = str(data.at(0))
+  let divisor-str = str(data.at(1))
   // Optional quotient at index 2 — generator pushes it when available.
-  let quotient-str = if numbers.len() > 2 { str(numbers.at(2)) } else { "" }
+  let quotient-str = if data.len() > 2 { str(data.at(2)) } else { "" }
 
   // 1.3em per row ≈ one typeset line at this size.
   let work-space = 1.3em * answer-rows
 
-  box(width: width, stroke: debug-box, align(left, {
+  let content = box(width: width, stroke: debug-box, align(left, {
     // Suppress the default paragraph gap between sibling blocks inside
     // this problem. Otherwise the quotient block sits ~1em above where
     // it should visually (the block spacing stacks between quotient and
@@ -118,7 +122,7 @@
         // The rem carries into the next step paired with the brought-down
         // digit, forming the next current.
         let dividend-digits = dividend-str.clusters().map(c => int(c))
-        let divisor = numbers.at(1)
+        let divisor = data.at(1)
         let n = dividend-digits.len()
 
         let steps = ()
@@ -223,4 +227,10 @@
       }
     }
   }))
+
+  // Self-pad + self-align so the worksheet-grid doesn't have to know
+  // anything style-specific about this component. 0.5cm left pad for
+  // breathing room from the cell edge; left+top because the bracket
+  // glyph is anchored to the dividend's left edge.
+  align(left + top, pad(left: 0.5cm, content))
 }

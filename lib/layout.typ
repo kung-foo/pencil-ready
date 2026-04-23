@@ -1,76 +1,52 @@
-// Grid that lays problems out on a page. Three "solved" knobs:
+// Grid that lays problems out on a page.
 //
-//   solve-first: the *first* problem is rendered with full work (worked
-//                example for the student to read).
-//   all-solved:  *every* problem is rendered with the answer filled in —
-//                used by the answer-key page generator.
-//   answer-only: when paired with solve-first or all-solved, suppress the
-//                worked steps (partial products, intermediate rows, etc.)
-//                and show just the final numeric answer. The answer-key
-//                pages turn this on so they read as a terse key.
+//   component: a function reference to the problem component to render
+//              each cell with. Signature: `(data, mode, opts, debug)`.
+//              Every component is self-padded and self-aligned (see
+//              lib/problems/*.typ), so worksheet-grid has no style-
+//              specific knowledge.
+//
+//   modes:     list of "blank" | "worked" | "answer-only", one entry
+//              per problem. Defaults to all-blank.
+//
+//   opts:      dict forwarded to each component unchanged. Keys are
+//              component-specific (operator, width, answer-rows,
+//              implicit, variable, pad-width, ...).
+//
+// Callers must import the component function into their scope and
+// pass it by reference.
 #let worksheet-grid(
   problems,
-  operator,
+  component,
   num-cols: 4,
-  width: 2.2cm,
   debug: false,
-  style: "vertical",
-  answer-rows: 1,
-  solve-first: false,
-  all-solved: false,
-  answer-only: false,
-  implicit: false,
-  variable: "x",
-  pad-width: 0,
+  modes: none,
+  opts: (:),
 ) = {
-  import "/lib/problems/vertical.typ": vertical-problem
-  import "/lib/problems/long-division.typ": long-division-problem
-  import "/lib/problems/horizontal.typ": horizontal-problem
-  import "/lib/problems/horizontal-fraction.typ": horizontal-fraction-problem
-  import "/lib/problems/algebra-two-step.typ": algebra-two-step-problem
-
   let num-problems = problems.len()
   // Ceiling division: handles partial last rows (e.g. 10 problems, 3 cols = 4 rows).
   let num-rows = calc.quo(num-problems + num-cols - 1, num-cols)
-  let header-height = 1.5cm
-  let footer-height = 0.8cm
-  let content-area = 98% - header-height - footer-height
+  // Header and footer are rendered as page chrome by template.rs
+  // (via typst's page.header / page.footer), so the grid fills the
+  // full body area.
+  let content-area = 100%
   let debug-box = if debug { 1pt + red } else { none }
   let debug-grid = if debug { 1pt + blue } else { none }
 
-  // Whether this *specific* problem index should be rendered solved.
-  let is-solved(idx) = all-solved or (solve-first and idx == 0)
+  let resolved-modes = if modes == none {
+    range(num-problems).map(_ => "blank")
+  } else {
+    modes
+  }
+  let mode-at(idx) = resolved-modes.at(idx)
 
   block(height: content-area, width: 100%, stroke: debug-box, {
     grid(
       columns: range(num-cols).map(_ => 1fr),
       rows: range(num-rows).map(_ => 1fr),
-      align: if style == "vertical" {
-        center + top
-      } else if style == "horizontal" or style == "horizontal-fraction" or style == "algebra-two-step" {
-        // Right-align problems within each cell so the = and answer
-        // blanks line up vertically down each column. Top-align so every
-        // problem starts flush with the top of its cell instead of being
-        // vertically centered — the visual rhythm across rows is cleaner.
-        right + top
-      } else {
-        left + top
-      },
       stroke: debug-grid,
       ..range(num-problems).map(idx => {
-        let nums = problems.at(idx)
-        let solved = is-solved(idx)
-        if style == "long-division" {
-          pad(left: 0.5cm, long-division-problem(nums, width: width, answer-rows: answer-rows, debug: debug, solved: solved, answer-only: answer-only))
-        } else if style == "horizontal" {
-          pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, operator, debug: debug, solved: solved))
-        } else if style == "horizontal-fraction" {
-          pad(left: 0.3cm, right: 0.3cm, horizontal-fraction-problem(nums, operator, debug: debug, solved: solved, answer-only: answer-only))
-        } else if style == "algebra-two-step" {
-          pad(left: 0.3cm, right: 1.5cm, algebra-two-step-problem(nums, operator, debug: debug, solved: solved, implicit: implicit, variable: variable, answer-only: answer-only))
-        } else {
-          vertical-problem(nums, operator, width: width, answer-rows: answer-rows, debug: debug, solved: solved, pad-width: pad-width, answer-only: answer-only)
-        }
+        component(problems.at(idx), mode: mode-at(idx), opts: opts, debug: debug)
       })
     )
   })

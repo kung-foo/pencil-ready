@@ -1,6 +1,8 @@
-#let worksheet-footer(body) = {
+#let worksheet-footer(body, debug: false) = {
+  let debug-box = if debug { 1pt + red } else { none }
   set text(size: 8pt, fill: rgb("#999999"))
-  align(center, body)
+  box(height: 0.8cm, width: 100%, stroke: debug-box,
+    align(center + horizon, body))
 }
 
 // Canonical footer content used by every generated worksheet. The baseline

@@ -1,25 +1,42 @@
 //! Addition worksheet.
 
-use crate::template;
-use crate::{CarryMode, WorksheetParams, WorksheetType};
+use crate::document;
+use crate::{CarryMode, ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
-    let binary = match &params.worksheet {
-        WorksheetType::Add { binary, .. } => *binary,
+pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
+    let (pad_width, binary) = match &params.worksheet {
+        WorksheetType::Add { digits, binary, .. } => {
+            // Binary mode: operand digit-count is the pad width used by
+            // the typst component to left-pad with zeros for column
+            // alignment. Decimal mode: no padding.
+            let pad = if *binary {
+                digits.iter().map(|d| d.max).max().unwrap_or(0)
+            } else {
+                0
+            };
+            (pad, *binary)
+        }
         _ => unreachable!(),
     };
     let problems = generate_problems(params);
-    if binary {
-        // Operand digit-count (a.k.a. bit-count) is the pad width used by
-        // the typst component to left-pad with zeros for column alignment.
-        let pad_width = match &params.worksheet {
-            WorksheetType::Add { digits, .. } => digits.iter().map(|d| d.max).max().unwrap_or(0),
-            _ => unreachable!(),
-        };
-        template::render_padded("sym.plus", &problems, params, 1, pad_width)
-    } else {
-        template::render("sym.plus", &problems, params, 1)
-    }
+    let max_digits = document::max_digits(&problems);
+    let operator = params
+        .symbol
+        .clone()
+        .unwrap_or_else(|| "sym.plus".to_string());
+    let _ = binary; // pad_width already encodes the binary case
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            operator,
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows: 1,
+            pad_width,
+            implicit: false,
+            variable: "x".to_string(),
+        },
+    })
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
@@ -248,12 +265,11 @@ mod tests {
             worksheet: WorksheetType::Add { digits, carry, binary: false },
             num_problems: 20,
             cols: 4,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
-            pages: 1,
             solve_first: false,
             include_answers: false,
             student_name: None,

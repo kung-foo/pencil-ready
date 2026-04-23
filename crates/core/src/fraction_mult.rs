@@ -2,14 +2,29 @@
 //!
 //! Always produces whole-integer answers (no remainders).
 
-use crate::template;
-use crate::{WorksheetParams, WorksheetType};
+use crate::document;
+use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
+pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let problems = generate_problems(params);
     // Locale-aware multiply symbol (× for US, · for Norway).
-    let symbol = params.locale.multiply_symbol();
-    template::render_horizontal_fraction(symbol, &problems, params)
+    let operator = params
+        .symbol
+        .clone()
+        .unwrap_or_else(|| params.locale.multiply_symbol().to_string());
+    let max_digits = document::max_digits(&problems);
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            operator,
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows: 1,
+            pad_width: 0,
+            implicit: false,
+            variable: "x".to_string(),
+        },
+    })
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
@@ -117,12 +132,11 @@ mod tests {
             },
             num_problems: 12,
             cols: 2,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
-            pages: 1,
             solve_first: false,
             include_answers: false,
             student_name: None,

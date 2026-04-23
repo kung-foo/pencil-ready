@@ -16,12 +16,24 @@
 
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-features, problem-line-height
 
-#let algebra-two-step-problem(numbers, operator, debug: false, solved: false, implicit: false, variable: "x", answer-only: false) = {
-  let a = numbers.at(0)
-  let b = numbers.at(1)
-  let x-val = numbers.at(2)
-  let c = numbers.at(3)
-  let form = numbers.at(4)
+// `data` = (a, b, x-val, c, form).
+// `opts` keys:
+//   operator: typst content used for implicit × (e.g. [#sym.dot.op])
+//   implicit: bool (default false) — coefficient-variable juxtaposition
+//   variable: string (default "x") — the variable glyph
+// `mode` = "blank" | "worked" | "answer-only".
+#let algebra-two-step-problem(data, mode: "blank", opts: (:), debug: false) = {
+  let operator = opts.at("operator")
+  let implicit = opts.at("implicit", default: false)
+  let variable = opts.at("variable", default: "x")
+  let solved = mode != "blank"
+  let answer-only = mode == "answer-only"
+
+  let a = data.at(0)
+  let b = data.at(1)
+  let x-val = data.at(2)
+  let c = data.at(3)
+  let form = data.at(4)
   // Intermediate value after isolating the coefficient term:
   // form 0, 1 (ax + b = c or b + ax = c): ax = c - b
   // form 2    (ax - b = c):                ax = c + b
@@ -104,7 +116,7 @@
     if solved { $#x-val$ }
   }))
 
-  box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
+  let content = box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
     columns: (auto, auto, auto),
     column-gutter: 0.3em,
     row-gutter: problem-line-height,
@@ -113,4 +125,10 @@
     row2-lhs, sym.eq, row2-right,
     row3-lhs, sym.eq, row3-right,
   ))
+
+  // Self-pad + self-align so the worksheet-grid doesn't have to know
+  // anything style-specific about this component. 0.3cm left / 1.5cm
+  // right — the extra right pad keeps the answer column from kissing
+  // the next cell. right+top to keep the equals-column rhythm.
+  align(right + top, pad(left: 0.3cm, right: 1.5cm, content))
 }

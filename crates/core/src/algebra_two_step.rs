@@ -8,25 +8,40 @@
 //!   form = 1 → const-first plus     `b + ax = c`
 //!   form = 2 → canonical minus      `ax - b = c` (only when a*x ≥ b)
 
-use crate::template;
-use crate::{WorksheetParams, WorksheetType};
+use crate::document;
+use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
-pub fn generate_typ(params: &WorksheetParams) -> anyhow::Result<String> {
+pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let problems = generate_problems(params);
     let (implicit, variable) = match &params.worksheet {
         WorksheetType::AlgebraTwoStep {
             implicit,
             variable,
             ..
-        } => (*implicit, variable.as_str()),
+        } => (*implicit, variable.clone()),
         _ => unreachable!(),
     };
     // Algebra uses `·` regardless of locale — `×` looks too much like the
     // variable `x` once variables are introduced. Matches the US pre-algebra
     // convention (elementary `×` → pre-algebra `·` → algebra implicit).
     // The explicit --symbol flag still overrides this.
-    let symbol = "sym.dot.op";
-    template::render_algebra_two_step(symbol, &problems, params, implicit, variable)
+    let operator = params
+        .symbol
+        .clone()
+        .unwrap_or_else(|| "sym.dot.op".to_string());
+    let max_digits = document::max_digits(&problems);
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            operator,
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows: 1,
+            pad_width: 0,
+            implicit,
+            variable,
+        },
+    })
 }
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
@@ -190,12 +205,11 @@ mod tests {
             },
             num_problems: 12,
             cols: 3,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
-            pages: 1,
             solve_first: false,
             include_answers: false,
             student_name: None,

@@ -1,21 +1,37 @@
 //! Division worksheets (simple + long).
 
-use crate::template;
-use crate::{WorksheetParams, WorksheetType};
+use crate::document;
+use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
 /// Simple division: times-table recall. Divisor (2-9) × quotient (1-max_quotient).
-pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<String> {
+pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let max_quotient = match &params.worksheet {
         WorksheetType::SimpleDivision { max_quotient } => *max_quotient,
         _ => unreachable!(),
     };
 
     let problems = generate_simple_problems(params, max_quotient);
-    template::render("sym.div", &problems, params, 1)
+    let max_digits = document::max_digits(&problems);
+    let operator = params
+        .symbol
+        .clone()
+        .unwrap_or_else(|| "sym.div".to_string());
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            operator,
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows: 1,
+            pad_width: 0,
+            implicit: false,
+            variable: "x".to_string(),
+        },
+    })
 }
 
 /// Long division: algorithm practice. Dividend has N digits, divisor is 1 digit (2-9).
-pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<String> {
+pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let (digit_range, remainder) = match &params.worksheet {
         WorksheetType::LongDivision { digits, remainder } => (*digits, *remainder),
         _ => unreachable!(),
@@ -30,7 +46,21 @@ pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<String> {
         .max()
         .unwrap_or(1);
     let answer_rows = 2 * max_dividend_digits;
-    template::render_long_division(&problems, params, answer_rows)
+    let max_digits = document::max_digits(&problems);
+    Ok(Sheet {
+        worksheet: params.worksheet.clone(),
+        problems,
+        opts: ComponentOpts {
+            // Long-division has no operator — the bracket glyph is
+            // drawn by the component itself.
+            operator: String::new(),
+            width_cm: document::box_width_cm(&params.worksheet, max_digits),
+            answer_rows,
+            pad_width: 0,
+            implicit: false,
+            variable: "x".to_string(),
+        },
+    })
 }
 
 fn generate_simple_problems(params: &WorksheetParams, max_quotient: u32) -> Vec<Vec<u32>> {
@@ -174,12 +204,11 @@ mod tests {
             worksheet: WorksheetType::SimpleDivision { max_quotient },
             num_problems: 12,
             cols: 4,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
-            pages: 1,
             solve_first: false,
             include_answers: false,
             student_name: None,
@@ -191,12 +220,11 @@ mod tests {
             worksheet: WorksheetType::LongDivision { digits: crate::DigitRange::fixed(digits), remainder },
             num_problems: 12,
             cols: 4,
-            paper: "a4".into(),
+            paper: crate::Paper::A4,
             debug: false,
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
-            pages: 1,
             solve_first: false,
             include_answers: false,
             student_name: None,

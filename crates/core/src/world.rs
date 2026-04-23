@@ -174,7 +174,7 @@ fn visit_typ_sources(
         if path.is_dir() {
             visit_typ_sources(root, &path, sources)?;
         } else if path.extension().is_some_and(|e| e == "typ") {
-            // Build the virtual path relative to root: "/lib/problems/vertical.typ"
+            // Build the virtual path relative to root: "/lib/problems/addition/basic.typ"
             let rel = path.strip_prefix(root).unwrap_or(&path);
             let vpath = format!("/{}", rel.to_string_lossy());
             let id = FileId::new(None, VirtualPath::new(&vpath));
@@ -327,4 +327,32 @@ pub fn compile_and_export(
             Ok(png)
         }
     }
+}
+
+/// Compile a .typ source and return the first page's natural size in
+/// centimeters. Intended for use with `#set page(width: auto, height:
+/// auto, margin: 0pt)` so the returned dimensions equal the rendered
+/// content's bounding box.
+pub fn measure(typ_source: &str, root: &Path, fonts: &Fonts) -> Result<(f32, f32)> {
+    let world = MathWorld::new(typ_source, root, fonts.clone())?;
+    // typst::compile is generic over the document type. compile_and_export
+    // above infers it from typst_pdf::pdf / typst_svg::svg calls; we only
+    // read .pages, so we have to name the type explicitly.
+    let document = typst::compile::<typst::layout::PagedDocument>(&world)
+        .output
+        .map_err(|diagnostics| {
+            let messages: Vec<String> = diagnostics
+                .iter()
+                .map(|d| d.message.to_string())
+                .collect();
+            anyhow::anyhow!("typst compilation failed:\n{}", messages.join("\n"))
+        })?;
+    let page = document
+        .pages
+        .first()
+        .ok_or_else(|| anyhow::anyhow!("document has no pages"))?;
+    let size = page.frame.size();
+    // Abs::to_pt returns f64 pt; 1 cm = 72 / 2.54 = 28.3464567 pt.
+    let to_cm = |pt: f64| (pt / 28.346_456_7_f64) as f32;
+    Ok((to_cm(size.x.to_pt()), to_cm(size.y.to_pt())))
 }

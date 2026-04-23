@@ -168,8 +168,8 @@ Uses the same horizontal layout and locale-sensitive symbol (÷ in US,
 
 ### Parameters
 
-- `divisor: list[range]` — which divisors to drill (default: `2-10`).
-- `max_quotient: range` — range of the quotient (default: `2-10`).
+- `divisor: list[range]` — which divisors to drill (default: `2-9`).
+- `max_quotient: range` — range of the quotient (default: `2-9`).
 - `count: u32` — number of problems (0 = all enumerated pairs).
 
 ### Problem generation
@@ -246,7 +246,7 @@ Same locale rules as the multiplication drill — `--locale us` shows `×`,
 ### Layout component
 
 ```typst
-horizontal-fraction-problem((30, 7, 10), [#sym.times], solved: false)
+fraction-multiplication-problem((30, 7, 10), opts: (operator: [#sym.times]))
 ```
 
 The equation is rendered in math mode with Fira Math pinned as the math
@@ -347,8 +347,12 @@ overrides.
 The problem renders as a 3-row grid:
 
 ```typst
-two-step-problem((a: 4, b: 5, x: 4, form: "canonical"), debug: false, solved: false)
+algebra-two-step-problem((4, 5, 4, 21, 0), opts: (operator: [#sym.dot.op]))
 ```
+
+`data` is `(a, b, x, c, form)`; `form: 0` is canonical, `1` is
+const-first, `2` is canonical-minus (see the generator for the full
+mapping). Operator is only used when `implicit: false`.
 
 The component owns the form-to-row-1 rendering; rows 2 and 3 are always
 `ax = ...` and `x = ...` regardless of form.

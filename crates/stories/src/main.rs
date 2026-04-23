@@ -37,6 +37,13 @@ enum Command {
         /// Specific story name (without .typ). If omitted, approves all changed.
         story: Option<String>,
     },
+    /// Directional pixel-diff two arbitrary PNGs; write the diff image to <out>.
+    /// Exits non-zero when the images differ.
+    DiffFiles {
+        baseline: PathBuf,
+        current: PathBuf,
+        out: PathBuf,
+    },
 }
 
 fn project_root() -> Result<PathBuf> {
@@ -114,7 +121,12 @@ fn cmd_diff(root: &Path) -> Result<bool> {
         }
 
         match directional_diff(&baseline, &current, &diff)? {
-            None => println!("✓ {name}"),
+            None => {
+                // Scrub any stale diff from a prior failing run so
+                // stories/diff/ only contains still-failing cases.
+                let _ = std::fs::remove_file(&diff);
+                println!("✓ {name}");
+            }
             Some((removed, added)) => {
                 println!(
                     "✗ {name}: {removed} removed, {added} added pixels → {}",
@@ -211,8 +223,10 @@ fn directional_diff(
     }
 
     if n_removed == 0 && n_added == 0 {
-        // Clean — delete any stale diff image.
-        let _ = std::fs::remove_file(out);
+        // Clean — caller decides whether to remove any stale diff at
+        // this path. cmd_diff's stories/diff/<name>.png is a managed
+        // cache so it scrubs; diff-files takes an arbitrary user-
+        // supplied path and leaves it alone.
         Ok(None)
     } else {
         out_img.save(out)?;
@@ -247,6 +261,15 @@ fn main() -> Result<()> {
             }
         }
         Command::Approve { story } => cmd_approve(&root, story.as_deref())?,
+        Command::DiffFiles { baseline, current, out } => {
+            match directional_diff(&baseline, &current, &out)? {
+                None => println!("✓ identical"),
+                Some((removed, added)) => {
+                    println!("✗ {removed} removed, {added} added pixels → {}", out.display());
+                    std::process::exit(1);
+                }
+            }
+        }
     }
     Ok(())
 }

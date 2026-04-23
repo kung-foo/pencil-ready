@@ -24,8 +24,8 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, WorksheetParams, WorksheetType,
-    generate,
+    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, Paper, WorksheetParams,
+    WorksheetType, generate,
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
@@ -52,6 +52,10 @@ struct AppState {
     /// Fonts parsed once at startup. Shared (via `Arc`) with every
     /// compile — avoids re-reading `fonts/` from disk per request.
     fonts: Fonts,
+    /// Force `debug: true` on every worksheet render regardless of
+    /// query params — turns the red/blue layout-debug borders on for
+    /// every browser-facing render. Set via `--debug` / `PENCIL_READY_DEBUG`.
+    force_debug: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -76,13 +80,10 @@ struct SharedParams {
     /// Columns in the problem grid (per-type default).
     #[serde(default)]
     cols: Option<u32>,
-    /// Pages (PDF only).
+    /// Paper size. Accepts "a4" (default) or "us-letter" (alias: "letter").
     #[serde(default)]
-    pages: Option<u32>,
-    /// Paper size passed to typst.
-    #[serde(default)]
-    #[param(example = "a4")]
-    paper: Option<String>,
+    #[param(value_type = String, example = "a4")]
+    paper: Option<Paper>,
     /// Regional defaults for operator symbols.
     #[serde(default)]
     locale: Option<Locale>,
@@ -115,12 +116,11 @@ impl SharedParams {
             worksheet,
             num_problems: self.problems.unwrap_or(default_problems),
             cols: self.cols.unwrap_or(default_cols),
-            paper: self.paper.unwrap_or_else(|| "a4".into()),
+            paper: self.paper.unwrap_or_default(),
             debug: self.debug.unwrap_or(false),
             seed: self.seed,
             symbol: self.symbol,
             locale: self.locale.unwrap_or_default(),
-            pages: self.pages.unwrap_or(1),
             solve_first: self.solve_first.unwrap_or(false),
             include_answers: self.include_answers.unwrap_or(false),
             student_name: self.student_name.filter(|s| !s.is_empty()),
@@ -324,10 +324,10 @@ impl MultDrillSpecific {
 #[into_params(parameter_in = Query)]
 struct DivDrillSpecific {
     #[serde(default)]
-    #[param(value_type = String, example = "2-10")]
+    #[param(value_type = String, example = "2-9")]
     divisor: Option<String>,
     #[serde(default)]
-    #[param(value_type = String, example = "2-10")]
+    #[param(value_type = String, example = "2-9")]
     max_quotient: Option<String>,
     #[serde(default)]
     count: Option<u32>,
@@ -337,11 +337,11 @@ impl DivDrillSpecific {
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
         let divisor = match self.divisor {
             Some(s) => parse_digits_csv(&s, "divisor")?,
-            None => vec![DigitRange::new(2, 10)],
+            None => vec![DigitRange::new(2, 9)],
         };
         let max_quotient = match self.max_quotient {
             Some(s) => parse_digit_range(&s, "max_quotient")?,
-            None => DigitRange::new(2, 10),
+            None => DigitRange::new(2, 9),
         };
         let (fmt, mut params) = shared.fold(
             WorksheetType::DivisionDrill {
@@ -456,7 +456,7 @@ fn render(
     let ip = client_ip(headers);
     let ua = user_agent(headers);
 
-    let (format, params) = match built {
+    let (format, mut params) = match built {
         Ok(p) => p,
         Err(e) => {
             warn!(
@@ -470,6 +470,9 @@ fn render(
             return (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response();
         }
     };
+    if state.force_debug {
+        params.debug = true;
+    }
 
     let start = Instant::now();
     let result = generate(&params, format, &state.root, &state.fonts);
@@ -483,7 +486,6 @@ fn render(
                 region = %region_display(&state.region),
                 num_problems = params.num_problems,
                 cols = params.cols,
-                pages = params.pages,
                 paper = %params.paper,
                 seed = params.seed,
                 solve_first = params.solve_first,
@@ -789,6 +791,11 @@ struct Cli {
     /// Run API-only, without serving any static bundle.
     #[arg(long)]
     api_only: bool,
+    /// Force `debug: true` on every worksheet render — useful for visual
+    /// layout debugging via the browser. Off by default; never set in
+    /// production.
+    #[arg(long, env = "PENCIL_READY_DEBUG")]
+    debug: bool,
 }
 
 #[tokio::main]
@@ -805,10 +812,14 @@ async fn main() {
     // Parse all bundled fonts once; clone the Arcs per request.
     let fonts = Fonts::load(&root).expect("load fonts from <root>/fonts");
     info!(region = %region_display(&region), "pencil-ready-server starting");
+    if cli.debug {
+        info!("--debug active: forcing debug borders on every worksheet render");
+    }
     let state = Arc::new(AppState {
         root: root.clone(),
         region,
         fonts,
+        force_debug: cli.debug,
     });
 
     // Resolve the static directory. Explicit flag wins; otherwise

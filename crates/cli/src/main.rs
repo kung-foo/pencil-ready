@@ -15,9 +15,13 @@ use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, WorksheetParams, WorksheetType,
-    compile_typst, generate, generate_typst_source,
+    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, Paper, WorksheetParams,
+    WorksheetType, compile_typst, generate, generate_typst_source,
 };
+
+fn parse_paper(s: &str) -> Result<Paper, String> {
+    s.parse()
+}
 
 #[derive(Clone, Copy, Default, ValueEnum)]
 enum CliCarryMode {
@@ -85,12 +89,9 @@ impl From<CliLocale> for Locale {
 /// problem count from their own args (drills use --count).
 #[derive(Parser)]
 struct GlobalArgs {
-    /// Number of pages (PDF only). Each page has the same number of problems.
-    #[arg(long, default_value = "1")]
-    pages: u32,
-
-    #[arg(long, default_value = "a4")]
-    paper: String,
+    /// Paper size. Accepts "a4" (default) or "us-letter" (alias: "letter").
+    #[arg(long, default_value = "a4", value_parser = parse_paper)]
+    paper: Paper,
 
     #[arg(long)]
     seed: Option<u64>,
@@ -268,11 +269,11 @@ enum Command {
         cols: u32,
 
         /// Which divisors to drill, comma-separated. e.g. "2,3" or "1-10"
-        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(2, 10)])]
+        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::new(2, 9)])]
         divisor: Vec<DigitRange>,
 
         /// Range of the quotient. e.g. "1-10" or "1-12"
-        #[arg(long, default_value = "2-10")]
+        #[arg(long, default_value = "2-9")]
         max_quotient: DigitRange,
 
         /// Number of problems (0 = all problems from the enumerated table).
@@ -540,7 +541,6 @@ fn main() -> Result<()> {
         seed: global.seed,
         symbol: global.symbol,
         locale: global.locale.into(),
-        pages: global.pages,
         solve_first: global.solve_first,
         include_answers: global.include_answers,
         student_name: global.student_name,
@@ -598,13 +598,12 @@ fn default_params_for(
         worksheet,
         num_problems,
         cols,
-        paper: global.paper.clone(),
+        paper: global.paper,
         debug: global.debug,
         // Ignore any --seed the caller passed: `all` must be reproducible.
         seed: Some(42),
         symbol: global.symbol.clone(),
         locale: global.locale.into(),
-        pages: 1,
         // Force worked-example rendering for every type.
         solve_first: true,
         // `all` is a single-PDF sampler — don't duplicate pages with an
@@ -685,8 +684,8 @@ fn run_all(global: GlobalArgs) -> Result<()> {
         (
             "div-drill",
             WorksheetType::DivisionDrill {
-                divisor: vec![DigitRange::new(2, 10)],
-                max_quotient: DigitRange::new(2, 10),
+                divisor: vec![DigitRange::new(2, 9)],
+                max_quotient: DigitRange::new(2, 9),
             },
             0,
             3,
@@ -729,9 +728,20 @@ fn run_all(global: GlobalArgs) -> Result<()> {
     // join bodies with pagebreaks.
     let combined = format!(
         r#"#import "/lib/header.typ": worksheet-header
-#import "/lib/layout.typ": worksheet-grid
+#import "/lib/page.typ": worksheet-page
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
+// Problem components passed to worksheet-grid by reference must be
+// in scope at the call site. (Mirrors document.rs's preamble.)
+#import "/lib/problems/addition/basic.typ": addition-basic-problem
+#import "/lib/problems/subtraction/basic.typ": subtraction-basic-problem
+#import "/lib/problems/multiplication/basic.typ": multiplication-basic-problem
+#import "/lib/problems/multiplication/drill.typ": multiplication-drill-problem
+#import "/lib/problems/division/simple.typ": division-simple-problem
+#import "/lib/problems/division/long.typ": division-long-problem
+#import "/lib/problems/division/drill.typ": division-drill-problem
+#import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
+#import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)
