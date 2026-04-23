@@ -7,7 +7,7 @@
 //! knows about RNGs — all of that lives in the per-worksheet
 //! generators (add.rs, multiply.rs, …) which populate `Sheet`.
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 
 use crate::{
     ComponentOpts, Document, FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM,
@@ -112,16 +112,6 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     let sheet = &doc.sheet;
     let chrome = &doc.chrome;
 
-    let expected = (doc.num_problems * doc.pages) as usize;
-    // Drills with num_problems=0 allow any count. Others must match exactly.
-    if doc.num_problems > 0 && sheet.problems.len() < expected {
-        bail!(
-            "no valid problems for the given constraints — the combination \
-             of digits / carry / borrow / mode rules out every candidate. \
-             Widen at least one parameter."
-        );
-    }
-
     let debug_str = if chrome.debug { "true" } else { "false" };
     let cols = doc.cols;
     let paper_name = chrome.paper.typst_name();
@@ -131,13 +121,16 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     // straight into the generated .typ source.
     let student_name_arg = header_name_arg(chrome.student_name.as_deref());
 
-    // Chunk problems across pages.
-    let per_page = if doc.num_problems > 0 {
-        doc.num_problems as usize
+    // Chunk problems across pages — `cells_per_page` is `cols ×
+    // rows_per_page` computed upstream in `Document::from_params`.
+    let per_page = doc.cells_per_page.max(1) as usize;
+    let pages: Vec<&[Vec<u32>]> = if sheet.problems.is_empty() {
+        // Degenerate: no problems. Emit one empty grid so the page
+        // chrome still renders.
+        vec![&[]]
     } else {
-        sheet.problems.len() // drills with num_problems=0: all on one page
+        sheet.problems.chunks(per_page).collect()
     };
-    let pages: Vec<&[Vec<u32>]> = sheet.problems.chunks(per_page).collect();
 
     // Flatten into a sequence of (problems, is_answer_key_page) tuples so we
     // can render problem pages first and answer pages at the end — each page

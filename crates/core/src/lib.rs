@@ -23,8 +23,14 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 const MAX_DIGITS: u32 = 5;
-const MAX_PROBLEMS: u32 = 16;
-const MAX_PROBLEMS_DRILL: u32 = 40;
+/// Upper bound on total problems across the whole worksheet (all
+/// pages combined). Chosen to cover realistic teacher packets without
+/// exposing a trivial DoS vector against the public server — typst
+/// compile time scales roughly with problem count.
+const MAX_PROBLEMS: u32 = 100;
+/// Same cap for drills, which are cheaper per problem (horizontal
+/// single-line) so can afford more.
+const MAX_PROBLEMS_DRILL: u32 = 200;
 const MAX_OPERANDS: usize = 4;
 
 /// A digit count that can be a fixed value or a range.
@@ -586,26 +592,38 @@ pub struct Sheet {
     pub opts: ComponentOpts,
 }
 
-/// A worksheet ready to validate and render. Owns its `Sheet`. The
-/// `num_problems` / `pages` fields are transitional until step 7
-/// switches pagination to an overflow-based model — at that point
-/// both become derived from `cols`, `cell_size_cm`, and `content_area_cm`.
+/// A worksheet ready to validate and render. Owns its `Sheet`.
+/// Pagination is derived — `cells_per_page` and `pages` come from
+/// `cols × rows_per_page` where `rows_per_page = floor(content_area_cm.h
+/// / cell_size_cm.h)`. Users no longer supply `pages` directly.
 #[derive(Debug, Clone)]
 pub struct Document {
     pub sheet: Sheet,
     pub cols: u32,
     pub chrome: Chrome,
-    /// Number of problems per page.
-    pub num_problems: u32,
-    /// Number of problem pages.
+    /// `cols × rows_per_page`. Drives the per-page chunking in
+    /// `Document::render`.
+    pub cells_per_page: u32,
+    /// Number of problem pages. `ceil(problems.len() / cells_per_page)`.
+    /// Does not include answer-key pages (they're appended in render).
     pub pages: u32,
 }
 
 impl Document {
     /// Build a Document from legacy `WorksheetParams` — runs the
     /// appropriate per-worksheet generator to produce the `Sheet`,
-    /// wraps it up, and runs `validate()`.
+    /// derives pagination from `cell_size_cm` + `content_area_cm`,
+    /// and runs `validate()`.
     pub fn from_params(params: &WorksheetParams) -> Result<Self> {
+        if params.pages > 1 {
+            // Step 7 deprecation: `pages` is derived now. Accept the
+            // param for one release but warn loudly so anyone wiring
+            // it via CLI/HTTP notices. Next release removes the field.
+            eprintln!(
+                "warning: --pages is deprecated and ignored; worksheet pages are now \
+                 derived from cell size + paper. Set --problems to the total you want."
+            );
+        }
         let sheet = match &params.worksheet {
             WorksheetType::Add { .. } => add::generate(params)?,
             WorksheetType::Subtract { .. } => subtract::generate(params)?,
@@ -617,19 +635,53 @@ impl Document {
             WorksheetType::FractionMultiply { .. } => fraction_mult::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
         };
+        let chrome = Chrome::from_params(params);
+        let max_digits = sheet.worksheet.max_digits_bound();
+        let (cell_w, cell_h) = sheet.worksheet.cell_size_cm(max_digits);
+        let (area_w, area_h) = chrome.content_area_cm();
+
+        // Paper-fit check: cols must fit in the content-area width.
+        let max_cols = (area_w / cell_w).floor() as u32;
+        if params.cols > max_cols {
+            bail!(
+                "{} cols is too wide for {} on {}: at {max_digits} digits \
+                 each cell is {cell_w:.2}cm but content area is only \
+                 {area_w:.2}cm wide (max {max_cols} cols)",
+                params.cols,
+                sheet.worksheet.component_typst_name(),
+                chrome.paper,
+            );
+        }
+        let rows_per_page = (area_h / cell_h).floor() as u32;
+        if rows_per_page == 0 {
+            bail!(
+                "content area is {area_h:.2}cm tall but a single {} cell \
+                 needs {cell_h:.2}cm — nothing fits.",
+                sheet.worksheet.component_typst_name(),
+            );
+        }
+        let cells_per_page = params.cols * rows_per_page;
+        let problem_count = sheet.problems.len() as u32;
+        let pages = if problem_count == 0 {
+            1 // degenerate but render-able: one blank grid
+        } else {
+            problem_count.div_ceil(cells_per_page)
+        };
+
         let doc = Document {
             sheet,
             cols: params.cols,
-            chrome: Chrome::from_params(params),
-            num_problems: params.num_problems,
-            pages: params.pages,
+            chrome,
+            cells_per_page,
+            pages,
         };
         doc.validate()?;
         Ok(doc)
     }
 
     /// Check the user-supplied `cols` fits on the configured paper for
-    /// the worst-case operand digit count.
+    /// the worst-case operand digit count. Kept as a pub method for
+    /// callers that construct Document directly.
     pub fn validate(&self) -> Result<()> {
         let max_digits = self.sheet.worksheet.max_digits_bound();
         let (cell_w, _) = self.sheet.worksheet.cell_size_cm(max_digits);
@@ -681,9 +733,13 @@ pub struct WorksheetParams {
 }
 
 impl WorksheetParams {
-    /// Total number of unique problems across all pages.
+    /// Total number of unique problems across all pages. Since step 7
+    /// this is simply `num_problems`; the `pages` field is a no-op
+    /// kept for one release of backward compatibility and will be
+    /// removed. Pages are derived from `Document::from_params` based
+    /// on paper size + `cell_size_cm`.
     pub fn total_problems(&self) -> u32 {
-        self.num_problems * self.pages
+        self.num_problems
     }
 }
 
@@ -728,11 +784,6 @@ pub fn generate(
     root: &std::path::Path,
     fonts: &Fonts,
 ) -> Result<Worksheet> {
-    if (params.pages > 1 || params.include_answers) && !matches!(format, OutputFormat::Pdf) {
-        bail!(
-            "pages > 1 or include_answers requires PDF output (PNG/SVG are single-image formats)"
-        );
-    }
     // Typst memoizes compilation via the global `comemo` cache (shared
     // across all `World`s in the process). Without periodic eviction the
     // cache grows unbounded under load — on a 256 MB Fly machine that
@@ -740,7 +791,19 @@ pub fn generate(
     // so callers measuring raw cache behavior (see examples/cache_growth)
     // can render without side-effects.
     typst::comemo::evict(10);
-    let typ_source = generate_typst_source(params)?;
+    // Per-worksheet validation happens inside Document::from_params,
+    // which also derives page count. The format check below uses the
+    // derived page count, not params.pages (which is deprecated).
+    validate_worksheet_params(params)?;
+    let doc = Document::from_params(params)?;
+    if (doc.pages > 1 || doc.chrome.include_answers) && !matches!(format, OutputFormat::Pdf) {
+        bail!(
+            "this worksheet spans {} pages (or has --include-answers set); \
+             PNG/SVG are single-image formats — use --format pdf",
+            doc.pages,
+        );
+    }
+    let typ_source = doc.render()?;
     let bytes = world::compile_and_export(&typ_source, format, root, fonts)?;
     Ok(Worksheet { bytes, format })
 }
@@ -749,10 +812,15 @@ pub fn generate(
 /// so the CLI can concatenate several worksheets into a single multi-page
 /// PDF (the `all` subcommand).
 pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
-    if params.pages == 0 {
-        bail!("pages must be at least 1");
-    }
+    validate_worksheet_params(params)?;
+    Document::from_params(params)?.render()
+}
 
+/// Per-worksheet range / shape validation. Cheap checks on the config
+/// itself, separate from the paper-fit check in `Document::validate()`
+/// and from generator-internal validation. Called by both
+/// `generate_typst_source` and `generate`.
+fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
     let is_drill = matches!(
         &params.worksheet,
         WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. }
@@ -777,9 +845,6 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
         );
     }
 
-    // Per-worksheet range / shape validation. These are cheap checks
-    // on the config itself, separate from the paper-fit check in
-    // `Document::validate()` and from generator-internal checks.
     match &params.worksheet {
         WorksheetType::Add { digits, .. } => validate_digit_ranges(digits)?,
         WorksheetType::Subtract { digits, .. } => {
@@ -905,12 +970,7 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
             }
         }
     };
-
-    // One centralized path from params → Sheet → Document → .typ:
-    // generators return pure data; Document::from_params assembles
-    // the Document (including `Document::validate()` for paper-fit)
-    // and Document::render emits the source.
-    Document::from_params(params)?.render()
+    Ok(())
 }
 
 /// When a generator's unique-problem pool is smaller than `target`
@@ -1054,7 +1114,7 @@ mod tests {
             sheet: sheet.clone(),
             cols: 7,
             chrome: chrome.clone(),
-            num_problems: 12,
+            cells_per_page: 7 * 6,
             pages: 1,
         };
         let err = doc.validate().unwrap_err().to_string();
