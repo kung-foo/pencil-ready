@@ -615,15 +615,6 @@ impl Document {
     /// derives pagination from `cell_size_cm` + `content_area_cm`,
     /// and runs `validate()`.
     pub fn from_params(params: &WorksheetParams) -> Result<Self> {
-        if params.pages > 1 {
-            // Step 7 deprecation: `pages` is derived now. Accept the
-            // param for one release but warn loudly so anyone wiring
-            // it via CLI/HTTP notices. Next release removes the field.
-            eprintln!(
-                "warning: --pages is deprecated and ignored; worksheet pages are now \
-                 derived from cell size + paper. Set --problems to the total you want."
-            );
-        }
         let sheet = match &params.worksheet {
             WorksheetType::Add { .. } => add::generate(params)?,
             WorksheetType::Subtract { .. } => subtract::generate(params)?,
@@ -717,9 +708,6 @@ pub struct WorksheetParams {
     /// Explicit symbol override. Takes precedence over locale.
     pub symbol: Option<String>,
     pub locale: Locale,
-    /// Number of pages. Each page has `num_problems` unique problems.
-    /// pages > 1 requires PDF output.
-    pub pages: u32,
     /// Render the first problem as a worked example — applies to any
     /// worksheet type whose problem component understands a `solved` flag.
     pub solve_first: bool,
@@ -733,11 +721,9 @@ pub struct WorksheetParams {
 }
 
 impl WorksheetParams {
-    /// Total number of unique problems across all pages. Since step 7
-    /// this is simply `num_problems`; the `pages` field is a no-op
-    /// kept for one release of backward compatibility and will be
-    /// removed. Pages are derived from `Document::from_params` based
-    /// on paper size + `cell_size_cm`.
+    /// Total number of unique problems on the worksheet. Page count
+    /// is derived from `cell_size_cm` + `content_area_cm` by
+    /// `Document::from_params`.
     pub fn total_problems(&self) -> u32 {
         self.num_problems
     }

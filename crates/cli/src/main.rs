@@ -89,10 +89,6 @@ impl From<CliLocale> for Locale {
 /// problem count from their own args (drills use --count).
 #[derive(Parser)]
 struct GlobalArgs {
-    /// Number of pages (PDF only). Each page has the same number of problems.
-    #[arg(long, default_value = "1")]
-    pages: u32,
-
     /// Paper size. Accepts "a4" (default) or "us-letter" (alias: "letter").
     #[arg(long, default_value = "a4", value_parser = parse_paper)]
     paper: Paper,
@@ -545,7 +541,6 @@ fn main() -> Result<()> {
         seed: global.seed,
         symbol: global.symbol,
         locale: global.locale.into(),
-        pages: global.pages,
         solve_first: global.solve_first,
         include_answers: global.include_answers,
         student_name: global.student_name,
@@ -609,7 +604,6 @@ fn default_params_for(
         seed: Some(42),
         symbol: global.symbol.clone(),
         locale: global.locale.into(),
-        pages: 1,
         // Force worked-example rendering for every type.
         solve_first: true,
         // `all` is a single-PDF sampler — don't duplicate pages with an

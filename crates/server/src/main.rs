@@ -80,9 +80,6 @@ struct SharedParams {
     /// Columns in the problem grid (per-type default).
     #[serde(default)]
     cols: Option<u32>,
-    /// Pages (PDF only).
-    #[serde(default)]
-    pages: Option<u32>,
     /// Paper size. Accepts "a4" (default) or "us-letter" (alias: "letter").
     #[serde(default)]
     #[param(value_type = String, example = "a4")]
@@ -124,7 +121,6 @@ impl SharedParams {
             seed: self.seed,
             symbol: self.symbol,
             locale: self.locale.unwrap_or_default(),
-            pages: self.pages.unwrap_or(1),
             solve_first: self.solve_first.unwrap_or(false),
             include_answers: self.include_answers.unwrap_or(false),
             student_name: self.student_name.filter(|s| !s.is_empty()),
@@ -490,7 +486,6 @@ fn render(
                 region = %region_display(&state.region),
                 num_problems = params.num_problems,
                 cols = params.cols,
-                pages = params.pages,
                 paper = %params.paper,
                 seed = params.seed,
                 solve_first = params.solve_first,

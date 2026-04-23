@@ -270,7 +270,6 @@ mod tests {
             seed: Some(42),
             symbol: None,
             locale: Default::default(),
-            pages: 1,
             solve_first: false,
             include_answers: false,
             student_name: None,

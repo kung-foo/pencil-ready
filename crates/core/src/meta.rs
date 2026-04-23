@@ -102,7 +102,6 @@ mod tests {
             seed: None,
             symbol: None,
             locale: Locale::Us,
-            pages: 1,
             solve_first: false,
             include_answers: false,
             student_name: None,
