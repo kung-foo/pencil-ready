@@ -65,7 +65,7 @@
         let solved = mode != "blank"
         let answer-only = mode == "answer-only"
         if style == "long-division" {
-          pad(left: 0.5cm, long-division-problem(nums, mode: mode, opts: (width: width, answer-rows: answer-rows), debug: debug))
+          long-division-problem(nums, mode: mode, opts: (width: width, answer-rows: answer-rows), debug: debug)
         } else if style == "horizontal" {
           horizontal-problem(nums, mode: mode, opts: (operator: operator), debug: debug)
         } else if style == "horizontal-fraction" {

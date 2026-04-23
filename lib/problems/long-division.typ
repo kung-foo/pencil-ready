@@ -55,7 +55,7 @@
   // 1.3em per row ≈ one typeset line at this size.
   let work-space = 1.3em * answer-rows
 
-  box(width: width, stroke: debug-box, align(left, {
+  let content = box(width: width, stroke: debug-box, align(left, {
     // Suppress the default paragraph gap between sibling blocks inside
     // this problem. Otherwise the quotient block sits ~1em above where
     // it should visually (the block spacing stacks between quotient and
@@ -224,4 +224,10 @@
       }
     }
   }))
+
+  // Self-pad + self-align so the worksheet-grid doesn't have to know
+  // anything style-specific about this component. 0.5cm left pad for
+  // breathing room from the cell edge; left+top because the bracket
+  // glyph is anchored to the dividend's left edge.
+  align(left + top, pad(left: 0.5cm, content))
 }
