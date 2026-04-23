@@ -116,7 +116,7 @@
     if solved { $#x-val$ }
   }))
 
-  box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
+  let content = box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
     columns: (auto, auto, auto),
     column-gutter: 0.3em,
     row-gutter: problem-line-height,
@@ -125,4 +125,10 @@
     row2-lhs, sym.eq, row2-right,
     row3-lhs, sym.eq, row3-right,
   ))
+
+  // Self-pad + self-align so the worksheet-grid doesn't have to know
+  // anything style-specific about this component. 0.3cm left / 1.5cm
+  // right — the extra right pad keeps the answer column from kissing
+  // the next cell. right+top to keep the equals-column rhythm.
+  align(right + top, pad(left: 0.3cm, right: 1.5cm, content))
 }

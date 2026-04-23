@@ -71,7 +71,7 @@
         } else if style == "horizontal-fraction" {
           horizontal-fraction-problem(nums, mode: mode, opts: (operator: operator), debug: debug)
         } else if style == "algebra-two-step" {
-          pad(left: 0.3cm, right: 1.5cm, algebra-two-step-problem(nums, mode: mode, opts: (operator: operator, implicit: implicit, variable: variable), debug: debug))
+          algebra-two-step-problem(nums, mode: mode, opts: (operator: operator, implicit: implicit, variable: variable), debug: debug)
         } else {
           vertical-problem(nums, mode: mode, opts: (operator: operator, width: width, answer-rows: answer-rows, pad-width: pad-width), debug: debug)
         }
