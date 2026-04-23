@@ -1,3 +1,9 @@
+// Full-page addition worksheet — the only story that exercises
+// `worksheet-grid` + the page chrome together. Mirrors what
+// `crates/core/src/template.rs` emits for an `add --seed 42 --digits
+// 2,2 --problems 12` run, so visual diffs here catch regressions in
+// either half of the pipeline.
+
 #import "/lib/header.typ": worksheet-header
 #import "/lib/layout.typ": worksheet-grid
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
@@ -11,15 +17,18 @@
   keywords: ("math", "worksheet", "addition", "pencilready.com"),
 )
 
-#set page(paper: "a4", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
+// Margins / ascent / descent / pad values match `MARGINS_CM`,
+// `HEADER_ASCENT_CM`, `FOOTER_DESCENT_CM`, `HEADER_PAD_TOP_CM`,
+// `FOOTER_PAD_BOTTOM_CM` in `pencil_ready_core`. Keep in sync.
+#set page(
+  paper: "a4",
+  margin: (top: 3.2cm, bottom: 2.2cm, left: 1.5cm, right: 1.5cm),
+  header-ascent: 0.8cm,
+  footer-descent: 0.4cm,
+  header: pad(top: 0.7cm, worksheet-header(student-name: "Luke Skywalker", debug: false)),
+  footer: pad(bottom: 0.7cm, worksheet-footer(pencil-ready-content)),
+)
 #set text(font: body-font, size: 10pt)
-
-// Headings exist only to populate the PDF outline (sidebar bookmarks)
-// when --include-answers is used. Suppress visible rendering here — the
-// worksheet-header already provides the on-page title area.
-#show heading: _ => []
-
-#worksheet-header(student-name: "Luke Skywalker", debug: false)
 
 #worksheet-grid(
   (
@@ -41,6 +50,4 @@
   debug: false,
   opts: (operator: [#sym.plus], width: 2.25cm, answer-rows: 1, pad-width: 0),
 )
-
-#worksheet-footer(pencil-ready-content)
 
