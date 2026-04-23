@@ -1,5 +1,7 @@
 # Pencil Ready
 
+![Pencil Ready — free printable math worksheets](frontend/astro/public/og-image-600x315.png)
+
 Free printable math worksheets. Live at [pencilready.com](https://pencilready.com).
 
 Rust workspace that renders worksheets through [Typst](https://typst.app/)

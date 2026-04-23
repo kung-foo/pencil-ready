@@ -1,6 +1,12 @@
 // Open Graph / social share image for pencilready.com
-// Render: `typst compile assets/og-image.typ frontend/astro/public/og-image.png --ppi 72`
-// Target: 1200 x 630 px.
+// Two sizes — OG meta uses the 1200×630; README banners and other
+// narrow contexts use the 600×315. Both render from the same source.
+//
+//   typst compile assets/og-image.typ frontend/astro/public/og-image-1200x630.png --ppi 72
+//   typst compile assets/og-image.typ frontend/astro/public/og-image-600x315.png  --ppi 36
+//
+// Page dimensions below stay at 1200pt × 630pt — `--ppi` scales the
+// rasterized output.
 
 #set page(
   width: 1200pt,
