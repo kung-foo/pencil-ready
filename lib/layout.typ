@@ -67,7 +67,7 @@
         if style == "long-division" {
           pad(left: 0.5cm, long-division-problem(nums, mode: mode, opts: (width: width, answer-rows: answer-rows), debug: debug))
         } else if style == "horizontal" {
-          pad(left: 0.3cm, right: 0.3cm, horizontal-problem(nums, mode: mode, opts: (operator: operator), debug: debug))
+          horizontal-problem(nums, mode: mode, opts: (operator: operator), debug: debug)
         } else if style == "horizontal-fraction" {
           pad(left: 0.3cm, right: 0.3cm, horizontal-fraction-problem(nums, mode: mode, opts: (operator: operator), debug: debug))
         } else if style == "algebra-two-step" {

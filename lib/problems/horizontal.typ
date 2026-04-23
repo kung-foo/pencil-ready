@@ -45,7 +45,7 @@
   }))
 
   // Single non-breaking inline box so nothing wraps.
-  box(stroke: debug-box, {
+  let content = box(stroke: debug-box, {
     text(a)
     op-box
     text(b)
@@ -54,4 +54,10 @@
     h(0.3em)
     answer-slot
   })
+
+  // Self-pad + self-align so the worksheet-grid doesn't have to know
+  // anything style-specific about this component. 0.3cm left/right to
+  // space cells apart; right+top to match the equals-column rhythm
+  // across problems in a row.
+  align(right + top, pad(left: 0.3cm, right: 0.3cm, content))
 }
