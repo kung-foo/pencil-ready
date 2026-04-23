@@ -211,6 +211,88 @@ impl WorksheetType {
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
         }
     }
+
+    /// Natural cell rectangle (width, height) in cm. Mirror of the
+    /// measured + ceiled values in `crates/core/generated/cell-sizes.toml`
+    /// (that file is the source of truth; re-run `cargo run --example
+    /// measure_cells` and update this table in the same review).
+    ///
+    /// `max_digits` is the largest operand digit count across all
+    /// problems on a page (or the dividend digit count for long-division,
+    /// the whole-number digit count for fraction, the coefficient /
+    /// constant magnitude for algebra).
+    ///
+    /// The rectangle is the same across all render modes — "Cell envelope
+    /// rule" (LAYOUT_REFACTOR.md § "Render modes"): `Blank` dominates,
+    /// `Worked` fills it in, `AnswerOnly` leaves it empty. This keeps
+    /// grid pitch consistent between problem pages and answer-key pages.
+    pub fn cell_size_cm(&self, max_digits: u32) -> (f32, f32) {
+        match self {
+            // Vertical stack, single answer line — width grows with
+            // digit count, height fixed at 3.5cm.
+            WorksheetType::Add { .. }
+            | WorksheetType::Subtract { .. }
+            | WorksheetType::SimpleDivision { .. } => (vertical_stack_width(max_digits), 3.5),
+
+            // Vertical stack with partial-products machinery. Height
+            // depends on multiplier digit count (one partial row per
+            // multiplier digit, plus a final sum row). We key off the
+            // smaller of the two operand digit counts — that's the
+            // multiplier by convention in the generator.
+            WorksheetType::Multiply { digits } => {
+                let min_dig = digits.iter().map(|r| r.max).min().unwrap_or(2).max(1);
+                let height = match min_dig {
+                    1..=2 => 5.5, // 2 partials + sum + padding
+                    3 => 6.5,     // 3 partials + sum + padding
+                    _ => 7.5,     // 4+ partials; conservative
+                };
+                (vertical_stack_width(max_digits), height)
+            }
+
+            // Long division: unique layout. Height grows with dividend
+            // digits (each digit contributes ~2 rows of work space).
+            WorksheetType::LongDivision { digits, .. } => match digits.max {
+                1..=2 => (3.8, 6.0),
+                3 => (3.8, 8.0),
+                _ => (4.4, 10.0), // 4+ dividend digits
+            },
+
+            // Horizontal drills — same primitive for multiplication and
+            // division. d1x1 fits in 4.5cm; d2x1 needs 5.0cm.
+            WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => {
+                let w = if max_digits <= 1 { 4.5 } else { 5.0 };
+                (w, 1.0)
+            }
+
+            // Fraction × whole — width is fixed (the fraction slot
+            // dominates). 2-row vertical layout gives 2.8cm height.
+            WorksheetType::FractionMultiply { .. } => (6.0, 2.8),
+
+            // Algebra two-step — width grows with coefficient / constant
+            // magnitude (more digits in the LHS expression).
+            WorksheetType::AlgebraTwoStep {
+                a_range,
+                b_range,
+                x_range,
+                ..
+            } => {
+                let max = a_range.max.max(b_range.max).max(x_range.max);
+                let w = if max <= 30 { 7.3 } else { 8.0 };
+                (w, 4.1)
+            }
+        }
+    }
+}
+
+/// Shared with Add/Subtract/Multiply/SimpleDivision. Vertical-stack
+/// width is driven by the widest operand.
+fn vertical_stack_width(max_digits: u32) -> f32 {
+    match max_digits {
+        0..=2 => 2.5,
+        3 => 2.6,
+        4 => 3.1,
+        _ => 3.7, // 5+ digits
+    }
 }
 
 /// Regional defaults for operator symbols in horizontal layouts.
@@ -578,4 +660,71 @@ fn validate_max_quotient(mq: u32) -> Result<()> {
         bail!("max-quotient must be 2-12, got {mq}");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Spot-check that `cell_size_cm()` matches the committed
+    /// `cell-sizes.toml` fixtures. When this fails: re-run `cargo run
+    /// --example measure_cells` and update the mirror in lib.rs in
+    /// the same commit.
+    #[test]
+    fn cell_size_cm_matches_toml_fixtures() {
+        // addition-basic-d3-op2-blank: 3-digit operands → 2.6 × 3.5
+        let add = WorksheetType::Add {
+            digits: vec![DigitRange::fixed(3), DigitRange::fixed(3)],
+            carry: CarryMode::Any,
+            binary: false,
+        };
+        assert_eq!(add.cell_size_cm(3), (2.6, 3.5));
+
+        // multiplication-basic-d3x3-blank: 3×3 → 2.6 × 6.5
+        let mul_3x3 = WorksheetType::Multiply {
+            digits: vec![DigitRange::fixed(3), DigitRange::fixed(3)],
+        };
+        assert_eq!(mul_3x3.cell_size_cm(3), (2.6, 6.5));
+
+        // multiplication-basic-d2x2-blank / d3x2-blank: 2-digit multiplier
+        // drives 5.5 cm height regardless of multiplicand width.
+        let mul_3x2 = WorksheetType::Multiply {
+            digits: vec![DigitRange::fixed(3), DigitRange::fixed(2)],
+        };
+        assert_eq!(mul_3x2.cell_size_cm(3), (2.6, 5.5));
+
+        // division-long-d3-blank: 3-digit dividend → 3.8 × 8.0
+        let long_d3 = WorksheetType::LongDivision {
+            digits: DigitRange::fixed(3),
+            remainder: true,
+        };
+        assert_eq!(long_d3.cell_size_cm(3), (3.8, 8.0));
+
+        // multiplication-drill-d1x1: 4.5 × 1.0
+        let mult_drill = WorksheetType::MultiplicationDrill {
+            multiplicand: vec![DigitRange::fixed(7)],
+            multiplier: DigitRange::new(1, 10),
+        };
+        assert_eq!(mult_drill.cell_size_cm(1), (4.5, 1.0));
+
+        // fraction-multiplication-unit-d2: 6.0 × 2.8
+        let frac = WorksheetType::FractionMultiply {
+            denominators: vec![2, 3, 4],
+            min_whole: 1,
+            max_whole: 99,
+            unit_only: true,
+        };
+        assert_eq!(frac.cell_size_cm(2), (6.0, 2.8));
+
+        // algebra-two-step-small-form0: 7.3 × 4.1 (all ranges ≤ 30)
+        let alg_small = WorksheetType::AlgebraTwoStep {
+            a_range: DigitRange::new(2, 12),
+            b_range: DigitRange::new(1, 30),
+            x_range: DigitRange::new(0, 20),
+            variable: "x".into(),
+            implicit: false,
+            mix_forms: false,
+        };
+        assert_eq!(alg_small.cell_size_cm(2), (7.3, 4.1));
+    }
 }
