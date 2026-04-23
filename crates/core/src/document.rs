@@ -28,10 +28,31 @@ fn page_modes(is_answer_page: bool, solve_first: bool, len: usize) -> Vec<Render
     }
 }
 
-/// Cell width in cm for the vertical-stack and horizontal-inline
-/// primitives (and the long-division layout). Drives the `width`
-/// opts key emitted for those components. Formulas match what
-/// `render_inner_with_pad` computed pre-refactor.
+/// Compute a grid width hint (in centimeters) for a problem component cell based on the
+/// worksheet variant and the maximum number of digits present in the problems.
+///
+/// The returned value is a UI hint used as the `width` option for vertical-stack /
+/// horizontal-inline primitives and the long-division layout; specific variants receive
+/// variant-tuned defaults:
+/// - LongDivision: max(3.0, max_digits * 0.6 + 1.2)
+/// - MultiplicationDrill / DivisionDrill: max(6.0, max_digits * 1.2 + 4.0)
+/// - FractionMultiply: 6.0
+/// - FractionSimplify: 5.0
+/// - AlgebraTwoStep: 6.0
+/// - all other variants: max(2.2, max_digits * 0.55 + 0.6)
+///
+/// # Returns
+///
+/// The suggested cell width in centimeters for the given worksheet variant and digit count.
+///
+/// # Examples
+///
+/// ```
+/// // Construct a worksheet value appropriate for your codebase and pass it here.
+/// // let ws = WorksheetType::LongDivision { /* fields */ };
+/// // let w = box_width_cm(&ws, 4);
+/// // assert!(w >= 3.0);
+/// ```
 pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
     match worksheet {
         WorksheetType::LongDivision { .. } => f64::max(3.0, max_digits as f64 * 0.6 + 1.2),
@@ -73,9 +94,32 @@ fn header_name_arg(name: Option<&str>) -> String {
     }
 }
 
-/// Format a ComponentOpts dict as a typst expression, emitting only
-/// the keys the current worksheet's component reads. Keeps the emitted
-/// source tight (and easier to eyeball during debugging).
+/// Serialize component options into a Typst `opts` fragment containing only the
+/// keys that the given worksheet component consumes.
+///
+/// The returned string is suitable for direct interpolation into the Typst
+/// `opts: (...)` argument (for example `operator: [#×], width: 6.0cm`).
+/// The `FractionSimplify` variant yields `":"`, Typst's empty-dict literal.
+/// The `variable` field (used by `AlgebraTwoStep`) is escaped so it can be
+/// embedded in a Typst string literal.
+///
+/// # Examples
+///
+/// ```
+/// // Construct minimal values for demonstration; actual types may have more fields.
+/// let worksheet = WorksheetType::Add { /* ... */ };
+/// let opts = ComponentOpts {
+///     operator: "+".to_string(),
+///     width_cm: 3.5,
+///     answer_rows: 1,
+///     pad_width: 0.6,
+///     implicit: false,
+///     variable: "x".to_string(),
+/// };
+/// let s = opts_body(&worksheet, &opts);
+/// assert!(s.contains("operator: [#+]") || s.contains("operator: [#+]"));
+/// assert!(s.contains("width: 3.5cm"));
+/// ```
 fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
     let operator_arg = if opts.operator.is_empty() {
         "[]".to_string()
@@ -117,6 +161,26 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
     }
 }
 
+/// Renders the entire Typst source for a worksheet document.
+///
+/// Produces the full .typ document text (preamble, page settings, header/footer
+/// callbacks, and the concatenated worksheet pages) suitable for writing to a
+/// .typ file or passing to a Typst renderer. The function never performs
+/// fallible I/O itself and returns the generated source as a `String`.
+///
+/// # Returns
+///
+/// The complete Typst source as a `String`.
+///
+/// # Examples
+///
+/// ```no_run
+/// // Construct or obtain a `Document` as required by your application.
+/// let doc = /* build Document */ unimplemented!();
+/// let typst_source = pencilready::render_document(&doc).unwrap();
+/// // The output is a Typst document string; write it to a file or render it.
+/// std::fs::write("worksheet.typ", typst_source).unwrap();
+/// ```
 pub(crate) fn render_document(doc: &Document) -> Result<String> {
     let sheet = &doc.sheet;
     let chrome = &doc.chrome;

@@ -409,6 +409,15 @@ struct Resolved {
     worksheet: WorksheetType,
 }
 
+/// Convert a parsed CLI `Command` into a normalized `Resolved` configuration.
+///
+/// This maps each `Command` variant into a `Resolved` struct containing:
+/// - `global`: the shared `GlobalArgs`,
+/// - `num_problems`: the effective number of problems (CLI-provided or command-fixed),
+/// - `cols`: the effective column count (CLI-provided or command-fixed),
+/// - `worksheet`: the corresponding `WorksheetType` populated with the command's parameters.
+///
+/// The `Command::All` variant is not expected here and is marked unreachable.
 fn resolve(command: Command) -> Resolved {
     match command {
         Command::Add {
@@ -679,6 +688,18 @@ fn typst_body(source: &str) -> &str {
         .unwrap_or(source)
 }
 
+/// Generates a single multi-page PDF that contains one page-set of each worksheet type and writes it to `<global.output>.pdf`.
+///
+/// The document is constructed by generating each worksheet's Typst body, concatenating them with page breaks, compiling the combined Typst to PDF, and saving the result at the path derived from `global.output`.
+///
+/// # Examples
+///
+/// ```
+/// // Construct `GlobalArgs` with desired output path and options, then generate the combined PDF.
+/// let global = GlobalArgs { output: "output/all_worksheets".into(), ..Default::default() };
+/// run_all(global).unwrap();
+/// assert!(std::path::Path::new("output/all_worksheets.pdf").exists());
+/// ```
 fn run_all(global: GlobalArgs) -> Result<()> {
     // One entry per worksheet type. Column and problem counts mirror each
     // subcommand's dispatch. Keep in sync with `resolve()`.

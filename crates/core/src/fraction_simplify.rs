@@ -10,6 +10,21 @@
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
+/// Creates a `Sheet` configured for the FractionSimplify worksheet from the provided `WorksheetParams`.
+///
+/// The returned sheet contains a generated list of fraction problems and component options tuned for
+/// fraction simplification (including a computed box width based on the largest problem). The worksheet
+/// field is cloned from `params`.
+///
+/// # Examples
+///
+/// ```ignore
+/// // Construct WorksheetParams for a FractionSimplify worksheet, then:
+/// let params = /* WorksheetParams for FractionSimplify */ ;
+/// let sheet = generate(&params).unwrap();
+/// assert_eq!(sheet.worksheet, params.worksheet);
+/// assert!(!sheet.problems.is_empty());
+/// ```
 pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let problems = generate_problems(params);
     let max_digits = document::max_digits(&problems);
@@ -30,6 +45,24 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     })
 }
 
+/// Builds the list of (numerator, denominator) pairs used as problems for a
+/// FractionSimplify worksheet.
+///
+/// The returned vector contains one inner vector per problem in the form
+/// `[numerator, denominator]`. Candidates are generated from the worksheet's
+/// `denominators` and `max_numerator`, then filtered according to
+/// `include_improper` and `include_whole`. The final set is shuffled using the
+/// worksheet seed (or entropy), truncated to `total_problems()`, and padded
+/// with duplicates if necessary to reach the requested total.
+///
+/// # Examples
+///
+/// ```
+/// // Illustrative usage; tests in this crate construct `WorksheetParams` via
+/// // helper functions and then call `generate_problems(&params)`.
+/// // let problems = generate_problems(&params);
+/// // assert_eq!(problems.len(), params.total_problems() as usize);
+/// ```
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
     let (denominators, max_numerator, include_improper, include_whole) = match &params.worksheet {
         WorksheetType::FractionSimplify {
@@ -89,6 +122,17 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
     all.into_iter().map(|(n, d)| vec![n, d]).collect()
 }
 
+/// Computes the greatest common divisor (GCD) of two non-negative integers.
+///
+/// If both inputs are zero, returns `0`.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(gcd(8, 12), 4);
+/// assert_eq!(gcd(0, 5), 5);
+/// assert_eq!(gcd(0, 0), 0);
+/// ```
 fn gcd(a: u32, b: u32) -> u32 {
     if b == 0 { a } else { gcd(b, a % b) }
 }
@@ -109,6 +153,9 @@ mod tests {
         }
     }
 
+    /// Verifies that when improper fractions are disabled, all generated problems are proper fractions.
+    ///
+    /// Asserts that each problem's numerator is less than its denominator and fails if any improper fraction is produced.
     #[test]
     fn proper_only_when_improper_disabled() {
         let params = test_params(vec![4, 6, 8], 20, false, false);
@@ -142,6 +189,25 @@ mod tests {
         assert!(any_already_reduced, "no already-reduced fractions in sample");
     }
 
+    /// Constructs a WorksheetParams pre-configured for FractionSimplify using the supplied fraction settings and fixed test metadata.
+    ///
+    /// Returns a WorksheetParams for a 12-problem, 3-column A4 worksheet with the provided `denominators`, `max_numerator`,
+    /// `include_improper`, and `include_whole` values (seeded with `Some(42)` and answers disabled).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let params = test_params(vec![2, 3, 4], 6, false, false);
+    /// assert_eq!(params.num_problems, 12);
+    /// if let WorksheetType::FractionSimplify { denominators, max_numerator, include_improper, include_whole } = params.worksheet {
+    ///     assert_eq!(denominators, vec![2, 3, 4]);
+    ///     assert_eq!(max_numerator, 6);
+    ///     assert!(!include_improper);
+    ///     assert!(!include_whole);
+    /// } else {
+    ///     panic!("expected FractionSimplify worksheet type");
+    /// }
+    /// ```
     fn test_params(
         denominators: Vec<u32>,
         max_numerator: u32,

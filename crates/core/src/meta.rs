@@ -62,6 +62,20 @@ enum Form {
     Slug,
 }
 
+/// Provide a human-readable base name for a worksheet type in either title or slug form.
+///
+/// When `form` is `Form::Title` this returns a plain-English title (capitalized). When `form` is
+/// `Form::Slug` this returns a kebab-case, filename-safe slug.
+///
+/// # Examples
+///
+/// ```
+/// let title = base_name(&WorksheetType::Add { binary: false }, Form::Title);
+/// assert_eq!(title, "Addition");
+///
+/// let slug = base_name(&WorksheetType::Multiply { }, Form::Slug);
+/// assert_eq!(slug, "multiplication");
+/// ```
 fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
     match (ws, form) {
         (WorksheetType::Add { binary: true, .. }, Form::Title) => "Binary addition",

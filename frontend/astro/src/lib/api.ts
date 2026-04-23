@@ -105,7 +105,13 @@ export function configToSearchParams(cfg: WorksheetConfig): URLSearchParams {
   return q;
 }
 
-/** Parse search params into the shape each kind expects. Invalid/missing → defaults. */
+/**
+ * Parses URL search parameters into a WorksheetConfig for the specified worksheet kind.
+ *
+ * @param kind - The worksheet kind to produce configuration for.
+ * @param sp - URLSearchParams containing query parameters to parse.
+ * @returns A WorksheetConfig populated from `sp`; parameters that are missing or invalid are omitted or set to sensible defaults (for example, `format` defaults to `"pdf"`).
+ */
 export function parseConfig(kind: WorksheetKind, sp: URLSearchParams): WorksheetConfig {
   const s = (k: string) => sp.get(k) ?? undefined;
   const n = (k: string) => {

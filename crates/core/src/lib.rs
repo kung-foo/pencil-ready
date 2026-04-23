@@ -217,8 +217,23 @@ pub enum WorksheetType {
 }
 
 impl WorksheetType {
-    /// Name of the typst component function this worksheet renders
-    /// with. Matches the wrapper files under `lib/problems/<folder>/`.
+    /// Map a worksheet variant to the Typst component function name used for rendering.
+    ///
+    /// The returned name corresponds to the wrapper component under `lib/problems/<folder>/`
+    /// that renders problems for that worksheet type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use crate::{WorksheetType, DigitRange, CarryMode};
+    /// let name = WorksheetType::Add {
+    ///     digits: vec![DigitRange::fixed(2)],
+    ///     carry: CarryMode::Any,
+    ///     binary: false,
+    /// }
+    /// .component_typst_name();
+    /// assert_eq!(name, "addition-basic-problem");
+    /// ```
     pub(crate) fn component_typst_name(&self) -> &'static str {
         match self {
             WorksheetType::Add { .. } => "addition-basic-problem",
@@ -234,20 +249,30 @@ impl WorksheetType {
         }
     }
 
-    /// Natural cell rectangle (width, height) in cm. Mirror of the
-    /// measured + ceiled values in `crates/core/generated/cell-sizes.toml`
-    /// (that file is the source of truth; re-run `cargo run --example
-    /// measure_cells` and update this table in the same review).
+    /// Compute the cell envelope size (width, height) in centimeters for this worksheet type.
     ///
-    /// `max_digits` is the largest operand digit count across all
-    /// problems on a page (or the dividend digit count for long-division,
-    /// the whole-number digit count for fraction, the coefficient /
-    /// constant magnitude for algebra).
+    /// The `max_digits` parameter is the largest operand digit count relevant for layout:
+    /// for most generators it is the largest operand width on a page; for long-division it is
+    /// the dividend digit count; for fraction problems it is the whole-number digit count;
+    /// for algebra it is the worst-case magnitude digit count used for sizing.
     ///
-    /// The rectangle is the same across all render modes — "Cell envelope
-    /// rule" (LAYOUT_REFACTOR.md § "Render modes"): `Blank` dominates,
-    /// `Worked` fills it in, `AnswerOnly` leaves it empty. This keeps
-    /// grid pitch consistent between problem pages and answer-key pages.
+    /// # Returns
+    ///
+    /// `(width_cm, height_cm)` — the cell rectangle in centimeters used for page layout and pagination.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::{WorksheetType, DigitRange, CarryMode};
+    ///
+    /// let ws = WorksheetType::Add {
+    ///     digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+    ///     carry: CarryMode::Any,
+    ///     binary: false,
+    /// };
+    /// let (w, h) = ws.cell_size_cm(2);
+    /// assert!(w > 0.0 && h > 0.0);
+    /// ```
     pub fn cell_size_cm(&self, max_digits: u32) -> (f32, f32) {
         match self {
             // Vertical stack, single answer line — width grows with
@@ -310,10 +335,22 @@ impl WorksheetType {
         }
     }
 
-    /// Worst-case operand digit count implied by the worksheet config,
-    /// computed WITHOUT generating any problems. Feeds `cell_size_cm`
-    /// for `Document::validate` — we want an upper bound, not an
-    /// exact figure.
+    /// Compute an upper bound on operand digit count implied by the worksheet configuration.
+    ///
+    /// This value is determined without generating any problems and is used for layout sizing
+    /// and validation (for example by `cell_size_cm` and `Document::validate`).
+    ///
+    /// # Returns
+    ///
+    /// The maximum number of digits any operand printed for this worksheet might require.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let w = WorksheetType::LongDivision { digits: DigitRange::fixed(3), remainder: false };
+    /// let bound = w.max_digits_bound();
+    /// assert!(bound >= 3);
+    /// ```
     pub fn max_digits_bound(&self) -> u32 {
         match self {
             WorksheetType::Add { digits, .. }
@@ -641,10 +678,21 @@ pub struct Document {
 }
 
 impl Document {
-    /// Build a Document from legacy `WorksheetParams` — runs the
-    /// appropriate per-worksheet generator to produce the `Sheet`,
-    /// derives pagination from `cell_size_cm` + `content_area_cm`,
-    /// and runs `validate()`.
+    /// Construct a Document from legacy `WorksheetParams` by generating a `Sheet`, deriving pagination from component cell size and page content area, and validating the assembled document.
+    ///
+    /// This validates the provided `params`, dispatches to the appropriate per-worksheet generator to build the `Sheet`, computes cell dimensions via `cell_size_cm` and available area via `content_area_cm` to determine columns, rows per page, and total pages, and runs `validate()` on the resulting `Document`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(Document)` when the parameters produce a valid, page-fittable document; an `Err` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let params = WorksheetParams { /* populate required fields */ };
+    /// let doc = Document::from_params(&params).unwrap();
+    /// assert!(doc.pages >= 1);
+    /// ```
     pub fn from_params(params: &WorksheetParams) -> Result<Self> {
         validate_worksheet_params(params)?;
         let sheet = match &params.worksheet {
@@ -833,11 +881,39 @@ pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
     Document::from_params(params)?.render()
 }
 
-/// Per-worksheet range / shape validation. Cheap checks on the config
-/// itself, separate from the paper-fit check in `Document::validate()`
-/// and from generator-internal validation. Called by
-/// `Document::from_params` (so direct callers get it too, not just
-/// the `generate` / `generate_typst_source` entry points).
+/// Validate worksheet configuration for shape and range constraints.
+///
+/// Performs lightweight, worksheet-specific checks on `WorksheetParams`
+/// (e.g., digit-range bounds, operand counts, drill-specific limits).
+/// This does not perform paper-fit validation (see `Document::validate`) nor
+/// generator-internal checks; it is intended to be called early e.g. from
+/// `Document::from_params`.
+///
+/// # Examples
+///
+/// ```
+/// use crate::{WorksheetParams, WorksheetType, DigitRange, Paper, Locale, CarryMode};
+///
+/// let params = WorksheetParams {
+///     worksheet: WorksheetType::Add {
+///         digits: vec![DigitRange::fixed(2)],
+///         carry: CarryMode::Any,
+///         binary: false,
+///     },
+///     num_problems: 10,
+///     cols: 2,
+///     paper: Paper::A4,
+///     debug: false,
+///     seed: None,
+///     symbol: None,
+///     locale: Locale::Us,
+///     solve_first: false,
+///     include_answers: false,
+///     student_name: None,
+/// };
+///
+/// assert!(validate_worksheet_params(&params).is_ok());
+/// ```
 fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
     if params.cols == 0 {
         bail!("cols must be at least 1, got 0");

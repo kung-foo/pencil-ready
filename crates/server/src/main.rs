@@ -374,6 +374,34 @@ struct FractionMultSpecific {
 }
 
 impl FractionMultSpecific {
+    /// Builds the final `OutputFormat` and `WorksheetParams` for a fraction multiplication worksheet.
+    ///
+    /// Parses an optional comma-separated `denominators` list (defaults to `[2, 3, 4, 5, 10]` when absent)
+    /// and applies defaults for `min_whole` (2), `max_whole` (20), and `unit_only` (`false`) before
+    /// combining them with `shared` query parameters. Uses 12 as the default problem count and 3 as the
+    /// default number of columns when constructing the worksheet parameters.
+    ///
+    /// # Parameters
+    ///
+    /// - `shared`: shared query parameters used to compute the resulting `OutputFormat` and `WorksheetParams`.
+    ///
+    /// # Returns
+    ///
+    /// A tuple `(OutputFormat, WorksheetParams)` configured for a `FractionMultiply` worksheet.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Build with defaults (example values; actual construction may vary)
+    /// let spec = FractionMultSpecific {
+    ///     denominators: None,
+    ///     min_whole: None,
+    ///     max_whole: None,
+    ///     unit_only: None,
+    /// };
+    /// let shared = SharedParams::default();
+    /// let (_format, _params) = spec.build(shared).unwrap();
+    /// ```
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
         let denominators = match self.denominators {
             Some(s) => parse_u32_csv(&s, "denominators")?,
@@ -413,6 +441,24 @@ struct FractionSimplifySpecific {
 }
 
 impl FractionSimplifySpecific {
+    /// Builds the output format and worksheet parameters for a fraction-simplify worksheet from the query-specific options and shared parameters.
+    ///
+    /// Parses an optional CSV list of denominators and applies defaults for `max_numerator` (20), `include_improper` (the inverse of `proper_only`), and `include_whole`. Returns the computed `(OutputFormat, WorksheetParams)` with defaults of 12 problems and 3 columns unless overridden by `shared`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Assumes `FractionSimplifySpecific` and `SharedParams` are in scope and constructible.
+    /// let specific = FractionSimplifySpecific {
+    ///     denominators: None,
+    ///     max_numerator: None,
+    ///     proper_only: None,
+    ///     include_whole: None,
+    /// };
+    /// let shared = SharedParams::default();
+    /// let (format, params) = specific.build(shared).unwrap();
+    /// // `format` and `params` are now ready to be passed to the renderer.
+    /// ```
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
         let denominators = match self.denominators {
             Some(s) => parse_u32_csv(&s, "denominators")?,
@@ -721,12 +767,27 @@ async fn handle_div_drill(
     render(&s, "div-drill", p.build(shared), &headers)
 }
 
+/// HTTP handler for the `/api/worksheets/fraction-mult` endpoint that generates a fraction-multiplication worksheet.
+///
+/// Extracts `SharedParams` and `FractionMultSpecific` from the query string, builds worksheet parameters, and returns the rendered worksheet.
+///
+/// # Returns
+///
+/// `axum::response::Response` containing the generated worksheet bytes (PDF/PNG/SVG) on success, or a `400` response with an error message on failure.
+///
+/// # Examples
+///
+/// ```no_run
+/// use axum::{Router, routing::get};
+///
+/// let app = Router::new().route("/api/worksheets/fraction-mult", get(handle_fraction_mult));
+/// ```
 #[utoipa::path(
-    get,
-    path = "/api/worksheets/fraction-mult",
-    params(SharedParams, FractionMultSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
-    tag = "worksheets",
+get,
+path = "/api/worksheets/fraction-mult",
+params(SharedParams, FractionMultSpecific),
+responses((status = 200, description = "Worksheet bytes")),
+tag = "worksheets",
 )]
 async fn handle_fraction_mult(
     State(s): State<Arc<AppState>>,
@@ -737,12 +798,33 @@ async fn handle_fraction_mult(
     render(&s, "fraction-mult", p.build(shared), &headers)
 }
 
+/// Handles GET requests for the fraction-simplify worksheet endpoint and returns a rendered worksheet.
+///
+/// The handler extracts shared query parameters and endpoint-specific parameters, builds worksheet
+/// generation parameters, invokes the rendering pipeline, and returns an HTTP response containing
+/// the generated worksheet bytes or a 400 response with an error message when parameter parsing or
+/// generation fails.
+///
+/// # Returns
+///
+/// `Response` containing the rendered worksheet bytes on success, or a 400 response with a textual
+/// error description on failure.
+///
+/// # Examples
+///
+/// ```
+/// use axum::routing::get;
+/// use axum::Router;
+///
+/// // Register the handler on the router for the fraction-simplify endpoint.
+/// let app = Router::new().route("/api/worksheets/fraction-simplify", get(crate::handle_fraction_simplify));
+/// ```
 #[utoipa::path(
-    get,
-    path = "/api/worksheets/fraction-simplify",
-    params(SharedParams, FractionSimplifySpecific),
-    responses((status = 200, description = "Worksheet bytes")),
-    tag = "worksheets",
+get,
+path = "/api/worksheets/fraction-simplify",
+params(SharedParams, FractionSimplifySpecific),
+responses((status = 200, description = "Worksheet bytes")),
+tag = "worksheets",
 )]
 async fn handle_fraction_simplify(
     State(s): State<Arc<AppState>>,
@@ -853,6 +935,19 @@ struct Cli {
     debug: bool,
 }
 
+/// Starts the Pencil Ready HTTP server using CLI options and environment variables.
+///
+/// The function initializes logging, loads fonts and application state, configures routes
+/// (including OpenAPI/Swagger and optional static frontend serving), applies middleware
+/// (region rewrite, compression, CORS, tracing), binds to the configured port, and serves
+/// requests until shutdown.
+///
+/// # Examples
+///
+/// ```no_run
+/// // Start the server from the project root:
+/// // cargo run -- --port 8080
+/// ```
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
