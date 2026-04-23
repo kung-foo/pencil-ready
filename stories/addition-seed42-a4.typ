@@ -2,6 +2,7 @@
 #import "/lib/layout.typ": worksheet-grid
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
+#import "/lib/problems/vertical.typ": vertical-problem
 
 #set document(
   title: "Addition",
@@ -35,15 +36,10 @@
   (78, 55, 133),
   (20, 25, 45),
   ),
-  [#sym.plus],
+  vertical-problem,
   num-cols: 4,
-  width: 2.25cm,
   debug: false,
-  style: "vertical",
-  answer-rows: 1,
-  implicit: false,
-  variable: "x",
-  pad-width: 0,
+  opts: (operator: [#sym.plus], width: 2.25cm, answer-rows: 1, pad-width: 0),
 )
 
 #worksheet-footer(pencil-ready-content)

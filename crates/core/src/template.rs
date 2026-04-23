@@ -206,21 +206,44 @@ fn render_inner_with_pad(
             ""
         };
 
+        // Per-style dispatch: pick the component function and build the
+        // opts dict with exactly the keys that component uses. Keeping
+        // opts minimal per component makes emitted .typ easier to read
+        // during debugging.
+        let (component_name, opts_body) = match style {
+            "vertical" => (
+                "vertical-problem",
+                format!("operator: {operator_arg}, width: {box_width}cm, answer-rows: {answer_rows}, pad-width: {pad_width}"),
+            ),
+            "long-division" => (
+                "long-division-problem",
+                format!("width: {box_width}cm, answer-rows: {answer_rows}"),
+            ),
+            "horizontal" => (
+                "horizontal-problem",
+                format!("operator: {operator_arg}"),
+            ),
+            "horizontal-fraction" => (
+                "horizontal-fraction-problem",
+                format!("operator: {operator_arg}"),
+            ),
+            "algebra-two-step" => (
+                "algebra-two-step-problem",
+                format!("operator: {operator_arg}, implicit: {implicit_str}, variable: \"{variable}\""),
+            ),
+            other => bail!("unknown worksheet style: {other}"),
+        };
+
         page_blocks.push_str(&format!(
             r#"{outline_heading}#worksheet-grid(
   (
   {problem_lines},
   ),
-  {operator_arg},
+  {component_name},
   num-cols: {cols},
-  width: {box_width}cm,
   debug: {debug_str},
-  style: "{style}",
-  answer-rows: {answer_rows},
   modes: ({modes_arg},),
-  implicit: {implicit_str},
-  variable: "{variable}",
-  pad-width: {pad_width},
+  opts: ({opts_body}),
 )
 "#
         ));
@@ -238,6 +261,13 @@ fn render_inner_with_pad(
 #import "/lib/layout.typ": worksheet-grid
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
+// Problem components are passed to worksheet-grid by reference, so
+// they must be in scope at the call site.
+#import "/lib/problems/vertical.typ": vertical-problem
+#import "/lib/problems/long-division.typ": long-division-problem
+#import "/lib/problems/horizontal.typ": horizontal-problem
+#import "/lib/problems/horizontal-fraction.typ": horizontal-fraction-problem
+#import "/lib/problems/algebra-two-step.typ": algebra-two-step-problem
 
 #set document(
   title: "{doc_title}",

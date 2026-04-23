@@ -1,31 +1,28 @@
-// Grid that lays problems out on a page. Per-problem render mode:
+// Grid that lays problems out on a page.
 //
-//   modes: a list of "blank" | "worked" | "answer-only", one entry per
-//          problem. "blank" = unsolved. "worked" = filled-in example
-//          with partial work shown. "answer-only" = just the final
-//          numeric answer (used on answer-key pages).
+//   component: a function reference to the problem component to render
+//              each cell with. Signature: `(data, mode, opts, debug)`.
+//              Every component is self-padded and self-aligned (see
+//              lib/problems/*.typ), so worksheet-grid has no style-
+//              specific knowledge.
 //
-// Defaults to all-blank when the caller omits modes, so stories and
-// standalone invocations keep their existing behavior.
+//   modes:     list of "blank" | "worked" | "answer-only", one entry
+//              per problem. Defaults to all-blank.
+//
+//   opts:      dict forwarded to each component unchanged. Keys are
+//              component-specific (operator, width, answer-rows,
+//              implicit, variable, pad-width, ...).
+//
+// Callers must import the component function into their scope and
+// pass it by reference.
 #let worksheet-grid(
   problems,
-  operator,
+  component,
   num-cols: 4,
-  width: 2.2cm,
   debug: false,
-  style: "vertical",
-  answer-rows: 1,
   modes: none,
-  implicit: false,
-  variable: "x",
-  pad-width: 0,
+  opts: (:),
 ) = {
-  import "/lib/problems/vertical.typ": vertical-problem
-  import "/lib/problems/long-division.typ": long-division-problem
-  import "/lib/problems/horizontal.typ": horizontal-problem
-  import "/lib/problems/horizontal-fraction.typ": horizontal-fraction-problem
-  import "/lib/problems/algebra-two-step.typ": algebra-two-step-problem
-
   let num-problems = problems.len()
   // Ceiling division: handles partial last rows (e.g. 10 problems, 3 cols = 4 rows).
   let num-rows = calc.quo(num-problems + num-cols - 1, num-cols)
@@ -47,34 +44,9 @@
     grid(
       columns: range(num-cols).map(_ => 1fr),
       rows: range(num-rows).map(_ => 1fr),
-      align: if style == "vertical" {
-        center + top
-      } else if style == "horizontal" or style == "horizontal-fraction" or style == "algebra-two-step" {
-        // Right-align problems within each cell so the = and answer
-        // blanks line up vertically down each column. Top-align so every
-        // problem starts flush with the top of its cell instead of being
-        // vertically centered — the visual rhythm across rows is cleaner.
-        right + top
-      } else {
-        left + top
-      },
       stroke: debug-grid,
       ..range(num-problems).map(idx => {
-        let nums = problems.at(idx)
-        let mode = mode-at(idx)
-        let solved = mode != "blank"
-        let answer-only = mode == "answer-only"
-        if style == "long-division" {
-          long-division-problem(nums, mode: mode, opts: (width: width, answer-rows: answer-rows), debug: debug)
-        } else if style == "horizontal" {
-          horizontal-problem(nums, mode: mode, opts: (operator: operator), debug: debug)
-        } else if style == "horizontal-fraction" {
-          horizontal-fraction-problem(nums, mode: mode, opts: (operator: operator), debug: debug)
-        } else if style == "algebra-two-step" {
-          algebra-two-step-problem(nums, mode: mode, opts: (operator: operator, implicit: implicit, variable: variable), debug: debug)
-        } else {
-          vertical-problem(nums, mode: mode, opts: (operator: operator, width: width, answer-rows: answer-rows, pad-width: pad-width), debug: debug)
-        }
+        component(problems.at(idx), mode: mode-at(idx), opts: opts, debug: debug)
       })
     )
   })
