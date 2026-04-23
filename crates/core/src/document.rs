@@ -181,26 +181,28 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
             format!("({inner},)")
         };
 
-        // PDF outline entries — sidebar bookmarks. The preamble's
-        // show-rule suppresses the visual rendering.
-        let outline_heading = if chrome.include_answers && i == 0 {
-            "#heading(outlined: true, bookmarked: true, level: 1)[Problems]\n"
+        // PDF outline entries — sidebar bookmarks that `worksheet-page`
+        // emits as suppressed-rendering headings. The preamble's show-rule
+        // prevents visual output.
+        let outline_key = if chrome.include_answers && i == 0 {
+            "problems"
         } else if *is_answer_page && i == first_answer_idx {
-            "#heading(outlined: true, bookmarked: true, level: 1)[Answer Key]\n"
+            "answer-key"
         } else {
             ""
         };
 
         page_blocks.push_str(&format!(
-            r#"{outline_heading}#worksheet-grid(
+            r#"#worksheet-page(
   (
   {problem_lines},
   ),
   {component_name},
-  num-cols: {cols},
+  cols: {cols},
   debug: {debug_str},
   modes: {modes_arg},
   opts: ({opts_text}),
+  outline: "{outline_key}",
 )
 "#
         ));
@@ -226,7 +228,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 
     Ok(format!(
         r#"#import "/lib/header.typ": worksheet-header
-#import "/lib/layout.typ": worksheet-grid
+#import "/lib/page.typ": worksheet-page
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
 // Problem components are passed to worksheet-grid by reference, so

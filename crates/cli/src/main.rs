@@ -734,7 +734,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
     // join bodies with pagebreaks.
     let combined = format!(
         r#"#import "/lib/header.typ": worksheet-header
-#import "/lib/layout.typ": worksheet-grid
+#import "/lib/page.typ": worksheet-page
 #import "/lib/footer.typ": worksheet-footer, pencil-ready-content
 #import "/lib/problems/shared.typ": body-font
 // Problem components passed to worksheet-grid by reference must be
