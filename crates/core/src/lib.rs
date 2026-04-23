@@ -615,6 +615,7 @@ impl Document {
     /// derives pagination from `cell_size_cm` + `content_area_cm`,
     /// and runs `validate()`.
     pub fn from_params(params: &WorksheetParams) -> Result<Self> {
+        validate_worksheet_params(params)?;
         let sheet = match &params.worksheet {
             WorksheetType::Add { .. } => add::generate(params)?,
             WorksheetType::Subtract { .. } => subtract::generate(params)?,
@@ -777,10 +778,9 @@ pub fn generate(
     // so callers measuring raw cache behavior (see examples/cache_growth)
     // can render without side-effects.
     typst::comemo::evict(10);
-    // Per-worksheet validation happens inside Document::from_params,
-    // which also derives page count. The format check below uses the
-    // derived page count, not params.pages (which is deprecated).
-    validate_worksheet_params(params)?;
+    // `Document::from_params` runs all config + paper-fit validation
+    // and derives the page count; the format check below keys off the
+    // derived value rather than a user-supplied hint.
     let doc = Document::from_params(params)?;
     if (doc.pages > 1 || doc.chrome.include_answers) && !matches!(format, OutputFormat::Pdf) {
         bail!(
@@ -798,15 +798,18 @@ pub fn generate(
 /// so the CLI can concatenate several worksheets into a single multi-page
 /// PDF (the `all` subcommand).
 pub fn generate_typst_source(params: &WorksheetParams) -> Result<String> {
-    validate_worksheet_params(params)?;
     Document::from_params(params)?.render()
 }
 
 /// Per-worksheet range / shape validation. Cheap checks on the config
 /// itself, separate from the paper-fit check in `Document::validate()`
-/// and from generator-internal validation. Called by both
-/// `generate_typst_source` and `generate`.
+/// and from generator-internal validation. Called by
+/// `Document::from_params` (so direct callers get it too, not just
+/// the `generate` / `generate_typst_source` entry points).
 fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
+    if params.cols == 0 {
+        bail!("cols must be at least 1, got 0");
+    }
     let is_drill = matches!(
         &params.worksheet,
         WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. }
@@ -1067,6 +1070,29 @@ mod tests {
             .max_digits_bound(),
             3
         );
+    }
+
+    #[test]
+    fn document_from_params_rejects_zero_cols() {
+        let params = WorksheetParams {
+            worksheet: WorksheetType::Add {
+                digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+                carry: CarryMode::Any,
+                binary: false,
+            },
+            num_problems: 12,
+            cols: 0,
+            paper: Paper::A4,
+            debug: false,
+            seed: Some(42),
+            symbol: None,
+            locale: Locale::Us,
+            solve_first: false,
+            include_answers: false,
+            student_name: None,
+        };
+        let err = Document::from_params(&params).unwrap_err().to_string();
+        assert!(err.contains("cols must be at least 1"), "unexpected error: {err}");
     }
 
     #[test]

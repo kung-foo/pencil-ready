@@ -103,7 +103,11 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
         WorksheetType::AlgebraTwoStep { .. } => format!(
             "operator: {operator_arg}, implicit: {i}, variable: \"{v}\"",
             i = opts.implicit,
-            v = opts.variable,
+            // Escape backslashes and double-quotes so a variable like `"`
+            // or `\` drops into the generated .typ source without
+            // breaking string literal syntax. Upstream validation caps
+            // variable at one unicode scalar, so this is defence-in-depth.
+            v = opts.variable.replace('\\', "\\\\").replace('"', "\\\""),
         ),
     }
 }
@@ -165,9 +169,11 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
             .join(",\n  ");
 
         // On answer-key pages we force every problem into answer-only
-        // mode. The `solve-first` knob is respected only on problem
-        // pages, where it promotes problem 0 to a worked example.
-        let modes = page_modes(*is_answer_page, chrome.solve_first, page.len());
+        // mode. The `solve-first` knob only promotes cell 0 of the
+        // very first problem page — paginated worksheets don't get a
+        // fresh worked example on each page.
+        let solve_first_here = chrome.solve_first && !*is_answer_page && i == 0;
+        let modes = page_modes(*is_answer_page, solve_first_here, page.len());
         // Typst `(x,)` is a 1-tuple-as-array; `(,)` is a syntax error.
         // Emit `()` for empty so a zero-problem page produces valid source.
         let modes_arg = if modes.is_empty() {
