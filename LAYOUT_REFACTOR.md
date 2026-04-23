@@ -445,6 +445,40 @@ Each step compilable on its own. Gate with `cargo test --workspace
    branching; `worksheet-grid` shrinks to `data-list.map(component)`.
    Each component includes its own `pad(...)` and alignment. This is
    the biggest visual-diff risk — gate carefully.
+3.5. **Reorganize `lib/problems/` by worksheet, not layout.** Today
+   `vertical.typ` serves four worksheets (add / sub / mul / simple-div)
+   and `horizontal.typ` serves two (mult-drill / div-drill). The
+   layout-named files obscure which worksheet lives where. Move the
+   shared layout code into `_layouts/` primitives and give each
+   worksheet its own file under a worksheet-named folder:
+
+   ```
+   lib/problems/
+     shared.typ
+     _layouts/
+       vertical-stack.typ       (from vertical.typ)
+       horizontal-inline.typ    (from horizontal.typ)
+     addition/basic.typ
+     subtraction/basic.typ
+     multiplication/
+       basic.typ                (vertical-stack + × + partial-products)
+       drill.typ                (horizontal-inline with ×)
+     division/
+       simple.typ               (vertical-stack with ÷)
+       long.typ                 (own layout; moved from long-division.typ)
+       drill.typ                (horizontal-inline with ÷)
+     fraction/multiplication.typ   (own layout; moved from horizontal-fraction.typ)
+     algebra/two-step.typ          (moved from algebra-two-step.typ)
+   ```
+
+   Each worksheet file imports its layout primitive, hard-codes its
+   operator / options, and re-exports a worksheet-specific component
+   function. Mechanical file moves + thin wrappers — no visual change
+   at the pipeline level. Stories + fixtures update their import
+   paths; baselines stay pixel-identical. Must land after step 3
+   (so the component contract is already `(data, mode, opts, debug)`)
+   and before step 4 (so cell-size ids match the final tree, e.g.
+   `multiplication-basic-d2x2-blank`).
 4. **Declare `cell_size_cm` per worksheet type.** Add
    `WorksheetType::cell_size_cm` and `typst_component`. Wire
    `Document::validate` using them.
@@ -463,7 +497,7 @@ Each step compilable on its own. Gate with `cargo test --workspace
    page. Document preamble stays in Rust.
 9. **Delete dead code.** `Style` never existed; remove any shims.
 
-Steps 1–3 are incremental refinements that preserve behavior. Step 4
+Steps 1–3.5 are incremental refinements that preserve behavior. Step 4
 onward is the structural change. Step 7 is a breaking change to the
 public CLI/HTTP API — bundle with a release note.
 
