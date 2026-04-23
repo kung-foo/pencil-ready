@@ -40,8 +40,11 @@
 // `mode` = "blank" | "worked" | "answer-only". "answer-only" renders
 // just the quotient above the bar and skips the work rows.
 #let division-long-problem(data, mode: "blank", opts: (:), debug: false) = {
-  let width = opts.at("width", default: 3.9em)
-  let answer-rows = opts.at("answer-rows", default: 0)
+  // Required keys — a silent `answer-rows: 0` would render zero work
+  // space and be easy to miss in review, so fail loudly if a caller
+  // forgets.
+  let width = opts.at("width")
+  let answer-rows = opts.at("answer-rows")
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 

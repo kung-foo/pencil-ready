@@ -188,11 +188,20 @@ fn render_inner_with_pad(
         // steps). The `solve-first` knob is respected only on problem
         // pages, where it promotes problem 0 to a worked example.
         let modes = page_modes(*is_answer_page, params.solve_first, page.len());
-        let modes_arg = modes
-            .iter()
-            .map(|m| format!("\"{}\"", m.as_tag()))
-            .collect::<Vec<_>>()
-            .join(", ");
+        // Typst tuple-vs-array: `(x,)` is a 1-tuple-as-array; `(,)` is a
+        // syntax error. Emit `()` for the empty case so a zero-problem
+        // page (unreachable today, but a cheap footgun to defuse)
+        // produces valid source.
+        let modes_arg = if modes.is_empty() {
+            "()".to_string()
+        } else {
+            let inner = modes
+                .iter()
+                .map(|m| format!("\"{}\"", m.as_tag()))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("({inner},)")
+        };
 
         // PDF outline entries: when the document has both a problems section
         // and an answer-key section, emit a heading at the top of each to
@@ -237,7 +246,7 @@ fn render_inner_with_pad(
   {component_name},
   num-cols: {cols},
   debug: {debug_str},
-  modes: ({modes_arg},),
+  modes: {modes_arg},
   opts: ({opts_body}),
 )
 "#

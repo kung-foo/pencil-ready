@@ -37,8 +37,13 @@
   let d = data.at(2)
 
   // Worked-answer values (only rendered when solved: true).
+  // The generator guarantees divisibility; assert loudly so a bad
+  // input (whole×n not divisible by d) fails the compile instead of
+  // silently truncating in `str(int(...))` on the answer-key page.
   let inter-num = whole-v * n
-  let final = inter-num / d  // integer division: answers are always whole
+  assert(calc.rem(inter-num, d) == 0,
+    message: "fraction-multiplication: whole×num not divisible by den")
+  let final = calc.quo(inter-num, d)
 
   // Reserve fixed horizontal space on the right so solved and unsolved
   // problems occupy the same width — the worksheet grid stays aligned.

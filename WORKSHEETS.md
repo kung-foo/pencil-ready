@@ -347,8 +347,12 @@ overrides.
 The problem renders as a 3-row grid:
 
 ```typst
-two-step-problem((a: 4, b: 5, x: 4, form: "canonical"), debug: false, solved: false)
+algebra-two-step-problem((4, 5, 4, 21, 0), opts: (operator: [#sym.dot.op]))
 ```
+
+`data` is `(a, b, x, c, form)`; `form: 0` is canonical, `1` is
+const-first, `2` is canonical-minus (see the generator for the full
+mapping). Operator is only used when `implicit: false`.
 
 The component owns the form-to-row-1 rendering; rows 2 and 3 are always
 `ax = ...` and `x = ...` regardless of form.

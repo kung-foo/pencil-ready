@@ -34,8 +34,18 @@ fn build_source(snippet: &str) -> String {
     )
 }
 
-/// A4 content area after standard margins + header + footer. Matches
-/// what `Chrome::content_area_cm` will compute in the refactor.
+// A4 content area after standard margins + header + footer. Used
+// ONLY to print the diagnostic `cols_a4`/`rows_a4` columns below;
+// does NOT feed the emitted toml.
+//
+// TODO(step 5): these constants are stale — they use pre-chrome-
+// refactor margins. The current template emits
+//   margin: (top: 3.2cm, bottom: 2.2cm, left: 1.5cm, right: 1.5cm)
+// with header-ascent 0.8cm and footer-descent 0.4cm, which gives a
+// different content-area height. Re-derive from `Chrome::content_area_cm`
+// / `MARGINS_CM` / `HEADER_HEIGHT_CM` / `FOOTER_HEIGHT_CM` once those
+// constants land in step 5 of LAYOUT_REFACTOR.md. Until then the
+// diagnostic cols/rows are approximate.
 const A4_CONTENT_W_CM: f32 = 21.0 - 1.5 - 1.5; // paper w - margin l - margin r
 const A4_CONTENT_H_CM: f32 = 29.7 - 1.5 - 1.0 - 1.5 - 0.8; // - margins - header - footer
 

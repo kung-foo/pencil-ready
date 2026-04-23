@@ -121,7 +121,12 @@ fn cmd_diff(root: &Path) -> Result<bool> {
         }
 
         match directional_diff(&baseline, &current, &diff)? {
-            None => println!("✓ {name}"),
+            None => {
+                // Scrub any stale diff from a prior failing run so
+                // stories/diff/ only contains still-failing cases.
+                let _ = std::fs::remove_file(&diff);
+                println!("✓ {name}");
+            }
             Some((removed, added)) => {
                 println!(
                     "✗ {name}: {removed} removed, {added} added pixels → {}",
@@ -218,8 +223,10 @@ fn directional_diff(
     }
 
     if n_removed == 0 && n_added == 0 {
-        // Clean — delete any stale diff image.
-        let _ = std::fs::remove_file(out);
+        // Clean — caller decides whether to remove any stale diff at
+        // this path. cmd_diff's stories/diff/<name>.png is a managed
+        // cache so it scrubs; diff-files takes an arbitrary user-
+        // supplied path and leaves it alone.
         Ok(None)
     } else {
         out_img.save(out)?;
