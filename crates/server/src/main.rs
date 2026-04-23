@@ -52,6 +52,10 @@ struct AppState {
     /// Fonts parsed once at startup. Shared (via `Arc`) with every
     /// compile — avoids re-reading `fonts/` from disk per request.
     fonts: Fonts,
+    /// Force `debug: true` on every worksheet render regardless of
+    /// query params — turns the red/blue layout-debug borders on for
+    /// every browser-facing render. Set via `--debug` / `PENCIL_READY_DEBUG`.
+    force_debug: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -456,7 +460,7 @@ fn render(
     let ip = client_ip(headers);
     let ua = user_agent(headers);
 
-    let (format, params) = match built {
+    let (format, mut params) = match built {
         Ok(p) => p,
         Err(e) => {
             warn!(
@@ -470,6 +474,9 @@ fn render(
             return (StatusCode::BAD_REQUEST, format!("{e:#}\n")).into_response();
         }
     };
+    if state.force_debug {
+        params.debug = true;
+    }
 
     let start = Instant::now();
     let result = generate(&params, format, &state.root, &state.fonts);
@@ -789,6 +796,11 @@ struct Cli {
     /// Run API-only, without serving any static bundle.
     #[arg(long)]
     api_only: bool,
+    /// Force `debug: true` on every worksheet render — useful for visual
+    /// layout debugging via the browser. Off by default; never set in
+    /// production.
+    #[arg(long, env = "PENCIL_READY_DEBUG")]
+    debug: bool,
 }
 
 #[tokio::main]
@@ -805,10 +817,14 @@ async fn main() {
     // Parse all bundled fonts once; clone the Arcs per request.
     let fonts = Fonts::load(&root).expect("load fonts from <root>/fonts");
     info!(region = %region_display(&region), "pencil-ready-server starting");
+    if cli.debug {
+        info!("--debug active: forcing debug borders on every worksheet render");
+    }
     let state = Arc::new(AppState {
         root: root.clone(),
         region,
         fonts,
+        force_debug: cli.debug,
     });
 
     // Resolve the static directory. Explicit flag wins; otherwise
