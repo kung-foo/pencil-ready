@@ -50,7 +50,7 @@
   let carry-space = 0.5em
   let answer-space = problem-line-height * answer-rows
 
-  box(
+  let content = box(
     width: width,
     stroke: debug-box,
     inset: (top: carry-space, bottom: answer-space),
@@ -159,4 +159,10 @@
       }
     },
   )
+
+  // Self-align so the worksheet-grid doesn't have to know anything
+  // style-specific about this component. No pad — the box's fixed
+  // `width` already defines the cell's horizontal footprint, and the
+  // grid's 1fr columns space cells evenly.
+  align(center + top, content)
 }
