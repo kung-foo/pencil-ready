@@ -82,20 +82,30 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
         <header
             class="border-b px-3 py-3 flex items-center justify-between gap-4"
         >
-            <!-- inline-flex column sizes the wrapper to the wordmark's
-                 natural width; the SVG inherits that width via
-                 items-stretch and stretches horizontally (yellow barrel
-                 absorbs the slack) because preserveAspectRatio is
-                 disabled. See pencilready-logo-spec.md. -->
-            <a
-                href="/"
-                class="inline-flex flex-col items-stretch leading-none isolate"
-            >
-                <h1 class="text-[2.5em] leading-none relative z-10">
-                    Pencil Ready
-                </h1>
-                <PencilRule class="h-2 -mt-2" />
-            </a>
+            <div>
+                <!-- inline-flex column sizes the wrapper to the wordmark's
+                     natural width; the SVG inherits that width via
+                     items-stretch and stretches horizontally (yellow barrel
+                     absorbs the slack) because preserveAspectRatio is
+                     disabled. See pencilready-logo-spec.md. -->
+                <a
+                    href="/"
+                    class="inline-flex flex-col items-stretch leading-none isolate"
+                >
+                    <h1 class="text-[2.5em] leading-none relative z-10">
+                        Pencil Ready
+                    </h1>
+                    <PencilRule class="h-2 -mt-2" />
+                </a>
+                <!-- Tagline lives outside the wordmark anchor so it doesn't
+                     widen the inline-flex column (which would stretch the
+                     pencil-rule SVG). -->
+                <p
+                    class="mt-2 text-xs text-muted-foreground tracking-wide whitespace-nowrap"
+                >
+                    print → solve → sharpen → repeat
+                </p>
+            </div>
             <nav class="text-sm">
                 <a
                     href="/about/"

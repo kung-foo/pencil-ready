@@ -73,7 +73,7 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
         <DownloadButton state={state} />
         <PrintButton state={state} />
       </div>
-      <div className="min-h-[80vh]">
+      <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
         <Preview cfg={cfg} state={state} />
       </div>
     </div>
