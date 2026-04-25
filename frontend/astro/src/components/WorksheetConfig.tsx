@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
   InputGroup,
@@ -198,6 +199,139 @@ function Field({
   );
 }
 
+/** Single-thumb slider with the same defer-on-commit behavior as
+ * `RangeSliderField`. Used for scalar params like simple-divide's
+ * `max_quotient`. */
+function SliderField({
+  label,
+  min,
+  max,
+  value,
+  onCommit,
+}: {
+  label: string;
+  min: number;
+  max: number;
+  value: number;
+  onCommit: (next: number) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <Label>{label}</Label>
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {draft}
+        </span>
+      </div>
+      <Slider
+        min={min}
+        max={max}
+        step={1}
+        value={[draft]}
+        onValueChange={(v) => setDraft(v[0])}
+        onValueCommit={(v) => onCommit(v[0])}
+      />
+    </div>
+  );
+}
+
+/** Two-thumb range slider that keeps a local draft while dragging and only
+ * fires `onCommit` on release (Radix's `onValueCommit`) — same intent as
+ * `DeferredNameInput`: avoid hammering the worksheet API on every tick. */
+function RangeSliderField({
+  label,
+  min,
+  max,
+  value,
+  onCommit,
+}: {
+  label: string;
+  min: number;
+  max: number;
+  value: [number, number];
+  onCommit: (next: [number, number]) => void;
+}) {
+  const [draft, setDraft] = useState<[number, number]>(value);
+  // Re-sync when the source of truth changes externally (e.g. URL parse on
+  // hydration, or sibling control reset).
+  useEffect(() => setDraft(value), [value[0], value[1]]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <Label>{label}</Label>
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {draft[0]}{draft[0] === draft[1] ? "" : `–${draft[1]}`}
+        </span>
+      </div>
+      <Slider
+        min={min}
+        max={max}
+        step={1}
+        value={draft}
+        onValueChange={(v) => setDraft([v[0], v[1]] as [number, number])}
+        onValueCommit={(v) => onCommit([v[0], v[1]] as [number, number])}
+      />
+    </div>
+  );
+}
+
+function csvToRange(
+  csv: string | undefined,
+  fallback: [number, number],
+): [number, number] {
+  if (!csv) return fallback;
+  const nums = csv
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (nums.length === 0) return fallback;
+  return [Math.min(...nums), Math.max(...nums)];
+}
+
+/** Expand a [lo, hi] slider range to a CSV of denominators, dropping
+ * primes ≥ 7 from the interior. Those primes almost never reduce against
+ * numerators ≤ ~20 — keeping them just dilutes the worksheet with
+ * already-reduced fractions. The slider's chosen endpoints are always
+ * preserved so the label and the emitted set agree. */
+function expandDenominators(lo: number, hi: number): string {
+  const out: number[] = [];
+  for (let n = lo; n <= hi; n++) {
+    if (n !== lo && n !== hi && n >= 7 && isPrime(n)) continue;
+    out.push(n);
+  }
+  return out.join(",");
+}
+
+function isPrime(n: number): boolean {
+  if (n < 2) return false;
+  if (n % 2 === 0) return n === 2;
+  for (let d = 3; d * d <= n; d += 2) {
+    if (n % d === 0) return false;
+  }
+  return true;
+}
+
+/** Parse a `parse_digit_range`-style string ("N" or "N-M") into [lo, hi]. */
+function dashToRange(
+  s: string | undefined,
+  fallback: [number, number],
+): [number, number] {
+  if (!s) return fallback;
+  const m = s.trim().match(/^(\d+)(?:-(\d+))?$/);
+  if (!m) return fallback;
+  const lo = Number(m[1]);
+  const hi = m[2] === undefined ? lo : Number(m[2]);
+  return lo <= hi ? [lo, hi] : [hi, lo];
+}
+
+function rangeToDash(lo: number, hi: number): string {
+  return lo === hi ? String(lo) : `${lo}-${hi}`;
+}
+
 /** Input that keeps its own draft while focused and only fires `onCommit`
  * on blur — keeps keystrokes from hammering the worksheet API. Also
  * commits on Enter so the preview refreshes without tabbing away. */
@@ -348,31 +482,26 @@ function KindSpecific({
 
     case "simple-divide":
       return (
-        <Field label="Max quotient (2–12)">
-          <Input
-            type="number"
-            placeholder="10"
-            value={cfg.max_quotient ?? ""}
-            onChange={(e) =>
-              patch(
-                "max_quotient",
-                e.target.value === "" ? undefined : Number(e.target.value),
-              )
-            }
-          />
-        </Field>
+        <SliderField
+          label="Max quotient"
+          min={2}
+          max={12}
+          value={cfg.max_quotient ?? 10}
+          onCommit={(v) => patch("max_quotient", v)}
+        />
       );
 
-    case "long-divide":
+    case "long-divide": {
+      const [dLo, dHi] = dashToRange(cfg.digits, [3, 3]);
       return (
         <div className="space-y-4">
-          <Field label="Dividend digits">
-            <Input
-              value={cfg.digits ?? ""}
-              placeholder="3"
-              onChange={(e) => patch("digits", e.target.value)}
-            />
-          </Field>
+          <RangeSliderField
+            label="Dividend digits"
+            min={1}
+            max={6}
+            value={[dLo, dHi]}
+            onCommit={([lo, hi]) => patch("digits", rangeToDash(lo, hi))}
+          />
           <div className="flex items-center justify-between">
             <Label htmlFor="remainder">Allow remainders</Label>
             <Switch
@@ -383,8 +512,10 @@ function KindSpecific({
           </div>
         </div>
       );
+    }
 
-    case "mult-drill":
+    case "mult-drill": {
+      const [mLo, mHi] = dashToRange(cfg.multiplier, [1, 10]);
       return (
         <div className="space-y-4">
           <Field label="Multiplicand (e.g. 2,3 or 1-10)">
@@ -394,17 +525,19 @@ function KindSpecific({
               onChange={(e) => patch("multiplicand", e.target.value)}
             />
           </Field>
-          <Field label="Multiplier">
-            <Input
-              value={cfg.multiplier ?? ""}
-              placeholder="1-10"
-              onChange={(e) => patch("multiplier", e.target.value)}
-            />
-          </Field>
+          <RangeSliderField
+            label="Multiplier"
+            min={1}
+            max={12}
+            value={[mLo, mHi]}
+            onCommit={([lo, hi]) => patch("multiplier", rangeToDash(lo, hi))}
+          />
         </div>
       );
+    }
 
-    case "div-drill":
+    case "div-drill": {
+      const [qLo, qHi] = dashToRange(cfg.max_quotient, [2, 9]);
       return (
         <div className="space-y-4">
           <Field label="Divisor">
@@ -414,15 +547,16 @@ function KindSpecific({
               onChange={(e) => patch("divisor", e.target.value)}
             />
           </Field>
-          <Field label="Max quotient">
-            <Input
-              value={cfg.max_quotient ?? ""}
-              placeholder="2-9"
-              onChange={(e) => patch("max_quotient", e.target.value)}
-            />
-          </Field>
+          <RangeSliderField
+            label="Max quotient"
+            min={2}
+            max={12}
+            value={[qLo, qHi]}
+            onCommit={([lo, hi]) => patch("max_quotient", rangeToDash(lo, hi))}
+          />
         </div>
       );
+    }
 
     case "fraction-mult":
       return (
@@ -445,26 +579,26 @@ function KindSpecific({
         </div>
       );
 
-    case "fraction-simplify":
+    case "fraction-simplify": {
+      const [denMin, denMax] = csvToRange(cfg.denominators, [2, 12]);
       return (
         <div className="space-y-4">
-          <Field label="Denominators">
-            <Input
-              value={cfg.denominators ?? ""}
-              placeholder="2,3,4,5,6,8,10,12"
-              onChange={(e) => patch("denominators", e.target.value)}
-            />
-          </Field>
-          <Field label="Max numerator">
-            <Input
-              type="number"
-              value={cfg.max_numerator ?? ""}
-              placeholder="20"
-              onChange={(e) =>
-                patch("max_numerator", Number(e.target.value) || undefined)
-              }
-            />
-          </Field>
+          <RangeSliderField
+            label="Denominators"
+            min={2}
+            max={20}
+            value={[denMin, denMax]}
+            onCommit={([lo, hi]) =>
+              patch("denominators", expandDenominators(lo, hi))
+            }
+          />
+          <SliderField
+            label="Max numerator"
+            min={5}
+            max={30}
+            value={cfg.max_numerator ?? 20}
+            onCommit={(v) => patch("max_numerator", v)}
+          />
           <div className="flex items-center justify-between">
             <Label htmlFor="proper_only">Proper fractions only</Label>
             <Switch
@@ -483,31 +617,35 @@ function KindSpecific({
           </div>
         </div>
       );
+    }
 
-    case "algebra-two-step":
+    case "algebra-two-step": {
+      const [aLo, aHi] = dashToRange(cfg.a_range, [2, 10]);
+      const [bLo, bHi] = dashToRange(cfg.b_range, [1, 30]);
+      const [xLo, xHi] = dashToRange(cfg.x_range, [0, 20]);
       return (
         <div className="space-y-4">
-          <Field label="Coefficient range (a)">
-            <Input
-              value={cfg.a_range ?? ""}
-              placeholder="2-10"
-              onChange={(e) => patch("a_range", e.target.value)}
-            />
-          </Field>
-          <Field label="Constant range (b)">
-            <Input
-              value={cfg.b_range ?? ""}
-              placeholder="1-30"
-              onChange={(e) => patch("b_range", e.target.value)}
-            />
-          </Field>
-          <Field label="Answer range (x)">
-            <Input
-              value={cfg.x_range ?? ""}
-              placeholder="0-20"
-              onChange={(e) => patch("x_range", e.target.value)}
-            />
-          </Field>
+          <RangeSliderField
+            label="Coefficient (a)"
+            min={2}
+            max={20}
+            value={[aLo, aHi]}
+            onCommit={([lo, hi]) => patch("a_range", rangeToDash(lo, hi))}
+          />
+          <RangeSliderField
+            label="Constant (b)"
+            min={1}
+            max={50}
+            value={[bLo, bHi]}
+            onCommit={([lo, hi]) => patch("b_range", rangeToDash(lo, hi))}
+          />
+          <RangeSliderField
+            label="Answer (x)"
+            min={0}
+            max={30}
+            value={[xLo, xHi]}
+            onCommit={([lo, hi]) => patch("x_range", rangeToDash(lo, hi))}
+          />
           <div className="flex items-center justify-between">
             <Label htmlFor="implicit">Implicit form (4x)</Label>
             <Switch
@@ -518,5 +656,6 @@ function KindSpecific({
           </div>
         </div>
       );
+    }
   }
 }

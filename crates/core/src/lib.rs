@@ -968,8 +968,8 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 bail!("denominators must have at least one value");
             }
             for &d in denominators {
-                if d < 2 || d > 12 {
-                    bail!("denominator must be 2-12, got {d}");
+                if d < 2 || d > 20 {
+                    bail!("denominator must be 2-20, got {d}");
                 }
             }
             if *max_numerator < 2 || *max_numerator > 99 {
