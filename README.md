@@ -2,7 +2,9 @@
 
 ![Pencil Ready — free printable math worksheets](frontend/astro/public/og-image-600x315.png)
 
-Free printable math worksheets. Live at [pencilready.com](https://pencilready.com).
+> print → solve → sharpen → repeat
+
+Free printable math worksheets for 1st–6th grade. Live at [pencilready.com](https://pencilready.com).
 
 Rust workspace that renders worksheets through [Typst](https://typst.app/)
 and serves them via an Astro + React frontend. Deterministic from a seed,
