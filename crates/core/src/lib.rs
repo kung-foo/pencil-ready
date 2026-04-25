@@ -318,15 +318,19 @@ impl WorksheetType {
         match self {
             WorksheetType::Add { digits, .. }
             | WorksheetType::Subtract { digits, .. }
-            | WorksheetType::Multiply { digits } => {
-                digits.iter().map(|r| r.max).max().unwrap_or(2)
-            }
+            | WorksheetType::Multiply { digits } => digits.iter().map(|r| r.max).max().unwrap_or(2),
             WorksheetType::LongDivision { digits, .. } => digits.max,
-            WorksheetType::MultiplicationDrill { multiplicand, multiplier } => {
+            WorksheetType::MultiplicationDrill {
+                multiplicand,
+                multiplier,
+            } => {
                 let a = multiplicand.iter().map(|r| r.max).max().unwrap_or(1);
                 a.max(multiplier.max)
             }
-            WorksheetType::DivisionDrill { divisor, max_quotient } => {
+            WorksheetType::DivisionDrill {
+                divisor,
+                max_quotient,
+            } => {
                 let a = divisor.iter().map(|r| r.max).max().unwrap_or(1);
                 a.max(max_quotient.max)
             }
@@ -334,7 +338,9 @@ impl WorksheetType {
             // where quotient ≤ max_quotient and divisor is 1-digit.
             // The widest operand is the product (dividend), up to
             // ~9 * max_quotient — at most 3 digits for sane inputs.
-            WorksheetType::SimpleDivision { max_quotient } => document::digit_count(9 * *max_quotient),
+            WorksheetType::SimpleDivision { max_quotient } => {
+                document::digit_count(9 * *max_quotient)
+            }
             // Fraction-mult's width is driven by the whole-number LHS.
             WorksheetType::FractionMultiply { max_whole, .. } => document::digit_count(*max_whole),
             // Simplify's width is capped by max_numerator (the widest
@@ -356,7 +362,9 @@ impl WorksheetType {
                 x_range,
                 ..
             } => document::digit_count(
-                (a_range.max * x_range.max).max(b_range.max).max(a_range.max),
+                (a_range.max * x_range.max)
+                    .max(b_range.max)
+                    .max(a_range.max),
             ),
         }
     }
@@ -921,10 +929,7 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             max_quotient,
         } => {
             if params.cols > 3 {
-                bail!(
-                    "division drill supports max 3 columns, got {}",
-                    params.cols
-                );
+                bail!("division drill supports max 3 columns, got {}", params.cols);
             }
             for r in divisor {
                 if r.min < 1 || r.max > 12 {
@@ -954,9 +959,7 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 }
             }
             if *min_whole < 2 || *max_whole > 99 || min_whole > max_whole {
-                bail!(
-                    "whole range must be 2-99 with min ≤ max, got {min_whole}-{max_whole}"
-                );
+                bail!("whole range must be 2-99 with min ≤ max, got {min_whole}-{max_whole}");
             }
         }
         WorksheetType::FractionSimplify {
@@ -1141,7 +1144,10 @@ mod tests {
             student_name: None,
         };
         let err = Document::from_params(&params).unwrap_err().to_string();
-        assert!(err.contains("cols must be at least 1"), "unexpected error: {err}");
+        assert!(
+            err.contains("cols must be at least 1"),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]
@@ -1182,10 +1188,7 @@ mod tests {
         assert!(err.contains("too wide"), "unexpected error: {err}");
 
         // 6 cols should fit.
-        let ok_doc = Document {
-            cols: 6,
-            ..doc
-        };
+        let ok_doc = Document { cols: 6, ..doc };
         assert!(ok_doc.validate().is_ok());
     }
 
