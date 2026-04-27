@@ -199,6 +199,23 @@ function Field({
   );
 }
 
+/** Labeled section with indented children — for grouping a small list of
+ * related controls (e.g. four op toggles) under a single heading. */
+function FieldGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="ml-4 space-y-2">{children}</div>
+    </div>
+  );
+}
+
 /** Single-thumb slider with the same defer-on-commit behavior as
  * `RangeSliderField`. Used for scalar params like simple-divide's
  * `max_quotient`. */
@@ -678,39 +695,36 @@ function KindSpecific({
         enabledCount === 1 && currentlyOn;
       return (
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Operations</Label>
-            <div className="space-y-2">
-              <OpToggle
-                id="op-add"
-                label="Addition"
-                checked={onAdd}
-                disabled={lockToggle(onAdd)}
-                onChange={(v) => patch("add", v)}
-              />
-              <OpToggle
-                id="op-sub"
-                label="Subtraction"
-                checked={onSub}
-                disabled={lockToggle(onSub)}
-                onChange={(v) => patch("subtract", v)}
-              />
-              <OpToggle
-                id="op-mul"
-                label="Multiplication"
-                checked={onMul}
-                disabled={lockToggle(onMul)}
-                onChange={(v) => patch("multiply", v)}
-              />
-              <OpToggle
-                id="op-div"
-                label="Division"
-                checked={onDiv}
-                disabled={lockToggle(onDiv)}
-                onChange={(v) => patch("divide", v)}
-              />
-            </div>
-          </div>
+          <FieldGroup label="Operations">
+            <OpToggle
+              id="op-add"
+              label="Addition"
+              checked={onAdd}
+              disabled={lockToggle(onAdd)}
+              onChange={(v) => patch("add", v)}
+            />
+            <OpToggle
+              id="op-sub"
+              label="Subtraction"
+              checked={onSub}
+              disabled={lockToggle(onSub)}
+              onChange={(v) => patch("subtract", v)}
+            />
+            <OpToggle
+              id="op-mul"
+              label="Multiplication"
+              checked={onMul}
+              disabled={lockToggle(onMul)}
+              onChange={(v) => patch("multiply", v)}
+            />
+            <OpToggle
+              id="op-div"
+              label="Division"
+              checked={onDiv}
+              disabled={lockToggle(onDiv)}
+              onChange={(v) => patch("divide", v)}
+            />
+          </FieldGroup>
           <RangeSliderField
             label="Coefficient / divisor (a)"
             min={2}
@@ -753,7 +767,7 @@ function OpToggle({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <Label htmlFor={id} className="font-mono">
+      <Label htmlFor={id} className="text-xs font-normal">
         {label}
       </Label>
       <Switch
