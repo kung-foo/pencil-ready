@@ -43,6 +43,7 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         WorksheetType::FractionMultiply { .. } => 6.0,
         WorksheetType::FractionSimplify { .. } => 5.0,
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
+        WorksheetType::AlgebraOneStep { .. } => 6.0,
         _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
     }
 }
@@ -114,6 +115,21 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
             // variable at one unicode scalar, so this is defence-in-depth.
             v = opts.variable.replace('\\', "\\\\").replace('"', "\\\""),
         ),
+        WorksheetType::AlgebraOneStep { .. } => {
+            // Two operators: `·` for multiply (uses the shared
+            // `operator` slot) and `÷`/`:` for divide (its own slot).
+            // Empty divide_operator falls back to a literal so typst
+            // doesn't choke on `[#]`.
+            let div_arg = if opts.divide_operator.is_empty() {
+                "[]".to_string()
+            } else {
+                format!("[#{}]", opts.divide_operator)
+            };
+            format!(
+                "mult-operator: {operator_arg}, div-operator: {div_arg}, variable: \"{v}\"",
+                v = opts.variable.replace('\\', "\\\\").replace('"', "\\\""),
+            )
+        }
     }
 }
 
@@ -256,6 +272,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
+#import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 
 #set document(
   title: "{doc_title}",

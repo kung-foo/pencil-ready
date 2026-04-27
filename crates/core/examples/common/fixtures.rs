@@ -51,6 +51,14 @@ pub const FIXTURES: &[Fixture] = &[
     // --- algebra two-step ---
     Fixture { id: "algebra-two-step-small-form0", label: "algebra two-step (small, form 0)", snippet: r#"algebra-two-step-problem((4, 5, 4, 21, 0),    opts: (operator: [#sym.dot.op]))"# },
     Fixture { id: "algebra-two-step-large-form0", label: "algebra two-step (large, form 0)", snippet: r#"algebra-two-step-problem((12, 87, 3, 123, 0), opts: (operator: [#sym.dot.op]))"# },
+
+    // --- algebra one-step ---
+    // data = (form, p, x-val, c). One sample per form to exercise both
+    // operators (mult-operator + div-operator) and the widest LHS.
+    Fixture { id: "algebra-one-step-add",      label: "algebra one-step (add, x + b = c)",   snippet: r#"algebra-one-step-problem((0, 7, 5, 12),    opts: (mult-operator: [#sym.dot.op], div-operator: [#sym.div]))"# },
+    Fixture { id: "algebra-one-step-multiply", label: "algebra one-step (mul, a · x = c)",   snippet: r#"algebra-one-step-problem((2, 5, 6, 30),    opts: (mult-operator: [#sym.dot.op], div-operator: [#sym.div]))"# },
+    Fixture { id: "algebra-one-step-divide",   label: "algebra one-step (div, x ÷ a = c)",   snippet: r#"algebra-one-step-problem((3, 6, 24, 4),    opts: (mult-operator: [#sym.dot.op], div-operator: [#sym.div]))"# },
+    Fixture { id: "algebra-one-step-large",    label: "algebra one-step (large, x + 99 = c)", snippet: r#"algebra-one-step-problem((0, 99, 50, 149), opts: (mult-operator: [#sym.dot.op], div-operator: [#sym.div]))"# },
 ];
 
 /// Preamble with the typst imports every fixture needs, plus a
@@ -62,6 +70,7 @@ pub fn preamble() -> &'static str {
 #import "/lib/problems/division/long.typ": division-long-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
+#import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/shared.typ": body-font
 "##
 }

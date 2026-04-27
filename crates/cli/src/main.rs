@@ -281,6 +281,54 @@ enum Command {
         count: u32,
     },
 
+    /// One-step linear equation (e.g. x + 7 = 12, 5 · x = 30)
+    ///
+    /// Four equation forms — each one operation away from the answer.
+    /// Toggle the operations independently; defaults turn on add and
+    /// subtract. Two-row layout per problem (given equation + `x = ___`).
+    AlgebraOneStep {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "10")]
+        problems: u32,
+
+        #[arg(long, default_value = "2")]
+        cols: u32,
+
+        /// Coefficient/divisor range for multiply/divide forms, e.g. "2-10"
+        #[arg(long, default_value = "2-10")]
+        a_range: DigitRange,
+
+        /// Constant range for add/subtract forms, e.g. "1-30"
+        #[arg(long, default_value = "1-30")]
+        b_range: DigitRange,
+
+        /// Answer (x) range, e.g. "0-20"
+        #[arg(long, default_value = "0-20")]
+        x_range: DigitRange,
+
+        /// Variable glyph. Single character (letter, symbol, or emoji).
+        #[arg(long, default_value = "x")]
+        variable: String,
+
+        /// Include `x + b = c` problems.
+        #[arg(long, default_value = "true")]
+        add: bool,
+
+        /// Include `x − b = c` problems.
+        #[arg(long, default_value = "true")]
+        subtract: bool,
+
+        /// Include `a · x = c` problems.
+        #[arg(long, default_value = "false")]
+        multiply: bool,
+
+        /// Include `x ÷ a = c` problems.
+        #[arg(long, default_value = "false")]
+        divide: bool,
+    },
+
     /// Two-step linear equation (ax + b = c, solve for x)
     ///
     /// Always 6 problems × 2 columns — the equations are wide and the
@@ -526,6 +574,33 @@ fn resolve(command: Command) -> Resolved {
                 variable,
                 implicit,
                 mix_forms,
+            },
+        },
+        Command::AlgebraOneStep {
+            global,
+            problems,
+            cols,
+            a_range,
+            b_range,
+            x_range,
+            variable,
+            add,
+            subtract,
+            multiply,
+            divide,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::AlgebraOneStep {
+                a_range,
+                b_range,
+                x_range,
+                variable,
+                add,
+                subtract,
+                multiply,
+                divide,
             },
         },
         Command::FractionMult {
@@ -779,6 +854,21 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             6,
             2,
         ),
+        (
+            "algebra-one-step",
+            WorksheetType::AlgebraOneStep {
+                a_range: DigitRange::new(2, 10),
+                b_range: DigitRange::new(1, 30),
+                x_range: DigitRange::new(0, 20),
+                variable: "x".into(),
+                add: true,
+                subtract: true,
+                multiply: true,
+                divide: true,
+            },
+            10,
+            2,
+        ),
     ];
 
     let mut bodies = Vec::with_capacity(sheets.len());
@@ -808,6 +898,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
+#import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)

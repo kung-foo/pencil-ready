@@ -26,7 +26,7 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
   },
   {
     title: "Pre-algebra",
-    kinds: ["algebra-two-step"],
+    kinds: ["algebra-one-step", "algebra-two-step"],
   },
 ];
 
@@ -180,6 +180,21 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
       "Find the greatest common factor of the numerator and denominator and divide both by it.",
       "Convert an improper fraction to a mixed number via division with remainder.",
       "Recognize when a fraction is already in lowest terms and write it unchanged.",
+    ],
+  },
+  "algebra-one-step": {
+    title: "One-step equations",
+    summary:
+      "Solve for x in a single move — undo one of +, −, ·, or ÷ to isolate the variable.",
+    prerequisites: [
+      "Arithmetic facts in the operations you turn on.",
+      "Understand that a letter like x is a placeholder for an unknown number.",
+      "Recognize that addition undoes subtraction, multiplication undoes division.",
+    ],
+    learning: [
+      "Isolate x by applying the inverse of the operation acting on it.",
+      "Keep the equation balanced — whatever you do on one side, do on the other.",
+      "Read four equation forms: x + b = c, x − b = c, a · x = c, x ÷ a = c.",
     ],
   },
   "algebra-two-step": {

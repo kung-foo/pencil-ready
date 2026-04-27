@@ -152,3 +152,35 @@ height_cm = 4.1
 measured_width_cm = 7.945
 measured_height_cm = 4.050
 
+[[cell]]
+id = "algebra-one-step-add"
+label = "algebra one-step (add, x + b = c)"
+width_cm = 6.1
+height_cm = 2.6
+measured_width_cm = 6.020
+measured_height_cm = 2.590
+
+[[cell]]
+id = "algebra-one-step-multiply"
+label = "algebra one-step (mul, a · x = c)"
+width_cm = 5.9
+height_cm = 2.6
+measured_width_cm = 5.867
+measured_height_cm = 2.590
+
+[[cell]]
+id = "algebra-one-step-divide"
+label = "algebra one-step (div, x ÷ a = c)"
+width_cm = 6.1
+height_cm = 2.6
+measured_width_cm = 6.020
+measured_height_cm = 2.590
+
+[[cell]]
+id = "algebra-one-step-large"
+label = "algebra one-step (large, x + 99 = c)"
+width_cm = 6.4
+height_cm = 2.6
+measured_width_cm = 6.375
+measured_height_cm = 2.590
+

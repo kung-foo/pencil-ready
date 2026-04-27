@@ -21,6 +21,7 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
         // (see `opts_body` in document.rs emits an empty `opts: ()`).
         opts: ComponentOpts {
             operator: String::new(),
+            divide_operator: String::new(),
             width_cm: document::box_width_cm(&params.worksheet, max_digits),
             answer_rows: 0,
             pad_width: 0,

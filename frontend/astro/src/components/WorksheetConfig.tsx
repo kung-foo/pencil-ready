@@ -264,7 +264,8 @@ function RangeSliderField({
       <div className="flex items-baseline justify-between">
         <Label>{label}</Label>
         <span className="text-sm tabular-nums text-muted-foreground">
-          {draft[0]}{draft[0] === draft[1] ? "" : `–${draft[1]}`}
+          {draft[0]}
+          {draft[0] === draft[1] ? "" : `–${draft[1]}`}
         </span>
       </div>
       <Slider
@@ -657,5 +658,110 @@ function KindSpecific({
         </div>
       );
     }
+
+    case "algebra-one-step": {
+      const [aLo, aHi] = dashToRange(cfg.a_range, [2, 10]);
+      const [bLo, bHi] = dashToRange(cfg.b_range, [1, 30]);
+      const [xLo, xHi] = dashToRange(cfg.x_range, [0, 20]);
+      // The four toggles are always defined booleans by the time they hit
+      // here — parseConfig fills in the homepage-default (add+sub on) when
+      // the URL has no toggle keys, and fills explicit values otherwise.
+      const onAdd = cfg.add ?? false;
+      const onSub = cfg.subtract ?? false;
+      const onMul = cfg.multiply ?? false;
+      const onDiv = cfg.divide ?? false;
+      // Disable the last enabled toggle so users can't switch them all off
+      // (the server would reject the request).
+      const enabledCount =
+        Number(onAdd) + Number(onSub) + Number(onMul) + Number(onDiv);
+      const lockToggle = (currentlyOn: boolean) =>
+        enabledCount === 1 && currentlyOn;
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Operations</Label>
+            <div className="space-y-2">
+              <OpToggle
+                id="op-add"
+                label="Addition"
+                checked={onAdd}
+                disabled={lockToggle(onAdd)}
+                onChange={(v) => patch("add", v)}
+              />
+              <OpToggle
+                id="op-sub"
+                label="Subtraction"
+                checked={onSub}
+                disabled={lockToggle(onSub)}
+                onChange={(v) => patch("subtract", v)}
+              />
+              <OpToggle
+                id="op-mul"
+                label="Multiplication"
+                checked={onMul}
+                disabled={lockToggle(onMul)}
+                onChange={(v) => patch("multiply", v)}
+              />
+              <OpToggle
+                id="op-div"
+                label="Division"
+                checked={onDiv}
+                disabled={lockToggle(onDiv)}
+                onChange={(v) => patch("divide", v)}
+              />
+            </div>
+          </div>
+          <RangeSliderField
+            label="Coefficient / divisor (a)"
+            min={2}
+            max={12}
+            value={[aLo, aHi]}
+            onCommit={([lo, hi]) => patch("a_range", rangeToDash(lo, hi))}
+          />
+          <RangeSliderField
+            label="Constant (b)"
+            min={1}
+            max={50}
+            value={[bLo, bHi]}
+            onCommit={([lo, hi]) => patch("b_range", rangeToDash(lo, hi))}
+          />
+          <RangeSliderField
+            label="Answer (x)"
+            min={0}
+            max={30}
+            value={[xLo, xHi]}
+            onCommit={([lo, hi]) => patch("x_range", rangeToDash(lo, hi))}
+          />
+        </div>
+      );
+    }
   }
+}
+
+function OpToggle({
+  id,
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <Label htmlFor={id} className="font-mono">
+        {label}
+      </Label>
+      <Switch
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onChange}
+      />
+    </div>
+  );
 }

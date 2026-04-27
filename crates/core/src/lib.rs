@@ -4,6 +4,7 @@
 //! They share a common template renderer and the typst World implementation.
 
 mod add;
+mod algebra_one_step;
 mod algebra_two_step;
 mod div_drill;
 mod divide;
@@ -214,6 +215,25 @@ pub enum WorksheetType {
         /// Randomly mix canonical (`ax + b = c`) and const-first (`b + ax = c`).
         mix_forms: bool,
     },
+    AlgebraOneStep {
+        /// Coefficient/divisor range used by the multiply/divide forms
+        /// (default 2-10).
+        a_range: DigitRange,
+        /// Constant range used by the add/subtract forms (default 1-30).
+        b_range: DigitRange,
+        /// Answer (x) range (default 0-20).
+        x_range: DigitRange,
+        /// Variable glyph; same rules as `AlgebraTwoStep::variable`.
+        variable: String,
+        /// `x + b = c`.
+        add: bool,
+        /// `x − b = c` — only triples with `x ≥ b` are emitted so `c ≥ 0`.
+        subtract: bool,
+        /// `a · x = c`.
+        multiply: bool,
+        /// `x ÷ a = c` — only triples where `a` divides `x` evenly.
+        divide: bool,
+    },
 }
 
 impl WorksheetType {
@@ -231,6 +251,7 @@ impl WorksheetType {
             WorksheetType::FractionMultiply { .. } => "fraction-multiplication-problem",
             WorksheetType::FractionSimplify { .. } => "fraction-simplification-problem",
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
+            WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
         }
     }
 
@@ -307,6 +328,21 @@ impl WorksheetType {
                 let w = if max <= 30 { 7.3 } else { 8.0 };
                 (w, 4.1)
             }
+
+            // Algebra one-step — narrower than two-step (no coefficient
+            // grouping or const-first reshuffling) and shorter (two rows
+            // instead of three). Widths from cell-sizes.toml fixtures:
+            // small numbers (≤30) fit in ~6.0cm, up to 99 needs ~6.4cm.
+            WorksheetType::AlgebraOneStep {
+                a_range,
+                b_range,
+                x_range,
+                ..
+            } => {
+                let max = a_range.max.max(b_range.max).max(x_range.max);
+                let w = if max <= 30 { 6.2 } else { 6.5 };
+                (w, 2.6)
+            }
         }
     }
 
@@ -365,6 +401,16 @@ impl WorksheetType {
                 (a_range.max * x_range.max)
                     .max(b_range.max)
                     .max(a_range.max),
+            ),
+            // One-step's widest literal: `c` for add (x_max + b_max) or
+            // mul (a_max * x_max). Sub and div produce smaller `c`s.
+            WorksheetType::AlgebraOneStep {
+                a_range,
+                b_range,
+                x_range,
+                ..
+            } => document::digit_count(
+                (a_range.max * x_range.max).max(x_range.max + b_range.max),
             ),
         }
     }
@@ -605,6 +651,10 @@ pub struct ComponentOpts {
     /// Typst expression yielding the operator content (e.g.
     /// `"sym.plus"`). Empty string for long-division.
     pub operator: String,
+    /// Secondary operator for components that render two operations
+    /// in the same problem (algebra one-step renders both `·` for
+    /// multiply and `÷`/`:` for divide). Empty string when unused.
+    pub divide_operator: String,
     /// Cell width for the vertical-stack / long-division layouts.
     /// Other components ignore it.
     pub width_cm: f64,
@@ -666,6 +716,7 @@ impl Document {
             WorksheetType::FractionMultiply { .. } => fraction_mult::generate(params)?,
             WorksheetType::FractionSimplify { .. } => fraction_simplify::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
+            WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
         };
         let chrome = Chrome::from_params(params);
         let max_digits = sheet.worksheet.max_digits_bound();
@@ -1010,6 +1061,42 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 bail!("variable must be a single character, got {:?}", variable);
             }
         }
+        WorksheetType::AlgebraOneStep {
+            a_range,
+            b_range,
+            x_range,
+            variable,
+            add,
+            subtract,
+            multiply,
+            divide,
+        } => {
+            if a_range.min < 2 || a_range.max > 12 {
+                bail!("a-range must be 2-12, got {}-{}", a_range.min, a_range.max);
+            }
+            if b_range.max > 99 || b_range.min > b_range.max {
+                bail!(
+                    "b-range must be 0-99 with min ≤ max, got {}-{}",
+                    b_range.min,
+                    b_range.max
+                );
+            }
+            if x_range.max > 99 || x_range.min > x_range.max {
+                bail!(
+                    "x-range must be 0-99 with min ≤ max, got {}-{}",
+                    x_range.min,
+                    x_range.max
+                );
+            }
+            if variable.chars().count() != 1 {
+                bail!("variable must be a single character, got {:?}", variable);
+            }
+            if !(*add || *subtract || *multiply || *divide) {
+                bail!(
+                    "at least one of add/subtract/multiply/divide must be enabled"
+                );
+            }
+        }
     };
     Ok(())
 }
@@ -1163,6 +1250,7 @@ mod tests {
             problems: vec![],
             opts: ComponentOpts {
                 operator: "sym.plus".to_string(),
+                divide_operator: String::new(),
                 width_cm: 2.6,
                 answer_rows: 1,
                 pad_width: 0,
@@ -1248,5 +1336,31 @@ mod tests {
             mix_forms: false,
         };
         assert_eq!(alg_small.cell_size_cm(2), (7.3, 4.1));
+
+        // algebra-one-step-add (small): 6.2 × 2.6 (all ranges ≤ 30).
+        let one_step_small = WorksheetType::AlgebraOneStep {
+            a_range: DigitRange::new(2, 10),
+            b_range: DigitRange::new(1, 30),
+            x_range: DigitRange::new(0, 20),
+            variable: "x".into(),
+            add: true,
+            subtract: true,
+            multiply: false,
+            divide: false,
+        };
+        assert_eq!(one_step_small.cell_size_cm(2), (6.2, 2.6));
+
+        // algebra-one-step-large (b up to 99): 6.5 × 2.6.
+        let one_step_large = WorksheetType::AlgebraOneStep {
+            a_range: DigitRange::new(2, 10),
+            b_range: DigitRange::new(1, 99),
+            x_range: DigitRange::new(0, 20),
+            variable: "x".into(),
+            add: true,
+            subtract: true,
+            multiply: false,
+            divide: false,
+        };
+        assert_eq!(one_step_large.cell_size_cm(3), (6.5, 2.6));
     }
 }

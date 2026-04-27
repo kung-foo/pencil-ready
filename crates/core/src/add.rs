@@ -30,6 +30,7 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
         problems,
         opts: ComponentOpts {
             operator,
+            divide_operator: String::new(),
             width_cm: document::box_width_cm(&params.worksheet, max_digits),
             answer_rows: 1,
             pad_width,

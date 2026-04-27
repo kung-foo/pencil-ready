@@ -27,6 +27,31 @@ import { useWorksheet } from "@/lib/useWorksheet";
  * description, prereqs, help) updates to match. Current params are
  * carried over as query string.
  */
+/**
+ * Per-kind first-visit defaults, applied only when none of a kind's
+ * worksheet-shaping keys are present in the URL. Lets the configurator
+ * land on a working preview without baking implicit defaults into
+ * `parseConfig` (which stays a pure URL → cfg parser). After the user
+ * makes any change, the URL carries explicit values and the strict
+ * "absence == off" rule takes over.
+ */
+function applyFirstVisitDefaults(
+  cfg: WorksheetConfig,
+  search: URLSearchParams,
+): WorksheetConfig {
+  if (cfg.kind === "algebra-one-step") {
+    const noToggleInUrl =
+      !search.has("add") &&
+      !search.has("subtract") &&
+      !search.has("multiply") &&
+      !search.has("divide");
+    if (noToggleInUrl) {
+      return { ...cfg, add: true, subtract: true };
+    }
+  }
+  return cfg;
+}
+
 export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
   const [cfg, setCfg] = useState<WorksheetConfig>(() => {
     // Seed from URL query so deep-links like /worksheets/add/?seed=42&format=svg
@@ -35,7 +60,7 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
       typeof window === "undefined"
         ? new URLSearchParams()
         : new URLSearchParams(window.location.search);
-    return parseConfig(kind, search);
+    return applyFirstVisitDefaults(parseConfig(kind, search), search);
   });
   const [names, patchNames] = useNames();
   const url = useMemo(() => worksheetUrl(cfg, names), [cfg, names]);

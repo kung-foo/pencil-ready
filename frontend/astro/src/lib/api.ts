@@ -30,6 +30,7 @@ export const WORKSHEET_KINDS = [
   "div-drill",
   "fraction-mult",
   "fraction-simplify",
+  "algebra-one-step",
   "algebra-two-step",
 ] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
@@ -90,6 +91,16 @@ export type KindConfig =
       x_range?: string;
       implicit?: boolean;
       mix_forms?: boolean;
+    }
+  | {
+      kind: "algebra-one-step";
+      a_range?: string;
+      b_range?: string;
+      x_range?: string;
+      add?: boolean;
+      subtract?: boolean;
+      multiply?: boolean;
+      divide?: boolean;
     };
 
 export type WorksheetConfig = SharedConfig & KindConfig;
@@ -192,6 +203,18 @@ export function parseConfig(kind: WorksheetKind, sp: URLSearchParams): Worksheet
         x_range: s("x_range"),
         implicit: b("implicit"),
         mix_forms: b("mix_forms"),
+      };
+    case "algebra-one-step":
+      return {
+        ...shared,
+        kind,
+        a_range: s("a_range"),
+        b_range: s("b_range"),
+        x_range: s("x_range"),
+        add: b("add"),
+        subtract: b("subtract"),
+        multiply: b("multiply"),
+        divide: b("divide"),
       };
   }
 }

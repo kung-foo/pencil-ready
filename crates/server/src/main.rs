@@ -482,6 +482,69 @@ impl AlgebraTwoStepSpecific {
     }
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct AlgebraOneStepSpecific {
+    #[serde(default)]
+    #[param(value_type = String, example = "2-10")]
+    a_range: Option<String>,
+    #[serde(default)]
+    #[param(value_type = String, example = "1-30")]
+    b_range: Option<String>,
+    #[serde(default)]
+    #[param(value_type = String, example = "0-20")]
+    x_range: Option<String>,
+    /// Variable glyph (single character).
+    #[serde(default)]
+    variable: Option<String>,
+    /// Include `x + b = c` problems. Default true.
+    #[serde(default)]
+    add: Option<bool>,
+    /// Include `x − b = c` problems. Default true.
+    #[serde(default)]
+    subtract: Option<bool>,
+    /// Include `a · x = c` problems. Default false.
+    #[serde(default)]
+    multiply: Option<bool>,
+    /// Include `x ÷ a = c` problems. Default false.
+    #[serde(default)]
+    divide: Option<bool>,
+}
+
+impl AlgebraOneStepSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let a_range = match self.a_range {
+            Some(s) => parse_digit_range(&s, "a_range")?,
+            None => DigitRange::new(2, 10),
+        };
+        let b_range = match self.b_range {
+            Some(s) => parse_digit_range(&s, "b_range")?,
+            None => DigitRange::new(1, 30),
+        };
+        let x_range = match self.x_range {
+            Some(s) => parse_digit_range(&s, "x_range")?,
+            None => DigitRange::new(0, 20),
+        };
+        Ok(shared.fold(
+            WorksheetType::AlgebraOneStep {
+                a_range,
+                b_range,
+                x_range,
+                variable: self.variable.unwrap_or_else(|| "x".into()),
+                // Absence == off. With no toggle in the URL the existing
+                // "at least one op enabled" validation rejects the request
+                // with a readable error rather than silently defaulting.
+                add: self.add.unwrap_or(false),
+                subtract: self.subtract.unwrap_or(false),
+                multiply: self.multiply.unwrap_or(false),
+                divide: self.divide.unwrap_or(false),
+            },
+            10,
+            2,
+        ))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
@@ -769,6 +832,22 @@ async fn handle_algebra_two_step(
     render(&s, "algebra-two-step", p.build(shared), &headers)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/algebra-one-step",
+    params(SharedParams, AlgebraOneStepSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_algebra_one_step(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<AlgebraOneStepSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "algebra-one-step", p.build(shared), &headers)
+}
+
 /// Text substitution middleware: replaces `SERVER_REGION_PLACEHOLDER`
 /// inside `text/html` response bodies with a `(server:<region>)` tag (or
 /// an empty string for local dev). Layered *inside* compression so the
@@ -910,6 +989,7 @@ async fn main() {
         .routes(routes!(handle_fraction_mult))
         .routes(routes!(handle_fraction_simplify))
         .routes(routes!(handle_algebra_two_step))
+        .routes(routes!(handle_algebra_one_step))
         .with_state(state.clone())
         .split_for_parts();
 
