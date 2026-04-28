@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Result, anyhow};
 use axum::{
-    body::Body,
+    body::{Body, Bytes},
     extract::{Query, Request, State},
     http::{HeaderMap, StatusCode, header},
     middleware::{self, Next},
@@ -24,8 +24,8 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, Paper, WorksheetParams,
-    WorksheetType, generate,
+    BorrowMode, CarryMode, DigitRange, Fonts, Locale, MissingSlot, OutputFormat, Paper,
+    WorksheetParams, WorksheetType, generate,
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
@@ -56,6 +56,12 @@ struct AppState {
     /// query params — turns the red/blue layout-debug borders on for
     /// every browser-facing render. Set via `--debug` / `PENCIL_READY_DEBUG`.
     force_debug: bool,
+    /// Shared HTTP client for outbound proxy requests (Umami).
+    umami_client: reqwest::Client,
+    /// Lazily-fetched Umami tracker bundle. Fetched once from
+    /// cloud.umami.is on first `/umami/script.js` request, then held
+    /// for the lifetime of the process.
+    umami_script: Arc<tokio::sync::Mutex<Option<Bytes>>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -816,6 +822,64 @@ async fn handle_fraction_simplify(
     render(&s, "fraction-simplify", p.build(shared), &headers)
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct FractionEquivSpecific {
+    /// Allowed denominators of the base fraction, comma-separated.
+    #[serde(default)]
+    #[param(value_type = String, example = "2,3,4,5,6,8,10")]
+    denominators: Option<String>,
+    /// Scale-factor range (the multiplier). Min 2, max 10.
+    #[serde(default)]
+    #[param(value_type = String, example = "2-5")]
+    scale: Option<String>,
+    /// Which slot is blank: any, left-num, left-den, right-num, right-den.
+    #[serde(default)]
+    missing: Option<MissingSlot>,
+    /// Restrict base fraction to proper fractions (num < den).
+    #[serde(default)]
+    proper_only: Option<bool>,
+}
+
+impl FractionEquivSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let denominators = match self.denominators {
+            Some(s) => parse_u32_csv(&s, "denominators")?,
+            None => vec![2, 3, 4, 5, 6, 8, 10],
+        };
+        let scale = match self.scale {
+            Some(s) => s.parse::<DigitRange>().map_err(|e| anyhow::anyhow!(e))?,
+            None => DigitRange::new(2, 5),
+        };
+        Ok(shared.fold(
+            WorksheetType::FractionEquiv {
+                denominators,
+                scale,
+                missing: self.missing.unwrap_or(MissingSlot::Any),
+                proper_only: self.proper_only.unwrap_or(true),
+            },
+            12,
+            3,
+        ))
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-equiv",
+    params(SharedParams, FractionEquivSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_fraction_equiv(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionEquivSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-equiv", p.build(shared), &headers)
+}
+
 #[utoipa::path(
     get,
     path = "/api/worksheets/algebra-two-step",
@@ -846,6 +910,96 @@ async fn handle_algebra_one_step(
     headers: HeaderMap,
 ) -> Response {
     render(&s, "algebra-one-step", p.build(shared), &headers)
+}
+
+// ---------------------------------------------------------------------------
+// Umami analytics proxy
+// ---------------------------------------------------------------------------
+
+/// Serve the Umami tracker bundle from our own origin.
+///
+/// Fetches `script.js` from cloud.umami.is once and caches it in memory for
+/// the lifetime of the process. The frontend points `data-host-url="/umami"`
+/// so the tracker posts events to `/umami/api/send` (below) rather than
+/// directly to umami.is.
+async fn handle_umami_script(State(s): State<Arc<AppState>>) -> Response {
+    let mut cache = s.umami_script.lock().await;
+    if cache.is_none() {
+        match s
+            .umami_client
+            .get("https://cloud.umami.is/script.js")
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => match resp.bytes().await {
+                Ok(b) => *cache = Some(Bytes::copy_from_slice(&b)),
+                Err(e) => {
+                    warn!("umami script body error: {e}");
+                    return (StatusCode::BAD_GATEWAY, "failed to read umami script")
+                        .into_response();
+                }
+            },
+            Ok(resp) => {
+                warn!("umami script upstream status: {}", resp.status());
+                return (StatusCode::BAD_GATEWAY, "umami upstream error").into_response();
+            }
+            Err(e) => {
+                warn!("umami script fetch error: {e}");
+                return (StatusCode::BAD_GATEWAY, "failed to fetch umami script")
+                    .into_response();
+            }
+        }
+    }
+    let bytes = cache.as_ref().unwrap().clone();
+    (
+        [
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
+        bytes,
+    )
+        .into_response()
+}
+
+/// Forward Umami tracking payloads to cloud.umami.is, preserving the
+/// client's User-Agent and IP so Umami can geo-locate and detect browsers.
+async fn handle_umami_send(State(s): State<Arc<AppState>>, req: Request) -> Response {
+    let (parts, body) = req.into_parts();
+    let body_bytes = match axum::body::to_bytes(body, 64 * 1024).await {
+        Ok(b) => b,
+        Err(_) => return (StatusCode::BAD_REQUEST, "request body too large").into_response(),
+    };
+
+    let mut proxy = s
+        .umami_client
+        .post("https://cloud.umami.is/api/send")
+        .body(body_bytes.to_vec());
+
+    if let Some(ct) = parts.headers.get(header::CONTENT_TYPE) {
+        proxy = proxy.header("Content-Type", ct);
+    }
+    if let Some(ua) = parts.headers.get(header::USER_AGENT) {
+        proxy = proxy.header("User-Agent", ua);
+    }
+    let ip = client_ip(&parts.headers);
+    if ip != "-" {
+        proxy = proxy.header("X-Forwarded-For", ip);
+    }
+
+    match proxy.send().await {
+        Ok(resp) => {
+            let status = resp.status();
+            let body = resp.bytes().await.unwrap_or_default();
+            (status, body).into_response()
+        }
+        Err(e) => {
+            warn!("umami send proxy error: {e}");
+            (StatusCode::BAD_GATEWAY, "proxy error").into_response()
+        }
+    }
 }
 
 /// Text substitution middleware: replaces `SERVER_REGION_PLACEHOLDER`
@@ -954,6 +1108,8 @@ async fn main() {
         region,
         fonts,
         force_debug: cli.debug,
+        umami_client: reqwest::Client::new(),
+        umami_script: Arc::new(tokio::sync::Mutex::new(None)),
     });
 
     // Resolve the static directory. Explicit flag wins; otherwise
@@ -988,6 +1144,7 @@ async fn main() {
         .routes(routes!(handle_div_drill))
         .routes(routes!(handle_fraction_mult))
         .routes(routes!(handle_fraction_simplify))
+        .routes(routes!(handle_fraction_equiv))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .with_state(state.clone())
@@ -997,7 +1154,16 @@ async fn main() {
     // path and points the UI at it — no separate route needed.
     let mut app = axum::Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", api))
-        .merge(api_router);
+        .merge(api_router)
+        .route(
+            "/umami/script.js",
+            axum::routing::get(handle_umami_script),
+        )
+        .route(
+            "/umami/api/send",
+            axum::routing::post(handle_umami_send),
+        )
+        .with_state(state.clone());
 
     // One frontend per process. Astro's static build emits a real file
     // per route (`/worksheets/add/index.html`, etc.), so ServeDir

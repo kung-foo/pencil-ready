@@ -20,3 +20,4 @@ tracing-subscriber.workspace = true
 utoipa.workspace = true
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
+reqwest.workspace = true

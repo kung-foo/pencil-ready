@@ -74,6 +74,19 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
         <!-- Client-side routing with a View Transitions swap. Doesn't touch
          the generated per-route HTML — purely a progressive UX layer. -->
         <ClientRouter />
+        {
+            !import.meta.env.DEV && (
+                <script
+                    is:inline
+                    defer
+                    src="/umami/script.js"
+                    data-website-id="d47a9f9a-d800-408b-82f5-172a39ab9072"
+                    data-host-url="/umami"
+                    data-do-not-track="true"
+                    data-performance="true"
+                />
+            )
+        }
     </head>
     <!-- Layout mirrors the React App shell: fixed-ish header + footer,
        full-width flexible main. The per-page Astro file (e.g.

@@ -43,6 +43,7 @@ export default defineConfig({
       // useWorksheet fetches land same-origin from the browser's POV.
       proxy: {
         "/api": "http://127.0.0.1:8080",
+        "/umami": "http://127.0.0.1:8080",
       },
     },
   },

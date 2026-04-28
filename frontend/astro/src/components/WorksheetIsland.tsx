@@ -95,8 +95,8 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
           names={names}
           onNamesChange={patchNames}
         />
-        <DownloadButton state={state} />
-        <PrintButton state={state} />
+        <DownloadButton state={state} kind={kind} />
+        <PrintButton state={state} kind={kind} />
       </div>
       <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
         <Preview cfg={cfg} state={state} />

@@ -1,5 +1,6 @@
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { WorksheetKind } from "@/lib/api";
 import type { WorksheetState } from "@/lib/useWorksheet";
 
 // iOS/iPadOS (all browsers, since every browser on iOS uses WebKit) does
@@ -23,11 +24,18 @@ function isIOS() {
  * we instead pop the blob into a new tab; iOS's PDF viewer + share sheet
  * is the user's only practical path to AirPrint.
  */
-export function PrintButton({ state }: { state: WorksheetState }) {
+export function PrintButton({
+  state,
+  kind,
+}: {
+  state: WorksheetState;
+  kind: WorksheetKind;
+}) {
   const ready = state.status === "ready";
 
   const onPrint = () => {
     if (!ready) return;
+    window.umami?.track("print", { kind });
     if (isIOS()) {
       window.open(state.blobUrl, "_blank");
       return;

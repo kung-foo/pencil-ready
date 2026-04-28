@@ -24,6 +24,8 @@ utoipa = { version = "5", features = ["axum_extras"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
 # Typst ecosystem — the compiler + export crates
 typst = "0.14"
 typst-library = "0.14"
