@@ -115,6 +115,7 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
             // variable at one unicode scalar, so this is defence-in-depth.
             v = opts.variable.replace('\\', "\\\\").replace('"', "\\\""),
         ),
+        WorksheetType::FractionEquiv { .. } => ":".to_string(),
         WorksheetType::AlgebraOneStep { .. } => {
             // Two operators: `·` for multiply (uses the shared
             // `operator` slot) and `÷`/`:` for divide (its own slot).
@@ -273,6 +274,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
+#import "/lib/problems/fraction/equivalence.typ": fraction-equivalence-problem
 
 #set document(
   title: "{doc_title}",

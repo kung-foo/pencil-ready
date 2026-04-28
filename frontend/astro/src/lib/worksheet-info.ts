@@ -22,7 +22,7 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
   },
   {
     title: "Fractions",
-    kinds: ["fraction-simplify", "fraction-mult"],
+    kinds: ["fraction-equiv", "fraction-simplify", "fraction-mult"],
   },
   {
     title: "Pre-algebra",
@@ -165,6 +165,20 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
       "Multiply across: (whole × numerator) / denominator.",
       "Simplify to a whole number when the denominator divides the numerator.",
       "Recognize which (whole, fraction) pairs produce clean whole answers.",
+    ],
+  },
+  "fraction-equiv": {
+    title: "Equivalent fractions",
+    summary:
+      "Find the missing number that makes two fractions equal — build the intuition that multiplying (or dividing) top and bottom by the same number keeps a fraction's value unchanged.",
+    prerequisites: [
+      "Read a fraction as numerator over denominator.",
+      "Basic multiplication and division facts.",
+    ],
+    learning: [
+      "Recognize that multiplying numerator and denominator by the same number produces an equivalent fraction.",
+      "Find the scale factor between two equivalent fractions and apply it to the missing slot.",
+      "Work with the missing number in any position: left numerator, left denominator, right numerator, or right denominator.",
     ],
   },
   "fraction-simplify": {

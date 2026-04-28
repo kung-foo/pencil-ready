@@ -30,6 +30,7 @@ export const WORKSHEET_KINDS = [
   "div-drill",
   "fraction-mult",
   "fraction-simplify",
+  "fraction-equiv",
   "algebra-one-step",
   "algebra-two-step",
 ] as const;
@@ -83,6 +84,13 @@ export type KindConfig =
       max_numerator?: number;
       proper_only?: boolean;
       include_whole?: boolean;
+    }
+  | {
+      kind: "fraction-equiv";
+      denominators?: string;
+      scale?: string;
+      missing?: "any" | "left-num" | "left-den" | "right-num" | "right-den";
+      proper_only?: boolean;
     }
   | {
       kind: "algebra-two-step";
@@ -193,6 +201,21 @@ export function parseConfig(kind: WorksheetKind, sp: URLSearchParams): Worksheet
         max_numerator: n("max_numerator"),
         proper_only: b("proper_only"),
         include_whole: b("include_whole"),
+      };
+    case "fraction-equiv":
+      return {
+        ...shared,
+        kind,
+        denominators: s("denominators"),
+        scale: s("scale"),
+        missing: asEnum(s("missing"), [
+          "any",
+          "left-num",
+          "left-den",
+          "right-num",
+          "right-den",
+        ] as const),
+        proper_only: b("proper_only"),
       };
     case "algebra-two-step":
       return {

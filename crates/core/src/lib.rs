@@ -8,6 +8,7 @@ mod algebra_one_step;
 mod algebra_two_step;
 mod div_drill;
 mod divide;
+mod fraction_equiv;
 mod fraction_mult;
 mod fraction_simplify;
 mod meta;
@@ -18,6 +19,7 @@ mod subtract;
 mod document;
 mod world;
 
+pub use fraction_equiv::MissingSlot;
 pub use world::Fonts;
 
 use anyhow::{Result, bail};
@@ -234,6 +236,17 @@ pub enum WorksheetType {
         /// `x ÷ a = c` — only triples where `a` divides `x` evenly.
         divide: bool,
     },
+    FractionEquiv {
+        /// Allowed denominators of the base (reduced) fraction.
+        denominators: Vec<u32>,
+        /// Scale-factor range — the multiplier applied to produce the
+        /// equivalent fraction. Min 2; max reasonable 10.
+        scale: DigitRange,
+        /// Which of the four slots is left blank. `Any` picks randomly.
+        missing: MissingSlot,
+        /// Restrict base fraction to proper fractions (num < den).
+        proper_only: bool,
+    },
 }
 
 impl WorksheetType {
@@ -252,6 +265,7 @@ impl WorksheetType {
             WorksheetType::FractionSimplify { .. } => "fraction-simplification-problem",
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
             WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
+            WorksheetType::FractionEquiv { .. } => "fraction-equivalence-problem",
         }
     }
 
@@ -343,6 +357,10 @@ impl WorksheetType {
                 let w = if max <= 30 { 6.2 } else { 6.5 };
                 (w, 2.6)
             }
+
+            // Equivalent fractions — two stacked fractions + `=` on one row.
+            // Width fixed at 5.5cm; height matches fraction-simplify.
+            WorksheetType::FractionEquiv { .. } => (5.5, 2.6),
         }
     }
 
@@ -412,6 +430,15 @@ impl WorksheetType {
             } => document::digit_count(
                 (a_range.max * x_range.max).max(x_range.max + b_range.max),
             ),
+            // Widest number: scaled denominator = max_den * scale_max.
+            WorksheetType::FractionEquiv {
+                denominators,
+                scale,
+                ..
+            } => {
+                let max_den = denominators.iter().copied().max().unwrap_or(2);
+                document::digit_count(max_den * scale.max)
+            }
         }
     }
 }
@@ -717,6 +744,7 @@ impl Document {
             WorksheetType::FractionSimplify { .. } => fraction_simplify::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
             WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
+            WorksheetType::FractionEquiv { .. } => fraction_equiv::generate(params)?,
         };
         let chrome = Chrome::from_params(params);
         let max_digits = sheet.worksheet.max_digits_bound();
@@ -1094,6 +1122,27 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             if !(*add || *subtract || *multiply || *divide) {
                 bail!(
                     "at least one of add/subtract/multiply/divide must be enabled"
+                );
+            }
+        }
+        WorksheetType::FractionEquiv {
+            denominators,
+            scale,
+            ..
+        } => {
+            if denominators.is_empty() {
+                bail!("denominators must have at least one value");
+            }
+            for &d in denominators {
+                if d < 2 || d > 20 {
+                    bail!("denominator must be 2-20, got {d}");
+                }
+            }
+            if scale.min < 2 || scale.max > 10 || scale.min > scale.max {
+                bail!(
+                    "scale must be 2-10 with min ≤ max, got {}-{}",
+                    scale.min,
+                    scale.max
                 );
             }
         }

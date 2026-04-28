@@ -88,6 +88,8 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::AlgebraTwoStep { .. }, Form::Slug) => "two-step-equations",
         (WorksheetType::AlgebraOneStep { .. }, Form::Title) => "One-step equations",
         (WorksheetType::AlgebraOneStep { .. }, Form::Slug) => "one-step-equations",
+        (WorksheetType::FractionEquiv { .. }, Form::Title) => "Equivalent fractions",
+        (WorksheetType::FractionEquiv { .. }, Form::Slug) => "equivalent-fractions",
     }
 }
 
