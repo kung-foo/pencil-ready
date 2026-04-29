@@ -9,11 +9,11 @@ import type { WorksheetState } from "@/lib/useWorksheet";
 // correctly. Modern iPad reports "MacIntel" from platform; the
 // maxTouchPoints check disambiguates.
 function isIOS() {
-  if (typeof navigator === "undefined") return false;
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
+    if (typeof navigator === "undefined") return false;
+    return (
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
 }
 
 /**
@@ -24,49 +24,49 @@ function isIOS() {
  * is the user's only practical path to AirPrint.
  */
 export function PrintButton({ state }: { state: WorksheetState }) {
-  const ready = state.status === "ready";
+    const ready = state.status === "ready";
 
-  const onPrint = () => {
-    if (!ready) return;
-    if (isIOS()) {
-      window.open(state.blobUrl, "_blank");
-      return;
-    }
-    const iframe = document.createElement("iframe");
-    Object.assign(iframe.style, {
-      position: "fixed",
-      right: "0",
-      bottom: "0",
-      width: "0",
-      height: "0",
-      border: "0",
-    });
-    iframe.src = state.blobUrl;
-    iframe.onload = () => {
-      requestAnimationFrame(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch {
-          // Some browsers throw on cross-document access; ignore.
+    const onPrint = () => {
+        if (!ready) return;
+        if (isIOS()) {
+            window.open(state.blobUrl, "_blank");
+            return;
         }
-      });
+        const iframe = document.createElement("iframe");
+        Object.assign(iframe.style, {
+            position: "fixed",
+            right: "0",
+            bottom: "0",
+            width: "0",
+            height: "0",
+            border: "0",
+        });
+        iframe.src = state.blobUrl;
+        iframe.onload = () => {
+            requestAnimationFrame(() => {
+                try {
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                } catch {
+                    // Some browsers throw on cross-document access; ignore.
+                }
+            });
+        };
+        document.body.appendChild(iframe);
+        // `afterprint` doesn't fire reliably for iframe print() in all
+        // browsers; a generous timeout is the simplest correct cleanup.
+        setTimeout(() => iframe.remove(), 60_000);
     };
-    document.body.appendChild(iframe);
-    // `afterprint` doesn't fire reliably for iframe print() in all
-    // browsers; a generous timeout is the simplest correct cleanup.
-    setTimeout(() => iframe.remove(), 60_000);
-  };
 
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      className="w-full"
-      onClick={onPrint}
-      disabled={!ready}
-    >
-      <Printer className="size-4" /> Print
-    </Button>
-  );
+    return (
+        <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={onPrint}
+            disabled={!ready}
+        >
+            <Printer className="size-4" /> Print
+        </Button>
+    );
 }

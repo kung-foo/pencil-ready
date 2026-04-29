@@ -5,11 +5,11 @@ import { Preview } from "@/components/Preview";
 import { PrintButton } from "@/components/PrintButton";
 import { WorksheetConfigPanel } from "@/components/WorksheetConfig";
 import {
-  configToSearchParams,
-  parseConfig,
-  worksheetUrl,
-  type WorksheetConfig,
-  type WorksheetKind,
+    configToSearchParams,
+    parseConfig,
+    worksheetUrl,
+    type WorksheetConfig,
+    type WorksheetKind,
 } from "@/lib/api";
 import { useNames } from "@/lib/useNames";
 import { useWorksheet } from "@/lib/useWorksheet";
@@ -28,54 +28,54 @@ import { useWorksheet } from "@/lib/useWorksheet";
  * carried over as query string.
  */
 export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
-  const [cfg, setCfg] = useState<WorksheetConfig>(() => {
-    // Seed from URL query so deep-links like /worksheets/add/?seed=42&format=svg
-    // and type-change redirects that carry params land with the right state.
-    const search =
-      typeof window === "undefined"
-        ? new URLSearchParams()
-        : new URLSearchParams(window.location.search);
-    return parseConfig(kind, search);
-  });
-  const [names, patchNames] = useNames();
-  const url = useMemo(() => worksheetUrl(cfg, names), [cfg, names]);
-  const state = useWorksheet(url);
+    const [cfg, setCfg] = useState<WorksheetConfig>(() => {
+        // Seed from URL query so deep-links like /worksheets/add/?seed=42&format=svg
+        // and type-change redirects that carry params land with the right state.
+        const search =
+            typeof window === "undefined"
+                ? new URLSearchParams()
+                : new URLSearchParams(window.location.search);
+        return parseConfig(kind, search);
+    });
+    const [names, patchNames] = useNames();
+    const url = useMemo(() => worksheetUrl(cfg, names), [cfg, names]);
+    const state = useWorksheet(url);
 
-  const onChange = (next: WorksheetConfig) => {
-    if (next.kind !== kind) {
-      // Type changed → navigate via Astro's ClientRouter so the
-      // per-route static content (title, summary, help) swaps in
-      // without a full page reload. Preserve current query params so
-      // seed / format / etc. carry across.
-      const qs = configToSearchParams(next).toString();
-      navigate(`/worksheets/${next.kind}/${qs ? `?${qs}` : ""}`);
-      return;
-    }
-    setCfg(next);
-    // Sync URL so the state is shareable and survives reload.
-    const qs = configToSearchParams(next).toString();
-    const path = `/worksheets/${kind}/${qs ? `?${qs}` : ""}`;
-    window.history.replaceState(null, "", path);
-  };
+    const onChange = (next: WorksheetConfig) => {
+        if (next.kind !== kind) {
+            // Type changed → navigate via Astro's ClientRouter so the
+            // per-route static content (title, summary, help) swaps in
+            // without a full page reload. Preserve current query params so
+            // seed / format / etc. carry across.
+            const qs = configToSearchParams(next).toString();
+            navigate(`/worksheets/${next.kind}/${qs ? `?${qs}` : ""}`);
+            return;
+        }
+        setCfg(next);
+        // Sync URL so the state is shareable and survives reload.
+        const qs = configToSearchParams(next).toString();
+        const path = `/worksheets/${kind}/${qs ? `?${qs}` : ""}`;
+        window.history.replaceState(null, "", path);
+    };
 
-  return (
-    <div
-      className="grid gap-4 md:grid-cols-[320px_1fr]"
-      data-theme="graph-paper"
-    >
-      <div className="space-y-3">
-        <WorksheetConfigPanel
-          cfg={cfg}
-          onChange={onChange}
-          names={names}
-          onNamesChange={patchNames}
-        />
-        <DownloadButton state={state} />
-        <PrintButton state={state} />
-      </div>
-      <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
-        <Preview cfg={cfg} state={state} />
-      </div>
-    </div>
-  );
+    return (
+        <div
+            className="grid gap-4 md:grid-cols-[320px_1fr]"
+            data-theme="graph-paper"
+        >
+            <div className="space-y-3">
+                <WorksheetConfigPanel
+                    cfg={cfg}
+                    onChange={onChange}
+                    names={names}
+                    onNamesChange={patchNames}
+                />
+                <DownloadButton state={state} />
+                <PrintButton state={state} />
+            </div>
+            <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
+                <Preview cfg={cfg} state={state} />
+            </div>
+        </div>
+    );
 }
