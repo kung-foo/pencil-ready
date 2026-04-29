@@ -12,332 +12,430 @@
    --font-display so themes can swap typography along with color.             */
 :root,
 [data-theme="default"] {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --font-mono: "Fira Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-display: var(--font-sans);
-  --page-bg-image: none;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --radius: 0.625rem;
+    --font-sans:
+        ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+        "Helvetica Neue", sans-serif;
+    --font-mono: "Fira Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-display: var(--font-sans);
+    --page-bg-image: none;
 }
 
 /* --- Paper: warm cream, slab serif ---------------------------------------- */
 [data-theme="paper"] {
-  --background: #fbf4e4;
-  --foreground: #2a1e0f;
-  --card: #fff9eb;
-  --card-foreground: #2a1e0f;
-  --popover: #fff9eb;
-  --popover-foreground: #2a1e0f;
-  --primary: #7c3f12;
-  --primary-foreground: #fff9eb;
-  --secondary: #f0e2c2;
-  --secondary-foreground: #2a1e0f;
-  --muted: #efe4c6;
-  --muted-foreground: #6d5839;
-  --accent: #e8cf9a;
-  --accent-foreground: #2a1e0f;
-  --destructive: #9b1c1c;
-  --destructive-foreground: #fff9eb;
-  --border: #d8c391;
-  --input: #d8c391;
-  --ring: #b07e42;
-  --radius: 0.25rem;
-  --font-sans: "Roboto Slab", Georgia, serif;
-  --font-display: "Roboto Slab", Georgia, serif;
+    --background: #fbf4e4;
+    --foreground: #2a1e0f;
+    --card: #fff9eb;
+    --card-foreground: #2a1e0f;
+    --popover: #fff9eb;
+    --popover-foreground: #2a1e0f;
+    --primary: #7c3f12;
+    --primary-foreground: #fff9eb;
+    --secondary: #f0e2c2;
+    --secondary-foreground: #2a1e0f;
+    --muted: #efe4c6;
+    --muted-foreground: #6d5839;
+    --accent: #e8cf9a;
+    --accent-foreground: #2a1e0f;
+    --destructive: #9b1c1c;
+    --destructive-foreground: #fff9eb;
+    --border: #d8c391;
+    --input: #d8c391;
+    --ring: #b07e42;
+    --radius: 0.25rem;
+    --font-sans: "Roboto Slab", Georgia, serif;
+    --font-display: "Roboto Slab", Georgia, serif;
 }
 
 /* --- Chalkboard: dark green, chalk ---------------------------------------- */
 [data-theme="chalkboard"] {
-  --background: #1f3d2f;
-  --foreground: #f5f2e4;
-  --card: #26473a;
-  --card-foreground: #f5f2e4;
-  --popover: #26473a;
-  --popover-foreground: #f5f2e4;
-  --primary: #fff9d6;
-  --primary-foreground: #1f3d2f;
-  --secondary: #2c5345;
-  --secondary-foreground: #f5f2e4;
-  --muted: #2c5345;
-  --muted-foreground: #bfc9b9;
-  --accent: #ffd479;
-  --accent-foreground: #1f3d2f;
-  --destructive: #ef6767;
-  --destructive-foreground: #1f3d2f;
-  --border: #446b59;
-  --input: #446b59;
-  --ring: #ffd479;
-  --radius: 0.125rem;
-  --font-sans: "Roboto Slab", Georgia, serif;
-  --font-display: "Roboto Slab", Georgia, serif;
+    --background: #1f3d2f;
+    --foreground: #f5f2e4;
+    --card: #26473a;
+    --card-foreground: #f5f2e4;
+    --popover: #26473a;
+    --popover-foreground: #f5f2e4;
+    --primary: #fff9d6;
+    --primary-foreground: #1f3d2f;
+    --secondary: #2c5345;
+    --secondary-foreground: #f5f2e4;
+    --muted: #2c5345;
+    --muted-foreground: #bfc9b9;
+    --accent: #ffd479;
+    --accent-foreground: #1f3d2f;
+    --destructive: #ef6767;
+    --destructive-foreground: #1f3d2f;
+    --border: #446b59;
+    --input: #446b59;
+    --ring: #ffd479;
+    --radius: 0.125rem;
+    --font-sans: "Roboto Slab", Georgia, serif;
+    --font-display: "Roboto Slab", Georgia, serif;
 }
 
 /* --- Graph Paper: pale cyan grid, slate blue ------------------------------ */
 [data-theme="graph-paper"] {
-  --background: #fbfdff;
-  --foreground: #1e293b;
-  --card: #ffffff;
-  --card-foreground: #1e293b;
-  --popover: #ffffff;
-  --popover-foreground: #1e293b;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --secondary: #e2ecfb;
-  --secondary-foreground: #1e293b;
-  --muted: #eef5ff;
-  --muted-foreground: #475569;
-  --accent: #dbeafe;
-  --accent-foreground: #1e293b;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: #cbd8ec;
-  --input: #cbd8ec;
-  --ring: #2563eb;
-  --radius: 0.125rem;
-  --font-sans: "Roboto Slab", Georgia, serif;
-  --font-display: "Roboto Slab", Georgia, serif;
-  --page-bg-image:
-    linear-gradient(to right, rgba(37, 99, 235, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(37, 99, 235, 0.08) 1px, transparent 1px);
+    --background: #fbfdff;
+    --foreground: #1e293b;
+    --card: #ffffff;
+    --card-foreground: #1e293b;
+    --popover: #ffffff;
+    --popover-foreground: #1e293b;
+    --primary: #2563eb;
+    --primary-foreground: #ffffff;
+    --secondary: #e2ecfb;
+    --secondary-foreground: #1e293b;
+    --muted: #eef5ff;
+    --muted-foreground: #475569;
+    --accent: #dbeafe;
+    --accent-foreground: #1e293b;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: #cbd8ec;
+    --input: #cbd8ec;
+    --ring: #2563eb;
+    --radius: 0.125rem;
+    --font-sans: "Roboto Slab", Georgia, serif;
+    --font-display: "Roboto Slab", Georgia, serif;
+    /* Graph drawn on body::before instead of body — keeps it fixed so
+     content scrolls over a stationary paper. See @layer base. */
+    --grid-hue: 217;
+    --grid-paper: #fbfdff;
 }
 
 /* --- Blueprint: navy + cyan, mono ----------------------------------------- */
 [data-theme="blueprint"] {
-  --background: #0a2540;
-  --foreground: #b8e6ff;
-  --card: #123352;
-  --card-foreground: #b8e6ff;
-  --popover: #123352;
-  --popover-foreground: #b8e6ff;
-  --primary: #22d3ee;
-  --primary-foreground: #0a2540;
-  --secondary: #1a4370;
-  --secondary-foreground: #b8e6ff;
-  --muted: #1a4370;
-  --muted-foreground: #80b6d8;
-  --accent: #60efff;
-  --accent-foreground: #0a2540;
-  --destructive: #f87171;
-  --destructive-foreground: #0a2540;
-  --border: #2a5785;
-  --input: #2a5785;
-  --ring: #22d3ee;
-  --radius: 0.25rem;
-  --font-sans: "Fira Mono", ui-monospace, monospace;
-  --font-display: "Fira Mono", ui-monospace, monospace;
+    --background: #0a2540;
+    --foreground: #b8e6ff;
+    --card: #123352;
+    --card-foreground: #b8e6ff;
+    --popover: #123352;
+    --popover-foreground: #b8e6ff;
+    --primary: #22d3ee;
+    --primary-foreground: #0a2540;
+    --secondary: #1a4370;
+    --secondary-foreground: #b8e6ff;
+    --muted: #1a4370;
+    --muted-foreground: #80b6d8;
+    --accent: #60efff;
+    --accent-foreground: #0a2540;
+    --destructive: #f87171;
+    --destructive-foreground: #0a2540;
+    --border: #2a5785;
+    --input: #2a5785;
+    --ring: #22d3ee;
+    --radius: 0.25rem;
+    --font-sans: "Fira Mono", ui-monospace, monospace;
+    --font-display: "Fira Mono", ui-monospace, monospace;
 }
 
 /* --- Terminal: black + phosphor amber ------------------------------------- */
 [data-theme="terminal"] {
-  --background: #0a0a0a;
-  --foreground: #f5b942;
-  --card: #131313;
-  --card-foreground: #f5b942;
-  --popover: #131313;
-  --popover-foreground: #f5b942;
-  --primary: #f59e0b;
-  --primary-foreground: #0a0a0a;
-  --secondary: #1a1a1a;
-  --secondary-foreground: #f5b942;
-  --muted: #1a1a1a;
-  --muted-foreground: #a17a1a;
-  --accent: #fcd34d;
-  --accent-foreground: #0a0a0a;
-  --destructive: #f87171;
-  --destructive-foreground: #0a0a0a;
-  --border: #3a2d0c;
-  --input: #3a2d0c;
-  --ring: #f59e0b;
-  --radius: 0;
-  --font-sans: "Fira Code", "Fira Mono", ui-monospace, monospace;
-  --font-mono: "Fira Code", "Fira Mono", ui-monospace, monospace;
-  --font-display: "Fira Code", "Fira Mono", ui-monospace, monospace;
+    --background: #0a0a0a;
+    --foreground: #f5b942;
+    --card: #131313;
+    --card-foreground: #f5b942;
+    --popover: #131313;
+    --popover-foreground: #f5b942;
+    --primary: #f59e0b;
+    --primary-foreground: #0a0a0a;
+    --secondary: #1a1a1a;
+    --secondary-foreground: #f5b942;
+    --muted: #1a1a1a;
+    --muted-foreground: #a17a1a;
+    --accent: #fcd34d;
+    --accent-foreground: #0a0a0a;
+    --destructive: #f87171;
+    --destructive-foreground: #0a0a0a;
+    --border: #3a2d0c;
+    --input: #3a2d0c;
+    --ring: #f59e0b;
+    --radius: 0;
+    --font-sans: "Fira Code", "Fira Mono", ui-monospace, monospace;
+    --font-mono: "Fira Code", "Fira Mono", ui-monospace, monospace;
+    --font-display: "Fira Code", "Fira Mono", ui-monospace, monospace;
 }
 
 /* --- Scholar: sepia, classical serif -------------------------------------- */
 [data-theme="scholar"] {
-  --background: #f4ebd3;
-  --foreground: #2a1c10;
-  --card: #fbf3de;
-  --card-foreground: #2a1c10;
-  --popover: #fbf3de;
-  --popover-foreground: #2a1c10;
-  --primary: #8b1a1a;
-  --primary-foreground: #fbf3de;
-  --secondary: #e6d5ad;
-  --secondary-foreground: #2a1c10;
-  --muted: #e6d5ad;
-  --muted-foreground: #6b4a24;
-  --accent: #d4af7a;
-  --accent-foreground: #2a1c10;
-  --destructive: #701919;
-  --destructive-foreground: #fbf3de;
-  --border: #c9b489;
-  --input: #c9b489;
-  --ring: #8b1a1a;
-  --radius: 0.125rem;
-  --font-sans: "STIX Two Text", Georgia, "Times New Roman", serif;
-  --font-display: "STIX Two Text", Georgia, "Times New Roman", serif;
+    --background: #f4ebd3;
+    --foreground: #2a1c10;
+    --card: #fbf3de;
+    --card-foreground: #2a1c10;
+    --popover: #fbf3de;
+    --popover-foreground: #2a1c10;
+    --primary: #8b1a1a;
+    --primary-foreground: #fbf3de;
+    --secondary: #e6d5ad;
+    --secondary-foreground: #2a1c10;
+    --muted: #e6d5ad;
+    --muted-foreground: #6b4a24;
+    --accent: #d4af7a;
+    --accent-foreground: #2a1c10;
+    --destructive: #701919;
+    --destructive-foreground: #fbf3de;
+    --border: #c9b489;
+    --input: #c9b489;
+    --ring: #8b1a1a;
+    --radius: 0.125rem;
+    --font-sans: "STIX Two Text", Georgia, "Times New Roman", serif;
+    --font-display: "STIX Two Text", Georgia, "Times New Roman", serif;
 }
 
 /* --- Playground: pastels, rounded ----------------------------------------- */
 [data-theme="playground"] {
-  --background: #fff5fa;
-  --foreground: #4a154b;
-  --card: #ffffff;
-  --card-foreground: #4a154b;
-  --popover: #ffffff;
-  --popover-foreground: #4a154b;
-  --primary: #ec4899;
-  --primary-foreground: #ffffff;
-  --secondary: #d1fae5;
-  --secondary-foreground: #065f46;
-  --muted: #fef9c3;
-  --muted-foreground: #713f12;
-  --accent: #cffafe;
-  --accent-foreground: #155e75;
-  --destructive: #f87171;
-  --destructive-foreground: #ffffff;
-  --border: #fbcfe8;
-  --input: #fbcfe8;
-  --ring: #ec4899;
-  --radius: 1rem;
-  --font-sans: "Roboto Slab", Georgia, serif;
-  --font-display: "Roboto Slab", Georgia, serif;
+    --background: #fff5fa;
+    --foreground: #4a154b;
+    --card: #ffffff;
+    --card-foreground: #4a154b;
+    --popover: #ffffff;
+    --popover-foreground: #4a154b;
+    --primary: #ec4899;
+    --primary-foreground: #ffffff;
+    --secondary: #d1fae5;
+    --secondary-foreground: #065f46;
+    --muted: #fef9c3;
+    --muted-foreground: #713f12;
+    --accent: #cffafe;
+    --accent-foreground: #155e75;
+    --destructive: #f87171;
+    --destructive-foreground: #ffffff;
+    --border: #fbcfe8;
+    --input: #fbcfe8;
+    --ring: #ec4899;
+    --radius: 1rem;
+    --font-sans: "Roboto Slab", Georgia, serif;
+    --font-display: "Roboto Slab", Georgia, serif;
 }
 
 /* --- Norsk: flag palette, flat ------------------------------------------- */
 [data-theme="norsk"] {
-  --background: #f8fafc;
-  --foreground: #0a1e3f;
-  --card: #ffffff;
-  --card-foreground: #0a1e3f;
-  --popover: #ffffff;
-  --popover-foreground: #0a1e3f;
-  --primary: #002868;
-  --primary-foreground: #ffffff;
-  --secondary: #e2e8f0;
-  --secondary-foreground: #0a1e3f;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
-  --accent: #ba0c2f;
-  --accent-foreground: #ffffff;
-  --destructive: #ba0c2f;
-  --destructive-foreground: #ffffff;
-  --border: #cbd5e1;
-  --input: #cbd5e1;
-  --ring: #002868;
-  --radius: 0.25rem;
-  --font-sans: "Roboto Slab", Georgia, serif;
-  --font-display: "Roboto Slab", Georgia, serif;
+    --background: #f8fafc;
+    --foreground: #0a1e3f;
+    --card: #ffffff;
+    --card-foreground: #0a1e3f;
+    --popover: #ffffff;
+    --popover-foreground: #0a1e3f;
+    --primary: #002868;
+    --primary-foreground: #ffffff;
+    --secondary: #e2e8f0;
+    --secondary-foreground: #0a1e3f;
+    --muted: #f1f5f9;
+    --muted-foreground: #475569;
+    --accent: #ba0c2f;
+    --accent-foreground: #ffffff;
+    --destructive: #ba0c2f;
+    --destructive-foreground: #ffffff;
+    --border: #cbd5e1;
+    --input: #cbd5e1;
+    --ring: #002868;
+    --radius: 0.25rem;
+    --font-sans: "Roboto Slab", Georgia, serif;
+    --font-display: "Roboto Slab", Georgia, serif;
 }
 
 /* --- Minimalist: near-mono, hairline -------------------------------------- */
 [data-theme="minimalist"] {
-  --background: #fafafa;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #ffffff;
-  --secondary: #fafafa;
-  --secondary-foreground: #0a0a0a;
-  --muted: #fafafa;
-  --muted-foreground: #737373;
-  --accent: #f5f5f5;
-  --accent-foreground: #0a0a0a;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #0a0a0a;
-  --radius: 0;
-  --font-sans: "Roboto Slab", Georgia, serif;
-  --font-display: "Roboto Slab", Georgia, serif;
+    --background: #fafafa;
+    --foreground: #0a0a0a;
+    --card: #ffffff;
+    --card-foreground: #0a0a0a;
+    --popover: #ffffff;
+    --popover-foreground: #0a0a0a;
+    --primary: #0a0a0a;
+    --primary-foreground: #ffffff;
+    --secondary: #fafafa;
+    --secondary-foreground: #0a0a0a;
+    --muted: #fafafa;
+    --muted-foreground: #737373;
+    --accent: #f5f5f5;
+    --accent-foreground: #0a0a0a;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: #e5e5e5;
+    --input: #e5e5e5;
+    --ring: #0a0a0a;
+    --radius: 0;
+    --font-sans: "Roboto Slab", Georgia, serif;
+    --font-display: "Roboto Slab", Georgia, serif;
 }
 
 /* -------------------------------------------------------------------------- */
 /* Expose theme vars to Tailwind utilities                                    */
 /* -------------------------------------------------------------------------- */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --font-display: var(--font-display);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --font-display: var(--font-display);
 
-  /* Brand accents — literal colors, not theme-dependent. */
-  --color-pencil-no-2: #fdb600;
+    /* Brand accents — literal colors, not theme-dependent. */
+    --color-pencil-no-2: #fdb600;
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-sans);
-    background-image: var(--page-bg-image, none);
-    background-size: 24px 24px;
-    background-position: 0 0;
-  }
-  /* Headers render in Crimson Text SemiBold; body copy stays on
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+        font-family: var(--font-sans);
+    }
+    /* Fixed graph-paper plane — minor 4px lattice + major 20px grid + a tiny
+     punched dot at every major intersection. Sits under all content
+     (z-index: -1) and is oversized via inset: -8rem so the edges never
+     show during scroll bounce. Hidden in print via @media below. */
+    [data-theme="graph-paper"] body::before {
+        content: "";
+        position: fixed;
+        inset: -8rem;
+        z-index: -1;
+        pointer-events: none;
+        --grid-gap: 4px;
+        --grid-opacity: 0.55;
+        --grid-minor: hsl(
+            var(--grid-hue) 70% 60% / calc(var(--grid-opacity) * 0.08)
+        );
+        --grid-major: hsl(
+            var(--grid-hue) 70% 50% / calc(var(--grid-opacity) * 0.18)
+        );
+        background-color: var(--grid-paper);
+        background-image:
+            linear-gradient(
+                var(--grid-minor) 0 1px,
+                transparent 1px var(--grid-gap)
+            ),
+            linear-gradient(
+                to right,
+                var(--grid-minor) 0 1px,
+                transparent 1px var(--grid-gap)
+            ),
+            linear-gradient(
+                var(--grid-major) 0 1px,
+                transparent 1px calc(var(--grid-gap) * 5)
+            ),
+            linear-gradient(
+                to right,
+                var(--grid-major) 0 1px,
+                transparent 1px calc(var(--grid-gap) * 5)
+            );
+        background-size:
+            var(--grid-gap) var(--grid-gap),
+            var(--grid-gap) var(--grid-gap),
+            calc(var(--grid-gap) * 5) calc(var(--grid-gap) * 5),
+            calc(var(--grid-gap) * 5) calc(var(--grid-gap) * 5);
+    }
+    /* Sticky translucent header — floats above content so the body shows
+     through the alpha. Stacked vertical gradient gives the subtle
+     "extruded" feel; backdrop-filter softens anything underneath. */
+    [data-theme="graph-paper"] body > header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        /* Tall resting state so the motto has room to breathe. Browsers
+       without scroll-driven animation support stay here permanently —
+       a fine fallback. */
+        padding-top: 1.25rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid
+            color-mix(in srgb, var(--border) 70%, transparent);
+        background:
+            linear-gradient(
+                180deg,
+                color-mix(in srgb, var(--background) 88%, transparent),
+                color-mix(in srgb, var(--background) 78%, transparent)
+            ),
+            linear-gradient(
+                90deg,
+                color-mix(in srgb, var(--primary) 6%, transparent),
+                color-mix(in srgb, var(--primary) 2%, transparent)
+            );
+        backdrop-filter: saturate(1.4) blur(8px);
+        -webkit-backdrop-filter: saturate(1.4) blur(8px);
+    }
+
+    [data-theme="graph-paper"] body > header {
+        transition:
+            padding-top 220ms ease,
+            padding-bottom 220ms ease,
+            box-shadow 220ms ease;
+    }
+    [data-theme="graph-paper"] body > header.is-condensed {
+        padding-top: 0.15rem;
+        padding-bottom: 0rem;
+        box-shadow: 0 4px 12px
+            color-mix(in srgb, var(--foreground) 12%, transparent);
+    }
+
+    [data-theme="graph-paper"] body > header .header-tagline {
+        overflow: clip;
+        max-height: 2rem;
+        transition:
+            opacity 180ms ease,
+            max-height 220ms ease,
+            margin-top 220ms ease;
+    }
+    [data-theme="graph-paper"] body > header.is-condensed .header-tagline {
+        opacity: 0;
+        max-height: 0;
+        margin-top: 0;
+    }
+    /* Headers render in Crimson Text SemiBold; body copy stays on
      whatever --font-sans the theme sets (Roboto Slab by default).
      Card titles from shadcn are <div>s — target them by data-slot so
      they pick up the same treatment. */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  [data-slot="card-title"] {
-    font-family: "Crimson Text", Georgia, serif;
-    font-weight: 600;
-  }
-  h3 {
-    font-size: 1.1em;
-  }
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    [data-slot="card-title"] {
+        font-family: "Crimson Text", Georgia, serif;
+        font-weight: 600;
+    }
+    h3 {
+        font-size: 1.1em;
+    }
 }
 
 /* Safety net when the browser falls back to page-level printing
@@ -349,22 +447,25 @@
    Uses the canonical visibility trick: visibility cascades, so the
    ancestors stay invisible while the target subtree is visible. */
 @media print {
-  body {
-    background: white !important;
-    background-image: none !important;
-  }
-  body * {
-    visibility: hidden;
-  }
-  [data-print-area],
-  [data-print-area] * {
-    visibility: visible;
-  }
-  [data-print-area] {
-    position: absolute;
-    inset: 0;
-    padding: 0;
-    border: 0;
-    box-shadow: none;
-  }
+    body {
+        background: white !important;
+        background-image: none !important;
+    }
+    body::before {
+        display: none !important;
+    }
+    body * {
+        visibility: hidden;
+    }
+    [data-print-area],
+    [data-print-area] * {
+        visibility: visible;
+    }
+    [data-print-area] {
+        position: absolute;
+        inset: 0;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+    }
 }

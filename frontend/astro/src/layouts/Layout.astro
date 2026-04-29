@@ -80,7 +80,7 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
        worksheets/[kind].astro) owns its inner grid. -->
     <body class="min-h-screen flex flex-col">
         <header
-            class="border-b px-3 py-3 flex items-center justify-between gap-4"
+            class="border-b px-3 flex items-center justify-between gap-4"
         >
             <div>
                 <!-- inline-flex column sizes the wrapper to the wordmark's
@@ -99,9 +99,10 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                 </a>
                 <!-- Tagline lives outside the wordmark anchor so it doesn't
                      widen the inline-flex column (which would stretch the
-                     pencil-rule SVG). -->
+                     pencil-rule SVG). header-tagline is the hook for the
+                     scroll-driven fade-out (see styles/index.css). -->
                 <p
-                    class="mt-2 text-xs text-muted-foreground tracking-wide whitespace-nowrap"
+                    class="header-tagline mt-2 text-xs text-muted-foreground tracking-wide whitespace-nowrap"
                 >
                     print → solve → sharpen → repeat
                 </p>
@@ -164,5 +165,36 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                 </span>
             </div>
         </footer>
+        <!-- Toggle the header into its condensed state once the user has
+             scrolled past the threshold. CSS handles the actual transition
+             (see styles/index.css → .is-condensed). The 12px hysteresis
+             between the on (>32) and off (<20) thresholds avoids flicker
+             when a scroll lands right on the boundary. Re-runs on every
+             astro:page-load so it survives ClientRouter view transitions. -->
+        <script is:inline>
+            (() => {
+                const setup = () => {
+                    const header = document.querySelector("body > header");
+                    if (!header) return;
+                    const onScroll = () => {
+                        const y = window.scrollY;
+                        if (y > 32) header.classList.add("is-condensed");
+                        else if (y < 20) header.classList.remove("is-condensed");
+                    };
+                    onScroll();
+                    window.addEventListener("scroll", onScroll, {
+                        passive: true,
+                    });
+                };
+                document.addEventListener("astro:page-load", setup);
+                if (document.readyState !== "loading") setup();
+                else
+                    document.addEventListener(
+                        "DOMContentLoaded",
+                        setup,
+                        { once: true },
+                    );
+            })();
+        </script>
     </body>
 </html>
