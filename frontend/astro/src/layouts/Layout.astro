@@ -80,7 +80,7 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
        worksheets/[kind].astro) owns its inner grid. -->
     <body class="min-h-screen flex flex-col">
         <header
-            class="border-b px-3 flex items-center justify-between gap-4"
+            class="border-b px-3 py-1 flex items-center justify-between gap-4"
         >
             <div>
                 <!-- inline-flex column sizes the wrapper to the wordmark's
@@ -102,7 +102,7 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                      pencil-rule SVG). header-tagline is the hook for the
                      scroll-driven fade-out (see styles/index.css). -->
                 <p
-                    class="header-tagline mt-2 text-xs text-muted-foreground tracking-wide whitespace-nowrap"
+                    class="header-tagline text-[0.8rem] text-muted-foreground tracking-wide whitespace-nowrap"
                 >
                     print → solve → sharpen → repeat
                 </p>
@@ -138,11 +138,13 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                     rel="noopener"
                     aria-label="Source on GitHub"
                 >
-                    {/* Inlined so fill="currentColor" inherits the
+                    {
+                        /* Inlined so fill="currentColor" inherits the
                         footer's text color. Mirrors /public/github.svg
                         for non-Astro consumers. `align-middle -mt-0.5`
                         matches the rainbow-heart nudge above so both
-                        glyphs sit on the same visual baseline. */}
+                        glyphs sit on the same visual baseline. */
+                    }
                     <svg
                         viewBox="0 0 98 96"
                         xmlns="http://www.w3.org/2000/svg"
@@ -156,10 +158,12 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                     </svg>{" "}
                     source
                 </a>
-                {/* Rewritten at response time by the Rust server — see
+                {
+                    /* Rewritten at response time by the Rust server — see
                     region_rewrite middleware. `pnpm dev` skips the Rust
                     proxy, so guard on import.meta.env.DEV to keep the raw
-                    token out of dev-mode pages. */}
+                    token out of dev-mode pages. */
+                }
                 <span class="ml-1 text-muted-foreground/60">
                     {import.meta.env.DEV ? "" : "SERVER_REGION_PLACEHOLDER"}
                 </span>
@@ -179,7 +183,8 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                     const onScroll = () => {
                         const y = window.scrollY;
                         if (y > 32) header.classList.add("is-condensed");
-                        else if (y < 20) header.classList.remove("is-condensed");
+                        else if (y < 20)
+                            header.classList.remove("is-condensed");
                     };
                     onScroll();
                     window.addEventListener("scroll", onScroll, {
@@ -189,11 +194,9 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                 document.addEventListener("astro:page-load", setup);
                 if (document.readyState !== "loading") setup();
                 else
-                    document.addEventListener(
-                        "DOMContentLoaded",
-                        setup,
-                        { once: true },
-                    );
+                    document.addEventListener("DOMContentLoaded", setup, {
+                        once: true,
+                    });
             })();
         </script>
     </body>

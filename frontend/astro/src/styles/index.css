@@ -406,9 +406,26 @@
             color-mix(in srgb, var(--foreground) 12%, transparent);
     }
 
+    /* Wordmark + pencil-rule scale down 25% on collapse. Targets the
+       anchor that wraps the wordmark and the PencilRule SVG (the only
+       direct anchor child of the header's content column). Origin
+       pinned to the left edge so the logo stays anchored to the
+       header's left padding rather than drifting toward center. */
+    [data-theme="graph-paper"] body > header > div > a {
+        transform-origin: left center;
+        transition: transform 220ms ease;
+    }
+    [data-theme="graph-paper"] body > header.is-condensed > div > a {
+        transform: scale(0.75);
+    }
+
     [data-theme="graph-paper"] body > header .header-tagline {
         overflow: clip;
         max-height: 2rem;
+        /* Owned here (not via Tailwind's `mt-2` utility) so .is-condensed
+           below can collapse it — utilities live in a later cascade
+           layer and would otherwise win. */
+        margin-top: 0.5rem;
         transition:
             opacity 180ms ease,
             max-height 220ms ease,
