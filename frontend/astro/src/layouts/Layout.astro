@@ -47,9 +47,8 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
             title="Sitemap"
             href="/sitemap-index.xml"
         />
-        <!-- Critical font preloads. Crimson Text SemiBold is used for the
-         "Pencil Ready" title in the header — preloading it keeps the
-         wordmark from flashing in a fallback serif on first paint. -->
+        <!-- Preloaded to avoid a fallback-serif flash on the wordmark
+             and headings during first paint. -->
         <link
             rel="preload"
             as="font"
@@ -71,23 +70,19 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
             href="/fonts/RobotoSlab-SemiBold.woff2"
             crossorigin
         />
-        <!-- Client-side routing with a View Transitions swap. Doesn't touch
-         the generated per-route HTML — purely a progressive UX layer. -->
         <ClientRouter />
     </head>
-    <!-- Layout mirrors the React App shell: fixed-ish header + footer,
-       full-width flexible main. The per-page Astro file (e.g.
-       worksheets/[kind].astro) owns its inner grid. -->
     <body class="min-h-screen flex flex-col">
         <header
             class="border-b px-3 py-1 flex items-center justify-between gap-4"
         >
             <div>
-                <!-- inline-flex column sizes the wrapper to the wordmark's
-                     natural width; the SVG inherits that width via
-                     items-stretch and stretches horizontally (yellow barrel
-                     absorbs the slack) because preserveAspectRatio is
-                     disabled. See pencilready-logo-spec.md. -->
+                <!-- inline-flex column sizes to the wordmark's natural
+                     width; the PencilRule SVG inherits that width and
+                     stretches because preserveAspectRatio is disabled
+                     (see pencilready-logo-spec.md). Keep the tagline a
+                     sibling — putting it inside this anchor would widen
+                     the column and stretch the pencil rule. -->
                 <a
                     href="/"
                     class="inline-flex flex-col items-stretch leading-none isolate"
@@ -97,10 +92,6 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                     </h1>
                     <PencilRule class="h-2 -mt-2" />
                 </a>
-                <!-- Tagline lives outside the wordmark anchor so it doesn't
-                     widen the inline-flex column (which would stretch the
-                     pencil-rule SVG). header-tagline is the hook for the
-                     scroll-driven fade-out (see styles/index.css). -->
                 <p
                     class="header-tagline text-[0.8rem] text-muted-foreground tracking-wide whitespace-nowrap"
                 >
@@ -139,11 +130,9 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                     aria-label="Source on GitHub"
                 >
                     {
-                        /* Inlined so fill="currentColor" inherits the
-                        footer's text color. Mirrors /public/github.svg
-                        for non-Astro consumers. `align-middle -mt-0.5`
-                        matches the rainbow-heart nudge above so both
-                        glyphs sit on the same visual baseline. */
+                        /* Inlined so fill="currentColor" picks up the
+                        footer text color. Mirrors /public/github.svg
+                        for non-Astro consumers. */
                     }
                     <svg
                         viewBox="0 0 98 96"
@@ -159,22 +148,18 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
                     source
                 </a>
                 {
-                    /* Rewritten at response time by the Rust server — see
-                    region_rewrite middleware. `pnpm dev` skips the Rust
-                    proxy, so guard on import.meta.env.DEV to keep the raw
-                    token out of dev-mode pages. */
+                    /* Rewritten at response time by the Rust server (see
+                    region_rewrite). `pnpm dev` bypasses the proxy, so
+                    skip emitting the raw token in dev. */
                 }
                 <span class="ml-1 text-muted-foreground/60">
                     {import.meta.env.DEV ? "" : "SERVER_REGION_PLACEHOLDER"}
                 </span>
             </div>
         </footer>
-        <!-- Toggle the header into its condensed state once the user has
-             scrolled past the threshold. CSS handles the actual transition
-             (see styles/index.css → .is-condensed). The 12px hysteresis
-             between the on (>32) and off (<20) thresholds avoids flicker
-             when a scroll lands right on the boundary. Re-runs on every
-             astro:page-load so it survives ClientRouter view transitions. -->
+        <!-- 12px hysteresis (on >32, off <20) avoids flicker when a
+             scroll lands right on the boundary. Re-runs on
+             astro:page-load so it survives ClientRouter swaps. -->
         <script is:inline>
             (() => {
                 const setup = () => {
