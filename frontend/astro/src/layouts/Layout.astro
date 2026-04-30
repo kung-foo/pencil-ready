@@ -17,6 +17,16 @@ interface Props {
 
 const { title, description, canonical } = Astro.props;
 const ogImage = "https://pencilready.com/og-image-1200x630.png";
+
+// Build-time values for the Umami inline script below. `define:vars`
+// turns these into top-of-script `const` declarations the JS body can
+// reference, so the script is real JS (Prettier-formatted, syntax-
+// highlighted) rather than a stringified blob.
+const umami = {
+    enabled: !import.meta.env.DEV,
+    websiteId: "d47a9f9a-d800-408b-82f5-172a39ab9072",
+    hostUrl: "/umami",
+};
 ---
 
 <!doctype html>
@@ -72,41 +82,35 @@ const ogImage = "https://pencilready.com/og-image-1200x630.png";
             crossorigin
         />
         <ClientRouter />
-        {
-            !import.meta.env.DEV && (
-                /* Inject the Umami tracker after the page has finished
-                   loading. A `<script defer>` tag in <head> still has its
-                   POST to /umami/api/send pulled into PageSpeed's LCP
-                   critical-request chain (was 1.8s on cold loads). By
-                   appending the script in window.load + requestIdleCallback,
-                   the tracking ping fires after first paint without losing
-                   pageviews. The IIFE guard against re-entry is overkill
-                   for the single-fire path but cheap insurance against
-                   ClientRouter re-running an inline head script. */
-                <script is:inline>
-                    {`(() => {
-                        if (window.__umamiInjected) return;
-                        window.__umamiInjected = true;
-                        const inject = () => {
-                            const s = document.createElement('script');
-                            s.defer = true;
-                            s.src = '/umami/script.js';
-                            s.dataset.websiteId = 'd47a9f9a-d800-408b-82f5-172a39ab9072';
-                            s.dataset.hostUrl = '/umami';
-                            s.dataset.doNotTrack = 'true';
-                            s.dataset.performance = 'true';
-                            document.head.appendChild(s);
-                        };
-                        const schedule = () =>
-                            'requestIdleCallback' in window
-                                ? requestIdleCallback(inject, { timeout: 2000 })
-                                : setTimeout(inject, 250);
-                        if (document.readyState === 'complete') schedule();
-                        else window.addEventListener('load', schedule, { once: true });
-                    })();`}
-                </script>
-            )
-        }
+        <!-- Inject the Umami tracker after first paint. A `<script defer>`
+             in <head> still pulls /umami/api/send into PageSpeed's LCP
+             critical chain (~1.8s cold). Scheduling via window.load +
+             requestIdleCallback moves the tracking ping past LCP without
+             losing pageviews — Umami's `data-performance` PerformanceObserver
+             still grabs buffered LCP/CLS that already fired. -->
+        <script is:inline define:vars={umami}>
+            (() => {
+                if (!enabled) return;
+                if (window.__umamiInjected) return;
+                window.__umamiInjected = true;
+                const inject = () => {
+                    const s = document.createElement("script");
+                    s.defer = true;
+                    s.src = `${hostUrl}/script.js`;
+                    s.dataset.websiteId = websiteId;
+                    s.dataset.hostUrl = hostUrl;
+                    s.dataset.doNotTrack = "true";
+                    s.dataset.performance = "true";
+                    document.head.appendChild(s);
+                };
+                const schedule = () =>
+                    "requestIdleCallback" in window
+                        ? requestIdleCallback(inject, { timeout: 2000 })
+                        : setTimeout(inject, 250);
+                if (document.readyState === "complete") schedule();
+                else window.addEventListener("load", schedule, { once: true });
+            })();
+        </script>
     </head>
     <body class="min-h-screen flex flex-col">
         <header
