@@ -49,8 +49,15 @@ function Body({ cfg, state }: { cfg: WorksheetConfig; state: WorksheetState }) {
     }
     if (state.status === "error") {
         return (
-            <div className="w-full h-full p-4 font-mono text-sm whitespace-pre-wrap overflow-auto bg-destructive/5 text-destructive">
-                {state.message}
+            <div className="w-full h-full flex items-center justify-center p-8 text-center">
+                <div className="max-w-xs space-y-2">
+                    <p className="text-sm font-medium text-foreground">
+                        {state.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        Check back in a moment, or refresh the page.
+                    </p>
+                </div>
             </div>
         );
     }

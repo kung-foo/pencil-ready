@@ -7,6 +7,12 @@ export type WorksheetState =
 
 const FILENAME_RE = /filename="([^"]+)"/;
 
+function messageForStatus(status: number): string {
+    if (status === 404) return "This worksheet isn't available right now.";
+    if (status >= 500) return "The worksheet generator hit an error.";
+    return "Couldn't generate this worksheet.";
+}
+
 /**
  * Fetch the server-generated worksheet bytes as a Blob, expose it as an
  * object URL. Keeps the previous object URL alive until the next one is
@@ -26,9 +32,16 @@ export function useWorksheet(url: string): WorksheetState {
             try {
                 const res = await fetch(url);
                 if (!res.ok) {
-                    throw new Error(
-                        (await res.text()).trim() || `HTTP ${res.status}`,
+                    // Keep the body for diagnostics but never show it to the
+                    // user — when the server is misconfigured or stale it
+                    // can return an HTML 404 page, and dumping that into the
+                    // preview leaks framing markup into the UI.
+                    const body = await res.text().catch(() => "");
+                    console.error(
+                        `Worksheet fetch failed (${res.status}) for ${url}`,
+                        body,
                     );
+                    throw new Error(messageForStatus(res.status));
                 }
                 const cd = res.headers.get("Content-Disposition") ?? "";
                 const filename = FILENAME_RE.exec(cd)?.[1] ?? "worksheet";
@@ -42,9 +55,13 @@ export function useWorksheet(url: string): WorksheetState {
                 if (prev) URL.revokeObjectURL(prev);
             } catch (e) {
                 if (cancelled) return;
+                console.error("Worksheet fetch error", e);
                 setState({
                     status: "error",
-                    message: e instanceof Error ? e.message : String(e),
+                    message:
+                        e instanceof Error && e.message
+                            ? e.message
+                            : "Couldn't reach the worksheet generator.",
                 });
             }
         })();
