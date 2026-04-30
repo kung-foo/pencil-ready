@@ -1,0 +1,23 @@
+---
+// Renders an SVG (passed in as a raw string from a `?raw` import) inline
+// with adjacent text. Sizing and alignment live on the wrapper span so
+// the SVGs in public/ stay untouched — favicon and any external mirrors
+// keep their intrinsic dimensions. `[&>svg]:size-full` overrides any
+// width/height attributes baked into the source so the inner svg fills
+// the wrapper.
+interface Props {
+    svg: string;
+    class?: string;
+}
+const { svg, class: className } = Astro.props;
+---
+
+<span
+    class:list={[
+        "inline-block size-4 align-middle -mt-0.5 [&>svg]:size-full",
+        className,
+    ]}
+    aria-hidden="true"
+>
+    <Fragment set:html={svg} />
+</span>

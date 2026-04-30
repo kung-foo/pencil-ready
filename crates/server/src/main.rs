@@ -18,7 +18,7 @@ use anyhow::{Result, anyhow};
 use axum::{
     body::{Body, Bytes},
     extract::{Query, Request, State},
-    http::{HeaderMap, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
 };
@@ -1046,6 +1046,42 @@ async fn region_rewrite(
     Response::from_parts(parts, Body::from(rewritten))
 }
 
+/// Cache-Control by URI prefix. Astro hashes its bundle filenames
+/// (`/_astro/*.js`, `/_astro/*.css`) so they're safe to mark immutable;
+/// fonts ship with stable filenames but never change in practice
+/// (we'd version-bump the filename if they did) so they get the same
+/// year-long lifetime. Other static assets (svg/png/ico) get a month.
+/// HTML is held back to 5 minutes so region-rewrite tags and routine
+/// content updates propagate without forcing a hard reload.
+///
+/// Anything else (including `/api/*` worksheet generation and the
+/// Umami proxy) is left untouched — handlers set their own caching.
+async fn cache_control(req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_string();
+    let mut response = next.run(req).await;
+
+    if response.headers().contains_key(header::CACHE_CONTROL) {
+        return response;
+    }
+
+    let value = if path.starts_with("/_astro/") || path.starts_with("/fonts/") {
+        Some("public, max-age=31536000, immutable")
+    } else if path.ends_with(".svg") || path.ends_with(".png") || path.ends_with(".ico") {
+        Some("public, max-age=2592000")
+    } else if path.ends_with(".html") || path == "/" || path.ends_with('/') {
+        Some("public, max-age=300, must-revalidate")
+    } else {
+        None
+    };
+
+    if let Some(v) = value {
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static(v));
+    }
+    response
+}
+
 // ---------------------------------------------------------------------------
 // OpenAPI + entry
 // ---------------------------------------------------------------------------
@@ -1240,6 +1276,7 @@ async fn main() {
 
     let app = app
         .layer(middleware::from_fn_with_state(state, region_rewrite))
+        .layer(middleware::from_fn(cache_control))
         .layer(compression)
         .layer(cors)
         .layer(trace_layer);
