@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-/* @font-face declarations live in ./fonts.css. */
+/* @font-face declarations are emitted inline by the Astro Fonts API
+   (see <Font> components in Layout.astro and `fonts` config in
+   astro.config.mjs). */
 
 /* -------------------------------------------------------------------------- */
 /* Tailwind v4 theme bridge                                                   */
@@ -61,8 +63,8 @@
     --input: #cbd8ec;
     --ring: #2563eb;
     --radius: 0.125rem;
-    --font-sans: "Roboto Slab", Georgia, serif;
-    --font-display: "Roboto Slab", Georgia, serif;
+    --font-sans: var(--font-roboto-slab);
+    --font-display: var(--font-roboto-slab);
     /* Graph drawn on body::before instead of body — keeps it fixed so
      content scrolls over a stationary paper. See @layer base. */
     --grid-hue: 217;
@@ -237,7 +239,7 @@
     h5,
     h6,
     [data-slot="card-title"] {
-        font-family: "Crimson Text", Georgia, serif;
+        font-family: var(--font-crimson-text);
         font-weight: 600;
     }
     h3 {

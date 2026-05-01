@@ -1,4 +1,4 @@
 /* Astro's single entry CSS. Pulls local shadcn theme tokens + Tailwind
-   v4 setup from index.css, and @font-face declarations from fonts.css. */
+   v4 setup from index.css. @font-face declarations are emitted inline
+   by the Astro Fonts API via the <Font> components in Layout.astro. */
 @import "./index.css";
-@import "./fonts.css";

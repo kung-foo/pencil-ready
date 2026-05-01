@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
@@ -31,6 +31,35 @@ export default defineConfig({
     prefetchAll: true,
     defaultStrategy: "hover",
   },
+  // Astro Fonts API: pulls woff2 files from Google at build time,
+  // self-hosts them under dist/_astro/ with content-hashed filenames,
+  // and emits @font-face rules with computed metric overrides
+  // (size-adjust / ascent-override / etc.) calibrated against each
+  // declared fallback stack. The metric overrides minimize layout
+  // shift when the webfont swaps in. Weights match what the UI
+  // actually renders — 400 (body), 500 (font-medium), 600
+  // (font-semibold) for Roboto Slab; 600 only for Crimson Text
+  // (used in the headers card on worksheet pages).
+  fonts: [
+    {
+      provider: fontProviders.google(),
+      name: "Roboto Slab",
+      cssVariable: "--font-roboto-slab",
+      weights: [400, 500, 600],
+      styles: ["normal"],
+      subsets: ["latin"],
+      fallbacks: ["Georgia", "serif"],
+    },
+    {
+      provider: fontProviders.google(),
+      name: "Crimson Text",
+      cssVariable: "--font-crimson-text",
+      weights: [600],
+      styles: ["normal"],
+      subsets: ["latin"],
+      fallbacks: ["Georgia", "serif"],
+    },
+  ],
   vite: {
     plugins: [tailwindcss()],
     resolve: {

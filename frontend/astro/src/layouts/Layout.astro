@@ -1,4 +1,5 @@
 ---
+import { Font } from "astro:assets";
 import { ClientRouter } from "astro:transitions";
 import PencilRule from "../components/PencilRule.astro";
 import InlineIcon from "../components/InlineIcon.astro";
@@ -63,24 +64,20 @@ const umami = {
             title="Sitemap"
             href="/sitemap-index.xml"
         />
-        <!-- Preloaded to avoid a fallback-serif flash on the wordmark
-             and headings during first paint. RobotoSlab-SemiBold isn't
-             preloaded — its only consumer is the footer wordmark, which
-             is below the fold. -->
-        <link
-            rel="preload"
-            as="font"
-            type="font/woff2"
-            href="/fonts/CrimsonText-SemiBold.woff2"
-            crossorigin
+        <!-- Astro Fonts API: emits @font-face inline with computed
+             metric overrides (size-adjust + ascent/descent/line-gap)
+             calibrated against each fallback stack, so the swap-in
+             from fallback to webfont doesn't shift layout. `preload`
+             primes the body weight (Roboto Slab 400) and Crimson Text
+             SemiBold used in headings — both above the fold on every
+             page. The other Roboto Slab weights (500/600) load
+             without preload since they appear only below the fold or
+             in lazy-rendered islands. -->
+        <Font
+            cssVariable="--font-roboto-slab"
+            preload={[{ weight: 400, style: "normal" }]}
         />
-        <link
-            rel="preload"
-            as="font"
-            type="font/woff2"
-            href="/fonts/RobotoSlab-Regular.woff2"
-            crossorigin
-        />
+        <Font cssVariable="--font-crimson-text" preload />
         <!--
           iOS Chrome / Edge back-button workaround for Astro #11919.
           On those two browsers (CriOS / EdgiOS — both WebKit but with

@@ -1064,7 +1064,7 @@ async fn cache_control(req: Request, next: Next) -> Response {
         return response;
     }
 
-    let value = if path.starts_with("/_astro/") || path.starts_with("/fonts/") {
+    let value = if path.starts_with("/_astro/") {
         Some("public, max-age=31536000, immutable")
     } else if path.ends_with(".svg") || path.ends_with(".png") || path.ends_with(".ico") {
         Some("public, max-age=2592000")
