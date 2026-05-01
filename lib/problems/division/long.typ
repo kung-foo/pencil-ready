@@ -36,6 +36,19 @@
 //   width: cell width (e.g. 3.9em). Required.
 //   answer-rows: rows of solve space below the bracket (typically 2×
 //     the number of dividend digits). Required.
+//   answer-font: typst font name for solved-mode student-work (quotient,
+//     sub digits, remainders, brought-down digits). Default: none =
+//     inherit problem-font.
+//   answer-color: color for solved-mode student-work. Default: none =
+//     inherit (black).
+//   align: alignment of the cell within its container. Default
+//     `left + top` — the worksheet grid relies on this so brackets
+//     line up across columns. Pass e.g. `center + horizon` for a
+//     single-cell rendering (thumbnails) where you want the problem
+//     anchored to the page center.
+//   pad-left: left padding around the cell — breathing room from
+//     the worksheet-grid cell edge. Default 0.5cm. Pass 0pt for
+//     single-cell thumbnails so the content centers symmetrically.
 //
 // `mode` = "blank" | "worked" | "answer-only". "answer-only" renders
 // just the quotient above the bar and skips the work rows.
@@ -45,8 +58,18 @@
   // forgets.
   let width = opts.at("width")
   let answer-rows = opts.at("answer-rows")
+  let answer-font = opts.at("answer-font", default: none)
+  let answer-color = opts.at("answer-color", default: none)
+  let cell-align = opts.at("align", default: left + top)
+  let cell-pad-left = opts.at("pad-left", default: 0.5cm)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
+
+  // Resolve answer styling once. set rules inside an `if` are scoped
+  // to the if-block, so we resolve to concrete values and apply
+  // unconditionally where the work is rendered.
+  let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
+  let resolved-answer-color = if answer-color != none { answer-color } else { black }
 
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
   let debug-box = if debug { 1pt + red } else { none }
@@ -73,12 +96,22 @@
       let overshoot = m.height * 0.25
       let column-gutter = 0.25em
 
+      // The bracket curve is `place`d, so it doesn't contribute to the
+      // dividend-area-box's natural width. Without an explicit width,
+      // typst's bounding box ends at the dividend's right edge and the
+      // overline sticks out into "outside" space — invisible to layout
+      // but visible on the page. That's fine for the worksheet (each
+      // cell is fixed-width and left-aligned) but breaks centering for
+      // single-cell renderings like the homepage thumbs. Pinning the
+      // box width to `division-bracket`'s `overline-end` (bulge + dividend
+      // + 0.7em) means the bounding rect truly bounds what you see.
+      let dividend-area-width = bulge + m.width + m.height * 0.7
       grid(
         columns: (auto, auto),
         column-gutter: column-gutter,
         align: bottom,
         pad(bottom: overshoot, text(divisor-str)),
-        box({
+        box(width: dividend-area-width, {
           // Space above the overline holds the quotient when solved, or
           // stays empty otherwise. v() preserves the exact pre-solve-first
           // layout for unsolved problems.
@@ -93,6 +126,8 @@
               width: bulge + 0.2em + m.width,
               align(right + bottom, text(
                 quotient-str,
+                font: resolved-answer-font,
+                fill: resolved-answer-color,
                 top-edge: "cap-height",
                 bottom-edge: "baseline",
               )),
@@ -214,12 +249,19 @@
         // the corresponding dividend digit's right edge.
         block(spacing: 0pt, pad(
           left: divisor-width + column-gutter + bulge + 0.2em - problem-tracking,
-          grid(
-            columns: (digit-pitch,) * n,
-            rows: row-heights,
-            row-gutter: 0pt,
-            ..cells,
-          ),
+          {
+            // Style the work as student handwriting (when caller passed
+            // answer-font/answer-color). Subtraction lines aren't text,
+            // so they're unaffected by `set text` and stay as printed
+            // 0.5pt strokes.
+            set text(font: resolved-answer-font, fill: resolved-answer-color)
+            grid(
+              columns: (digit-pitch,) * n,
+              rows: row-heights,
+              row-gutter: 0pt,
+              ..cells,
+            )
+          },
         ))
       } else {
         // Empty work space — pre-solve-first baseline layout.
@@ -230,7 +272,8 @@
 
   // Self-pad + self-align so the worksheet-grid doesn't have to know
   // anything style-specific about this component. 0.5cm left pad for
-  // breathing room from the cell edge; left+top because the bracket
-  // glyph is anchored to the dividend's left edge.
-  align(left + top, pad(left: 0.5cm, content))
+  // breathing room from the cell edge; default `left + top` because
+  // the bracket glyph is anchored to the dividend's left edge in the
+  // multi-column worksheet grid.
+  align(cell-align, pad(left: cell-pad-left, content))
 }

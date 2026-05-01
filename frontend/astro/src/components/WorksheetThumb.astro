@@ -25,6 +25,7 @@ import MultiplyThumb from "@/assets/thumbs/multiply.svg";
 import SimpleDivideThumb from "@/assets/thumbs/simple-divide.svg";
 import MultDrillThumb from "@/assets/thumbs/mult-drill.svg";
 import DivDrillThumb from "@/assets/thumbs/div-drill.svg";
+import LongDivideThumb from "@/assets/thumbs/long-divide.svg";
 
 import addUrl from "@/assets/thumbs/add.svg?url";
 import subtractUrl from "@/assets/thumbs/subtract.svg?url";
@@ -32,6 +33,7 @@ import multiplyUrl from "@/assets/thumbs/multiply.svg?url";
 import simpleDivideUrl from "@/assets/thumbs/simple-divide.svg?url";
 import multDrillUrl from "@/assets/thumbs/mult-drill.svg?url";
 import divDrillUrl from "@/assets/thumbs/div-drill.svg?url";
+import longDivideUrl from "@/assets/thumbs/long-divide.svg?url";
 
 interface Props {
     kind: WorksheetKind;
@@ -49,6 +51,7 @@ const Thumbs: Partial<Record<WorksheetKind, typeof AddThumb>> = {
     "simple-divide": SimpleDivideThumb,
     "mult-drill": MultDrillThumb,
     "div-drill": DivDrillThumb,
+    "long-divide": LongDivideThumb,
 };
 const ThumbUrls: Partial<Record<WorksheetKind, string>> = {
     add: addUrl,
@@ -57,6 +60,7 @@ const ThumbUrls: Partial<Record<WorksheetKind, string>> = {
     "simple-divide": simpleDivideUrl,
     "mult-drill": multDrillUrl,
     "div-drill": divDrillUrl,
+    "long-divide": longDivideUrl,
 };
 
 const Thumb = Thumbs[kind];
