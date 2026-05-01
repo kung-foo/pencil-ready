@@ -90,6 +90,8 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::AlgebraOneStep { .. }, Form::Slug) => "one-step-equations",
         (WorksheetType::FractionEquiv { .. }, Form::Title) => "Equivalent fractions",
         (WorksheetType::FractionEquiv { .. }, Form::Slug) => "equivalent-fractions",
+        (WorksheetType::AlgebraSquareRoot { .. }, Form::Title) => "Squares and Square Roots",
+        (WorksheetType::AlgebraSquareRoot { .. }, Form::Slug) => "squares-and-square-roots",
     }
 }
 

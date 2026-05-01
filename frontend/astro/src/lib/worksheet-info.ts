@@ -26,7 +26,7 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
     },
     {
         title: "Pre-algebra",
-        kinds: ["algebra-one-step", "algebra-two-step"],
+        kinds: ["algebra-one-step", "algebra-two-step", "algebra-square-root"],
     },
 ];
 
@@ -231,6 +231,21 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
             "Isolate the variable by undoing operations in reverse order: subtract the constant, then divide by the coefficient.",
             "Keep the equation balanced — whatever you do on one side, do on the other.",
             "Read three canonical forms: (ax) + b = c, b + (ax) = c, (ax) − b = c.",
+        ],
+    },
+    "algebra-square-root": {
+        title: "Squares and Square Roots",
+        summary:
+            "Solve x² ± b = c and √x ± b = c for x — practice squaring and taking square roots together.",
+        prerequisites: [
+            "Memorized squares 0² through 10² and the matching roots √0 through √100.",
+            "One-step and two-step linear equations.",
+            "Recognize that squaring and taking a square root are inverse operations.",
+        ],
+        learning: [
+            "Isolate the squared (or rooted) term first, then undo with √ or with x².",
+            "Move fluently between x² and √x — both directions show up on the same sheet.",
+            "Read six equation forms: x² + b = c, b + x² = c, x² − b = c, √x + b = c, b + √x = c, √x − b = c.",
         ],
     },
 };

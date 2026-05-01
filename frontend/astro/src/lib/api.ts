@@ -33,6 +33,7 @@ export const WORKSHEET_KINDS = [
     "fraction-equiv",
     "algebra-one-step",
     "algebra-two-step",
+    "algebra-square-root",
 ] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
 
@@ -119,6 +120,12 @@ export type KindConfig =
           subtract?: boolean;
           multiply?: boolean;
           divide?: boolean;
+      }
+    | {
+          kind: "algebra-square-root";
+          b_range?: string;
+          squares?: boolean;
+          roots?: boolean;
       };
 
 export type WorksheetConfig = SharedConfig & KindConfig;
@@ -256,6 +263,14 @@ export function parseConfig(
                 subtract: b("subtract"),
                 multiply: b("multiply"),
                 divide: b("divide"),
+            };
+        case "algebra-square-root":
+            return {
+                ...shared,
+                kind,
+                b_range: s("b_range"),
+                squares: b("squares"),
+                roots: b("roots"),
             };
     }
 }

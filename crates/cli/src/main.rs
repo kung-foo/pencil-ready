@@ -329,9 +329,43 @@ enum Command {
         divide: bool,
     },
 
+    /// Squares and square roots (x² ± b = c, √x ± b = c, solve for x)
+    ///
+    /// Six equation forms across two families. Toggle the families
+    /// with --squares / --roots; at least one must be on. Inner range
+    /// is pinned 0..10 (covers the curriculum target — squares 0²–10²
+    /// and the matching roots — by heart). Three-row layout, same
+    /// shape as algebra-two-step.
+    AlgebraSquareRoot {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "8")]
+        problems: u32,
+
+        #[arg(long, default_value = "2")]
+        cols: u32,
+
+        /// Constant range, e.g. "1-50"
+        #[arg(long, default_value = "1-50")]
+        b_range: DigitRange,
+
+        /// Variable glyph. Single character (letter, symbol, or emoji).
+        #[arg(long, default_value = "x")]
+        variable: String,
+
+        /// Include `x² ± b = c` problems.
+        #[arg(long, default_value = "true")]
+        squares: bool,
+
+        /// Include `√x ± b = c` problems.
+        #[arg(long, default_value = "true")]
+        roots: bool,
+    },
+
     /// Two-step linear equation (ax + b = c, solve for x)
     ///
-    /// Always 6 problems × 2 columns — the equations are wide and the
+    /// Always 8 problems × 2 columns — the equations are wide and the
     /// three-row layout needs vertical breathing room.
     AlgebraTwoStep {
         #[command(flatten)]
@@ -565,7 +599,7 @@ fn resolve(command: Command) -> Resolved {
             mix_forms,
         } => Resolved {
             global,
-            num_problems: 6,
+            num_problems: 8,
             cols: 2,
             worksheet: WorksheetType::AlgebraTwoStep {
                 a_range,
@@ -574,6 +608,25 @@ fn resolve(command: Command) -> Resolved {
                 variable,
                 implicit,
                 mix_forms,
+            },
+        },
+        Command::AlgebraSquareRoot {
+            global,
+            problems,
+            cols,
+            b_range,
+            variable,
+            squares,
+            roots,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::AlgebraSquareRoot {
+                b_range,
+                variable,
+                squares,
+                roots,
             },
         },
         Command::AlgebraOneStep {
@@ -851,7 +904,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
                 implicit: false,
                 mix_forms: true,
             },
-            6,
+            8,
             2,
         ),
         (
@@ -867,6 +920,17 @@ fn run_all(global: GlobalArgs) -> Result<()> {
                 divide: true,
             },
             10,
+            2,
+        ),
+        (
+            "algebra-square-root",
+            WorksheetType::AlgebraSquareRoot {
+                b_range: DigitRange::new(1, 50),
+                variable: "x".into(),
+                squares: true,
+                roots: true,
+            },
+            8,
             2,
         ),
     ];
@@ -899,6 +963,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
+#import "/lib/problems/algebra/square-root.typ": algebra-square-root-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)

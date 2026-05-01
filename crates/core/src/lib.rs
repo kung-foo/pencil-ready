@@ -5,6 +5,7 @@
 
 mod add;
 mod algebra_one_step;
+mod algebra_square_root;
 mod algebra_two_step;
 mod div_drill;
 mod divide;
@@ -247,6 +248,17 @@ pub enum WorksheetType {
         /// Restrict base fraction to proper fractions (num < den).
         proper_only: bool,
     },
+    AlgebraSquareRoot {
+        /// Constant range (default 1-30). Same shape as two-step's
+        /// `b_range` so the two algebra worksheets feel uniform.
+        b_range: DigitRange,
+        /// Variable glyph; same rules as `AlgebraTwoStep::variable`.
+        variable: String,
+        /// Include `x² ± b = c` problems.
+        squares: bool,
+        /// Include `√x ± b = c` problems.
+        roots: bool,
+    },
 }
 
 impl WorksheetType {
@@ -266,6 +278,7 @@ impl WorksheetType {
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
             WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
             WorksheetType::FractionEquiv { .. } => "fraction-equivalence-problem",
+            WorksheetType::AlgebraSquareRoot { .. } => "algebra-square-root-problem",
         }
     }
 
@@ -361,6 +374,15 @@ impl WorksheetType {
             // Equivalent fractions — two stacked fractions + `=` on one row.
             // Width fixed at 5.5cm; height matches fraction-simplify.
             WorksheetType::FractionEquiv { .. } => (5.5, 2.6),
+
+            // Squares and square-roots — same 3-row shape as two-step
+            // (given equation, intermediate, `x = ___`). Inner is pinned
+            // 0..10 and answer at most 100, so `b_range.max` (≤99) is
+            // the only knob that can push width up.
+            WorksheetType::AlgebraSquareRoot { b_range, .. } => {
+                let w = if b_range.max <= 30 { 7.3 } else { 8.0 };
+                (w, 4.1)
+            }
         }
     }
 
@@ -438,6 +460,12 @@ impl WorksheetType {
             } => {
                 let max_den = denominators.iter().copied().max().unwrap_or(2);
                 document::digit_count(max_den * scale.max)
+            }
+            // Square-roots: inner ≤ 10, so x² ≤ 100 and the root-form
+            // answer (r²) is also ≤ 100. The widest emitted literal is
+            // therefore max(100, b_max).
+            WorksheetType::AlgebraSquareRoot { b_range, .. } => {
+                document::digit_count(100u32.max(b_range.max))
             }
         }
     }
@@ -745,6 +773,7 @@ impl Document {
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
             WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
             WorksheetType::FractionEquiv { .. } => fraction_equiv::generate(params)?,
+            WorksheetType::AlgebraSquareRoot { .. } => algebra_square_root::generate(params)?,
         };
         let chrome = Chrome::from_params(params);
         let max_digits = sheet.worksheet.max_digits_bound();
@@ -1144,6 +1173,26 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                     scale.min,
                     scale.max
                 );
+            }
+        }
+        WorksheetType::AlgebraSquareRoot {
+            b_range,
+            variable,
+            squares,
+            roots,
+        } => {
+            if b_range.max > 99 || b_range.min > b_range.max {
+                bail!(
+                    "b-range must be 0-99 with min ≤ max, got {}-{}",
+                    b_range.min,
+                    b_range.max
+                );
+            }
+            if variable.chars().count() != 1 {
+                bail!("variable must be a single character, got {:?}", variable);
+            }
+            if !(*squares || *roots) {
+                bail!("at least one of squares/roots must be enabled");
             }
         }
     };

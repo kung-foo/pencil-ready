@@ -799,6 +799,36 @@ function KindSpecific({
                 </div>
             );
         }
+
+        case "algebra-square-root": {
+            const onSquares = cfg.squares ?? false;
+            const onRoots = cfg.roots ?? false;
+            // Lock the last enabled toggle so users can't switch both off
+            // (server validation rejects that).
+            const enabledCount = Number(onSquares) + Number(onRoots);
+            const lockToggle = (currentlyOn: boolean) =>
+                enabledCount === 1 && currentlyOn;
+            return (
+                <div className="space-y-4">
+                    <FieldGroup label="Families">
+                        <OpToggle
+                            id="op-squares"
+                            label="Squares (x²)"
+                            checked={onSquares}
+                            disabled={lockToggle(onSquares)}
+                            onChange={(v) => patch("squares", v)}
+                        />
+                        <OpToggle
+                            id="op-roots"
+                            label="Square roots (√x)"
+                            checked={onRoots}
+                            disabled={lockToggle(onRoots)}
+                            onChange={(v) => patch("roots", v)}
+                        />
+                    </FieldGroup>
+                </div>
+            );
+        }
     }
 }
 

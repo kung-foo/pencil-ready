@@ -420,3 +420,89 @@ mapping). Operator is only used when `implicit: false`.
 
 The component owns the form-to-row-1 rendering; rows 2 and 3 are always
 `ax = ...` and `x = ...` regardless of form.
+
+## Algebra: Squares and Square Roots
+
+Solve `x² ± b = c` and `√x ± b = c` for `x`. Practices squaring and
+taking square roots side-by-side — the inverse pair is taught
+together in the curriculum, so the worksheet mixes both families on
+one page.
+
+```
+x² + 5 = 21          √x + 4 = 9
+   x² = ___             √x = ___
+    x = ___              x = ___
+```
+
+Same three-row step-by-step layout as algebra-two-step. Row 1 is
+the equation as given; rows 2 and 3 are the student's work. The
+variable `x` renders in STIX Two Text italic; `x²` uses Fira Math
+superscript and `√x` uses Fira Math's `sqrt` glyph.
+
+### Parameters
+
+- `b_range: range` — constant range (default `1-30`). Same shape as
+  two-step's `b_range` so the algebra worksheets feel uniform.
+- `squares: bool` — include `x² ± b = c` problems (default `true`).
+- `roots: bool` — include `√x ± b = c` problems (default `true`).
+  At least one of `squares` / `roots` must be enabled (the server
+  rejects "neither" with a readable error).
+- `solve_first: bool` — render the first problem filled in as a worked
+  example showing the intermediate `x² = ...` (or `√x = ...`) and the
+  final `x = answer`.
+
+### Constraints
+
+- The "inner" integer (`x` for squares, `√x` for roots) is pinned to
+  `0..=10` — covers the curriculum target (squares 0² – 10² and the
+  matching roots) by heart. Not configurable from the UI.
+- Whole-integer answer only. `c − b` must be a perfect square (squares)
+  or `c − b` must be in `0..=10` (roots).
+- Only the positive root is shown. `x² = 4` has two real solutions
+  (`±2`) but the answer key shows `x = 2`; matches the 5th-grade
+  convention also used by algebra-two-step (`x ≥ 0`).
+- All form variants (canonical, const-first, canonical-minus) always
+  mix within whichever family is enabled — by the time a student
+  reaches squares-and-roots they've already met form variation in
+  algebra-two-step.
+
+### Equation forms
+
+Six forms total. Within each enabled family the canonical-minus
+variant is only emitted when the inner-LHS ≥ `b`, so `c` stays
+non-negative.
+
+| Form | Family | Example | Work row 1 intermediate | Answer |
+|---|---|---|---|---|
+| 0 | square | `x² + 5 = 21`  | `x² = c − b` | `x = inner` |
+| 1 | square | `5 + x² = 21`  | `x² = c − b` | `x = inner` |
+| 2 | square | `x² − 5 = 11`  | `x² = c + b` | `x = inner` |
+| 3 | root   | `√x + 5 = 9`   | `√x = c − b` | `x = inner²` |
+| 4 | root   | `5 + √x = 9`   | `√x = c − b` | `x = inner²` |
+| 5 | root   | `√x − 3 = 4`   | `√x = c + b` | `x = inner²` |
+
+### Locale
+
+Always uses `·` regardless of locale (none is rendered in the basic
+form, but the same rule applies if a future variant introduces a
+coefficient — never `×` once a variable is on the page).
+
+### Problem generation
+
+1. Enumerate `(inner, b)` pairs for `inner ∈ 0..=10` and `b` in `b_range`.
+2. For each pair and each enabled family, pick a random form (canonical
+   plus / const-first / canonical-minus). The minus form joins the
+   pool only when the inner-LHS ≥ `b`.
+3. Compute `c` from the chosen form.
+4. Shuffle; take `num_problems`.
+
+### Layout component
+
+```typst
+algebra-square-root-problem((0, 5, 4, 4, 21), opts: (variable: "x"))
+```
+
+`data` is `(form, b, inner, answer, c)`. The component picks the
+square-vs-root rendering off `form` (forms 0–2 are square, 3–5 are
+root) and the per-form LHS layout off the same field — callers don't
+need to flag families separately.

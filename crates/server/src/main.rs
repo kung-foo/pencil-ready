@@ -439,6 +439,45 @@ impl FractionSimplifySpecific {
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+struct AlgebraSquareRootSpecific {
+    #[serde(default)]
+    #[param(value_type = String, example = "1-30")]
+    b_range: Option<String>,
+    /// Variable glyph (single character).
+    #[serde(default)]
+    variable: Option<String>,
+    /// Include `x² ± b = c` problems.
+    #[serde(default)]
+    squares: Option<bool>,
+    /// Include `√x ± b = c` problems.
+    #[serde(default)]
+    roots: Option<bool>,
+}
+
+impl AlgebraSquareRootSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let b_range = match self.b_range {
+            Some(s) => parse_digit_range(&s, "b_range")?,
+            None => DigitRange::new(1, 50),
+        };
+        Ok(shared.fold(
+            WorksheetType::AlgebraSquareRoot {
+                b_range,
+                variable: self.variable.unwrap_or_else(|| "x".into()),
+                // Same "absence == off" convention as one-step. Validation
+                // rejects "neither" with a readable error, matching the
+                // CLI's at-least-one rule.
+                squares: self.squares.unwrap_or(false),
+                roots: self.roots.unwrap_or(false),
+            },
+            8,
+            2,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct AlgebraTwoStepSpecific {
     #[serde(default)]
     #[param(value_type = String, example = "2-10")]
@@ -482,7 +521,7 @@ impl AlgebraTwoStepSpecific {
                 implicit: self.implicit.unwrap_or(false),
                 mix_forms: self.mix_forms.unwrap_or(true),
             },
-            6,
+            8,
             2,
         ))
     }
@@ -912,6 +951,22 @@ async fn handle_algebra_one_step(
     render(&s, "algebra-one-step", p.build(shared), &headers)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/algebra-square-root",
+    params(SharedParams, AlgebraSquareRootSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_algebra_square_root(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<AlgebraSquareRootSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "algebra-square-root", p.build(shared), &headers)
+}
+
 // ---------------------------------------------------------------------------
 // Umami analytics proxy
 // ---------------------------------------------------------------------------
@@ -1183,6 +1238,7 @@ async fn main() {
         .routes(routes!(handle_fraction_equiv))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
+        .routes(routes!(handle_algebra_square_root))
         .with_state(state.clone())
         .split_for_parts();
 

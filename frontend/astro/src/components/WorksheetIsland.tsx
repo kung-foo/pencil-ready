@@ -49,6 +49,12 @@ function applyFirstVisitDefaults(
             return { ...cfg, add: true, subtract: true };
         }
     }
+    if (cfg.kind === "algebra-square-root") {
+        const noToggleInUrl = !search.has("squares") && !search.has("roots");
+        if (noToggleInUrl) {
+            return { ...cfg, squares: true, roots: true };
+        }
+    }
     return cfg;
 }
 
