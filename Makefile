@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs
 
 build:
 	cargo build
@@ -37,6 +37,21 @@ stories-check:
 
 stories-approve:
 	cargo run -p pencil-ready-stories -- approve
+
+# --- Homepage thumbnails ---
+#
+# Compile every frontend/astro/src/assets/thumbs/thumb-<kind>.typ into
+# its sibling <kind>.svg. The Astro build inlines those SVGs into the
+# homepage card grid (see WorksheetThumb.astro). Run after editing the
+# thumb sources or any of the lib/problems/* components they import.
+THUMB_DIR := frontend/astro/src/assets/thumbs
+THUMB_SOURCES := $(wildcard $(THUMB_DIR)/thumb-*.typ)
+THUMB_SVGS := $(patsubst $(THUMB_DIR)/thumb-%.typ,$(THUMB_DIR)/%.svg,$(THUMB_SOURCES))
+
+thumbs: $(THUMB_SVGS)
+
+$(THUMB_DIR)/%.svg: $(THUMB_DIR)/thumb-%.typ
+	typst compile --root . --font-path fonts $< $@
 
 # --- Frontend + prod-shaped local run ---
 

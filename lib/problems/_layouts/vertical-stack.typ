@@ -18,6 +18,11 @@
 //     (single answer line), ~partial products + 1 for multiply. Default 1.
 //   pad-width: when > 0, left-pad operand numbers with "0" up to this many
 //     characters. Used by binary addition. Default 0.
+//   answer-font: typst font name for the final answer (and partial products).
+//     Default: none = inherit `problem-font`. Pass e.g. "Architects Daughter"
+//     to make the answer read as if hand-written by the student.
+//   answer-color: color for the final answer text. Default: none = inherit
+//     (black). Pass e.g. rgb("#4a4a4a") for a graphite-pencil look.
 //
 // `mode` = "blank" | "worked" | "answer-only". "answer-only" skips worked
 // steps (partial products) and renders just the final answer — used by
@@ -27,6 +32,8 @@
   let width = opts.at("width", default: 2.8em)
   let answer-rows = opts.at("answer-rows", default: 1)
   let pad-width = opts.at("pad-width", default: 0)
+  let answer-font = opts.at("answer-font", default: none)
+  let answer-color = opts.at("answer-color", default: none)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -73,6 +80,16 @@
       line(length: 100%, stroke: 0.8pt)
       if solved {
         v(-0.65em)
+        // Optional font/color overrides for the answer (e.g. a handwriting
+        // face + graphite color to make the answer read as if filled in by
+        // the student). Each falls back to the inherited setting when not
+        // set explicitly. Because typst `set` rules are scoped to the
+        // enclosing block, we resolve to a concrete value first and `set`
+        // unconditionally — wrapping in `if` would scope the `set` to the
+        // if-block alone.
+        let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
+        let resolved-answer-color = if answer-color != none { answer-color } else { black }
+        set text(font: resolved-answer-font, fill: resolved-answer-color)
         if answer-rows == 1 or answer-only {
           // Single-row answers (add, subtract, simple-divide, 1-digit
           // multiply) OR answer-key mode for multi-digit multiply:
