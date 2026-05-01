@@ -12,10 +12,10 @@ import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
     <div class="p-4 md:p-8 max-w-6xl mx-auto">
         <h1 class="text-3xl font-semibold mb-4">Printable math worksheets</h1>
         <p class="text-lg text-muted-foreground max-w-2xl mb-10">
-            Master math the old-fashioned way: with handwritten drills.
-            No need for an iPad or AI. Just print the problems you want
-            to practice and pick up a pencil. If you miss too many,
-            print a new sheet and try again.
+            Master math the old-fashioned way: with handwritten drills. No need
+            for an iPad or AI. Just print the problems you want to practice and
+            pick up a pencil. If you miss too many, print a new sheet and try
+            again.
         </p>
 
         <!--
@@ -29,7 +29,11 @@ import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
         -->
         <div class="space-y-10">
             {
-                WORKSHEET_SECTIONS.map((section) => (
+                /* First section (Arithmetic) renders eagerly so its
+                   thumbs are inlined into the HTML and visible without
+                   a network roundtrip. Below-fold sections pass
+                   `lazy` so each thumb becomes <img loading="lazy">. */
+                WORKSHEET_SECTIONS.map((section, sectionIndex) => (
                     <section>
                         <h2 class="text-xl font-semibold mb-4 pb-1 border-b border-pencil-no-2">
                             {section.title}
@@ -52,7 +56,10 @@ import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
                                                 </div>
                                             </div>
                                             <div class="flex-shrink-0 w-14 self-start text-foreground/70">
-                                                <WorksheetThumb kind={kind} />
+                                                <WorksheetThumb
+                                                    kind={kind}
+                                                    lazy={sectionIndex > 0}
+                                                />
                                             </div>
                                         </a>
                                     </li>

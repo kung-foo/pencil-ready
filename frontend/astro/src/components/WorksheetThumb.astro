@@ -5,48 +5,99 @@
  * a single sample problem on a page-shaped rectangle with a 1pt
  * outline.
  *
- * SVGs are minified and per-file id-prefixed at `make thumbs` time
- * (see Makefile + svgo.config.mjs in this dir). The per-file prefix
- * is critical: typst names glyph defs by content hash, so multiple
- * inlined thumbs collide on shared glyph IDs without it. With that
- * baked in, we use Astro's native SVG component import — Astro
- * inlines the markup with proper attribute scoping.
+ * Rendering modes:
+ *  - default (eager): inline as an Astro SVG component. The optimizer
+ *    in astro.config.mjs prefixes IDs per content hash, then inlines
+ *    the markup with `data-astro-cid` scoping. Best for above-the-fold
+ *    thumbs where we want zero network roundtrip.
+ *  - lazy: emit an `<img src=… loading="lazy">` pointing at the SVG
+ *    as a hashed static asset. The browser defers the fetch until the
+ *    image is near the viewport — better for the 8 below-the-fold
+ *    thumbs (drills, long-form, fractions, algebra).
  *
- * Iteration scope: arithmetic kinds only for now. Other kinds fall
- * through to no render until we add their typst sources.
+ * Iteration scope: arithmetic + drills wired up so far. Other kinds
+ * fall through to no render.
  */
 import type { WorksheetKind } from "@/lib/api";
 import AddThumb from "@/assets/thumbs/add.svg";
 import SubtractThumb from "@/assets/thumbs/subtract.svg";
 import MultiplyThumb from "@/assets/thumbs/multiply.svg";
 import SimpleDivideThumb from "@/assets/thumbs/simple-divide.svg";
+import MultDrillThumb from "@/assets/thumbs/mult-drill.svg";
+import DivDrillThumb from "@/assets/thumbs/div-drill.svg";
+
+import addUrl from "@/assets/thumbs/add.svg?url";
+import subtractUrl from "@/assets/thumbs/subtract.svg?url";
+import multiplyUrl from "@/assets/thumbs/multiply.svg?url";
+import simpleDivideUrl from "@/assets/thumbs/simple-divide.svg?url";
+import multDrillUrl from "@/assets/thumbs/mult-drill.svg?url";
+import divDrillUrl from "@/assets/thumbs/div-drill.svg?url";
 
 interface Props {
     kind: WorksheetKind;
+    /** Render as `<img loading="lazy">` for below-fold cards. */
+    lazy?: boolean;
     class?: string;
 }
-const { kind, class: className } = Astro.props;
+const { kind, lazy = false, class: className } = Astro.props;
 
-// Dynamic-tag rendering requires a capitalized binding; map to one.
+// Capitalized binding required for Astro's dynamic-tag rendering.
 const Thumbs: Partial<Record<WorksheetKind, typeof AddThumb>> = {
     add: AddThumb,
     subtract: SubtractThumb,
     multiply: MultiplyThumb,
     "simple-divide": SimpleDivideThumb,
+    "mult-drill": MultDrillThumb,
+    "div-drill": DivDrillThumb,
 };
+const ThumbUrls: Partial<Record<WorksheetKind, string>> = {
+    add: addUrl,
+    subtract: subtractUrl,
+    multiply: multiplyUrl,
+    "simple-divide": simpleDivideUrl,
+    "mult-drill": multDrillUrl,
+    "div-drill": divDrillUrl,
+};
+
 const Thumb = Thumbs[kind];
+const url = ThumbUrls[kind];
 ---
 
-{Thumb && <Thumb class:list={["worksheet-thumb-svg", className]} />}
+{
+    lazy && url && (
+        /* width/height in HTML attrs (not CSS) so the browser can
+           reserve aspect-correct space *before* the SVG fetch. The
+           values just need the right ratio (A4 = 1:√2) — CSS sets
+           the actual rendered width. Without these, lazy <img>s
+           collapse to 0 height until fetched and the card layout
+           jumps when they arrive. */
+        <img
+            src={url}
+            width="90"
+            height="127"
+            loading="lazy"
+            decoding="async"
+            alt=""
+            class:list={["worksheet-thumb-svg", className]}
+        />
+    )
+}
+{
+    !lazy && Thumb && (
+        <Thumb class:list={["worksheet-thumb-svg", className]} />
+    )
+}
 
 <style>
-    /* Typst SVGs ship with intrinsic pt-based width/height. Override
-       so the parent box controls size; default preserveAspectRatio
-       keeps the natural A4 aspect. drop-shadow gives the page a
-       subtle paper-on-card lift. */
+    /* Same rule applies to both inline <svg> and <img>. Width is
+       driven by the parent slot (w-14 in index.astro); height is
+       `auto` so it comes from the intrinsic A4 aspect — kept stable
+       across the load via the width/height attrs above (img) and
+       the viewBox (inline svg). drop-shadow gives the page a subtle
+       paper-on-card lift. */
     .worksheet-thumb-svg {
         width: 100%;
-        height: 100%;
+        height: auto;
         display: block;
         filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.12))
             drop-shadow(0 2px 4px rgb(0 0 0 / 0.06));

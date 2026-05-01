@@ -19,18 +19,22 @@
 //   )
 
 // A4 ratio = 1 : √2. The absolute scale is arbitrary — the embedder
-// scales the SVG via CSS — but it must comfortably contain the natural
-// width of the problem component (~70pt at 22pt text).
-#let thumb-page-width = 90pt
-#let thumb-page-height = thumb-page-width * 1.41421356
+// scales the SVG via CSS — but it must comfortably contain the
+// natural width of whatever problem component the thumb renders.
+// 90pt fits the vertical-stack components (~70pt at 22pt text);
+// horizontal drills need ~200pt to fit a single line.
+#let thumb-default-width = 90pt
 
-// Document-wrapper for thumb sources: invoke as `#show: thumb-page`.
+// Document-wrapper for thumb sources: invoke as
+//   #show: thumb-page                            // 90pt default
+//   #show: thumb-page.with(width: 200pt)         // wider, for drills
 // `set page` here applies to the rest of the document via the show
 // rule's body scope.
-#let thumb-page(body) = {
+#let thumb-page(body, width: thumb-default-width) = {
+  let height = width * 1.41421356
   set page(
-    width: thumb-page-width,
-    height: thumb-page-height,
+    width: width,
+    height: height,
     margin: 8pt,
     // `background` renders behind the content across the full page
     // (margin included) — so this rect *is* the page outline.

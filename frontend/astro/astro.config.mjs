@@ -9,7 +9,8 @@ import { optimize as svgoOptimize } from "svgo";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Content-hashed SVG optimizer.
+// Content-hashed SVG optimizer for *inlined* SVG component imports
+// (e.g. the above-the-fold worksheet thumbs).
 //
 // Astro's bundled `svgoOptimizer()` doesn't pass file path info into
 // SVGO's `prefixIds`, so all SVGs get the same `prefix__a, b, c…`
@@ -19,10 +20,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // document `<use href="#g…">` resolves to whichever was defined first
 // — making subtract/multiply/divide all render as addition.
 //
-// Here we keep on-disk SVGs as raw typst output and namespace IDs at
+// We keep on-disk SVGs as raw typst output and namespace IDs at
 // bundle time using a sha1 of the SVG contents. Identical SVGs hash
 // the same (and their IDs are already identical, so no collision);
-// distinct SVGs get distinct prefixes.
+// distinct SVGs get distinct prefixes. Also drops xmlns/xlink since
+// these SVGs are inlined into HTML5 (no SVG-1.1 namespaces needed).
 const thumbSvgOptimizer = () => ({
     name: "thumb-svg-optimizer",
     optimize: (contents) => {
@@ -43,6 +45,37 @@ const thumbSvgOptimizer = () => ({
             ],
         });
         return data;
+    },
+});
+
+// Vite plugin: optimize SVG assets emitted into the build (i.e. the
+// hashed `_astro/<name>.<hash>.svg` files referenced by lazy-loaded
+// `<img src=…>` thumbs). Astro's `experimental.svgOptimizer` only
+// applies to *component* imports — `?url` imports just copy the raw
+// file. This hooks `generateBundle` to optimize every emitted .svg.
+//
+// Different SVGO profile from the inline optimizer above: keeps
+// xmlns + xlink since standalone SVGs served via `<img src>` are
+// rendered as their own document and need the namespaces. No
+// prefixIds either — separate documents don't collide.
+const optimizeSvgBundleAssetsPlugin = () => ({
+    name: "optimize-svg-bundle-assets",
+    enforce: "post",
+    generateBundle(_, bundle) {
+        for (const fileName of Object.keys(bundle)) {
+            const chunk = bundle[fileName];
+            if (chunk.type !== "asset") continue;
+            if (!fileName.endsWith(".svg")) continue;
+            const source =
+                typeof chunk.source === "string"
+                    ? chunk.source
+                    : Buffer.from(chunk.source).toString("utf-8");
+            const { data } = svgoOptimize(source, {
+                multipass: true,
+                plugins: ["preset-default"],
+            });
+            chunk.source = data;
+        }
     },
 });
 
@@ -105,7 +138,7 @@ export default defineConfig({
     },
   ],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), optimizeSvgBundleAssetsPlugin()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
