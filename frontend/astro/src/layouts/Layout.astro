@@ -81,6 +81,75 @@ const umami = {
             href="/fonts/RobotoSlab-Regular.woff2"
             crossorigin
         />
+        <!--
+          iOS Chrome / Edge back-button workaround for Astro #11919.
+          On those two browsers (CriOS / EdgiOS — both WebKit but with
+          their own UA tokens; iOS Safari itself is unaffected),
+          ClientRouter's JS-pushed history entries get silently
+          discarded on back-press from an address-bar-loaded tab:
+          popstate never fires, pageshow never fires, the tab just
+          exits. Verified empirically on iOS 26 / Chrome 146; the
+          fixes circulating in the issue thread (skip-replaceState +
+          popstate-intercept, sentinel pushState) all assume popstate
+          fires and don't help.
+
+          Workaround: hijack internal link clicks in the capture phase
+          before ClientRouter's delegated handler runs, and force a
+          real `window.location.assign()` navigation. The browser then
+          tracks the entry natively, so back works. Astro's
+          prefetch (configured site-wide as `hover`) warms the
+          destination so the MPA reload uses cached resources. The
+          cost is a brief flash on that one transition, only on iOS
+          Chrome / Edge — every other browser keeps the smooth SPA
+          path.
+
+          MUST run before <ClientRouter /> so the capture-phase
+          listener wins the click delegation race.
+        -->
+        <script is:inline>
+            (() => {
+                if (!/CriOS|EdgiOS/.test(navigator.userAgent)) return;
+                document.addEventListener(
+                    "click",
+                    (e) => {
+                        if (
+                            e.defaultPrevented ||
+                            e.metaKey ||
+                            e.ctrlKey ||
+                            e.shiftKey ||
+                            e.altKey ||
+                            e.button !== 0
+                        )
+                            return;
+                        const link =
+                            e.target && e.target.closest
+                                ? e.target.closest("a[href]")
+                                : null;
+                        if (!link) return;
+                        if (link.target && link.target !== "_self") return;
+                        if (link.hasAttribute("download")) return;
+                        let url;
+                        try {
+                            url = new URL(link.href, location.href);
+                        } catch {
+                            return;
+                        }
+                        if (url.origin !== location.origin) return;
+                        // Same-page hash link — let the browser handle.
+                        if (
+                            url.pathname === location.pathname &&
+                            url.search === location.search &&
+                            url.hash
+                        )
+                            return;
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        window.location.assign(url.href);
+                    },
+                    true,
+                );
+            })();
+        </script>
         <ClientRouter />
         <!-- Inject the Umami tracker after first paint. A `<script defer>`
              in <head> still pulls /umami/api/send into PageSpeed's LCP
