@@ -1,11 +1,50 @@
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, fontProviders } from "astro/config";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
+import { optimize as svgoOptimize } from "svgo";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Content-hashed SVG optimizer.
+//
+// Astro's bundled `svgoOptimizer()` doesn't pass file path info into
+// SVGO's `prefixIds`, so all SVGs get the same `prefix__a, b, c…`
+// namespace. That breaks the homepage's worksheet thumbs: typst
+// hashes glyph IDs by content, identical glyphs (e.g. the digit "2")
+// across files share IDs, and when 4 thumbs inline into the same
+// document `<use href="#g…">` resolves to whichever was defined first
+// — making subtract/multiply/divide all render as addition.
+//
+// Here we keep on-disk SVGs as raw typst output and namespace IDs at
+// bundle time using a sha1 of the SVG contents. Identical SVGs hash
+// the same (and their IDs are already identical, so no collision);
+// distinct SVGs get distinct prefixes.
+const thumbSvgOptimizer = () => ({
+    name: "thumb-svg-optimizer",
+    optimize: (contents) => {
+        const prefix =
+            "s" +
+            crypto
+                .createHash("sha1")
+                .update(contents)
+                .digest("hex")
+                .slice(0, 8);
+        const { data } = svgoOptimize(contents, {
+            multipass: true,
+            plugins: [
+                "preset-default",
+                { name: "prefixIds", params: { prefix, delim: "-" } },
+                "removeXMLNS",
+                { name: "removeXlink", params: { includeLegacy: true } },
+            ],
+        });
+        return data;
+    },
+});
 
 // https://astro.build/config
 export default defineConfig({
@@ -23,6 +62,11 @@ export default defineConfig({
     // use these to discover URLs without crawling.
     sitemap(),
   ],
+  // Optimize SVG component imports at production-build time. See
+  // `thumbSvgOptimizer` above for the content-hash-prefixed twist.
+  experimental: {
+    svgOptimizer: thumbSvgOptimizer(),
+  },
   // Opt every anchor into hover-triggered prefetch. ClientRouter picks
   // it up and fetches the destination HTML when a link is hovered/
   // focused, so the real navigation is instant. Prefetches are in-idle

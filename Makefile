@@ -41,9 +41,11 @@ stories-approve:
 # --- Homepage thumbnails ---
 #
 # Compile every frontend/astro/src/assets/thumbs/thumb-<kind>.typ into
-# its sibling <kind>.svg. The Astro build inlines those SVGs into the
-# homepage card grid (see WorksheetThumb.astro). Run after editing the
-# thumb sources or any of the lib/problems/* components they import.
+# its sibling <kind>.svg. The on-disk SVGs are raw typst output
+# (debuggable, openable standalone in a browser); the Astro build then
+# minifies + per-file id-prefixes them at bundle time via the custom
+# optimizer in astro.config.mjs. Run after editing the thumb sources
+# or any of the lib/problems/* components they import.
 THUMB_DIR := frontend/astro/src/assets/thumbs
 THUMB_SOURCES := $(wildcard $(THUMB_DIR)/thumb-*.typ)
 THUMB_SVGS := $(patsubst $(THUMB_DIR)/thumb-%.typ,$(THUMB_DIR)/%.svg,$(THUMB_SOURCES))

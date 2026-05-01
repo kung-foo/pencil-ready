@@ -3,18 +3,23 @@
  * Per-kind thumbnail for the homepage card grid. Each thumb is a tiny
  * A4-ratio SVG rendered by typst from `src/assets/thumbs/<kind>.typ` —
  * a single sample problem on a page-shaped rectangle with a 1pt
- * outline. Importing with `?raw` inlines the SVG markup into the HTML
- * so the parent box (CSS) controls visual size.
+ * outline.
  *
- * Iteration scope: arithmetic kinds only for now (add/sub/multiply/
- * simple-divide). Other kinds fall through to no render until we add
- * their typst sources.
+ * SVGs are minified and per-file id-prefixed at `make thumbs` time
+ * (see Makefile + svgo.config.mjs in this dir). The per-file prefix
+ * is critical: typst names glyph defs by content hash, so multiple
+ * inlined thumbs collide on shared glyph IDs without it. With that
+ * baked in, we use Astro's native SVG component import — Astro
+ * inlines the markup with proper attribute scoping.
+ *
+ * Iteration scope: arithmetic kinds only for now. Other kinds fall
+ * through to no render until we add their typst sources.
  */
 import type { WorksheetKind } from "@/lib/api";
-import addSvg from "@/assets/thumbs/add.svg?raw";
-import subtractSvg from "@/assets/thumbs/subtract.svg?raw";
-import multiplySvg from "@/assets/thumbs/multiply.svg?raw";
-import simpleDivideSvg from "@/assets/thumbs/simple-divide.svg?raw";
+import AddThumb from "@/assets/thumbs/add.svg";
+import SubtractThumb from "@/assets/thumbs/subtract.svg";
+import MultiplyThumb from "@/assets/thumbs/multiply.svg";
+import SimpleDivideThumb from "@/assets/thumbs/simple-divide.svg";
 
 interface Props {
     kind: WorksheetKind;
@@ -22,27 +27,24 @@ interface Props {
 }
 const { kind, class: className } = Astro.props;
 
-const thumbs: Partial<Record<WorksheetKind, string>> = {
-    add: addSvg,
-    subtract: subtractSvg,
-    multiply: multiplySvg,
-    "simple-divide": simpleDivideSvg,
+// Dynamic-tag rendering requires a capitalized binding; map to one.
+const Thumbs: Partial<Record<WorksheetKind, typeof AddThumb>> = {
+    add: AddThumb,
+    subtract: SubtractThumb,
+    multiply: MultiplyThumb,
+    "simple-divide": SimpleDivideThumb,
 };
-const svg = thumbs[kind];
+const Thumb = Thumbs[kind];
 ---
 
-{
-    svg && (
-        <div class:list={["worksheet-thumb", className]} set:html={svg} />
-    )
-}
+{Thumb && <Thumb class:list={["worksheet-thumb-svg", className]} />}
 
 <style>
-    /* Typst SVGs ship with intrinsic pt-based width/height attrs.
-       Override so the parent box controls size; default
-       preserveAspectRatio keeps the natural A4 aspect.
-       drop-shadow gives the page a subtle paper-on-card lift. */
-    .worksheet-thumb :global(svg) {
+    /* Typst SVGs ship with intrinsic pt-based width/height. Override
+       so the parent box controls size; default preserveAspectRatio
+       keeps the natural A4 aspect. drop-shadow gives the page a
+       subtle paper-on-card lift. */
+    .worksheet-thumb-svg {
         width: 100%;
         height: 100%;
         display: block;
