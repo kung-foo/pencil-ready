@@ -1,31 +1,36 @@
 // Two-step linear equation problem: `ax + b = c`, solve for x.
 //
-//   4x + 5 = 21
-//       4x = ___
-//        x = ___
+//   (4·x) + 5 = 21
+//        4·x = ___
+//          x = ___
 //
-// The equation is rendered in math mode so `x` is auto-italicized (Fira
-// Math) and visually distinct from text-font letters. A 3-row grid keeps
-// the `=` column aligned across all rows. Row 1 renders the given form
-// (canonical or const-first); rows 2 and 3 are always canonical work rows.
+// Three-row layout via `equation-rows`. Row 1 renders the given form
+// (canonical or const-first); rows 2 and 3 are always canonical work
+// rows. The shared helper makes col1 = col3 (symmetric around `=`)
+// so equals signs line up across all three rows automatically.
 //
 // `numbers` layout: (a, b, x, c, form)
 //   form = 0 → canonical plus    `ax + b = c`
 //   form = 1 → const-first plus  `b + ax = c`
 //   form = 2 → canonical minus   `ax - b = c`
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-features, problem-line-height
+#import "/lib/problems/shared.typ": problem-font, problem-text-size-horizontal, problem-features
+#import "/lib/problems/_layouts/equation-rows.typ": equation-rows
 
 // `data` = (a, b, x-val, c, form).
 // `opts` keys:
 //   operator: typst content used for implicit × (e.g. [#sym.dot.op])
 //   implicit: bool (default false) — coefficient-variable juxtaposition
 //   variable: string (default "x") — the variable glyph
+//   col-width: auto | length. When auto, each problem self-sizes from
+//     its own rows. Pass an explicit length from the worksheet
+//     template to align `=` across multiple problems.
 // `mode` = "blank" | "worked" | "answer-only".
 #let algebra-two-step-problem(data, mode: "blank", opts: (:), debug: false) = {
   let operator = opts.at("operator")
   let implicit = opts.at("implicit", default: false)
   let variable = opts.at("variable", default: "x")
+  let col-width = opts.at("col-width", default: auto)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -48,7 +53,6 @@
   // keeps multi-digit numbers as single atoms and avoids letter-spacing
   // bleed).
   show math.equation: set text(font: "Fira Math", features: ())
-  let debug-box = if debug { 1pt + red } else { none }
 
   // The variable glyph is rendered in STIX Two Text italic — classical
   // serif variable italic (LaTeX look) — so letter variables are visually
@@ -80,9 +84,8 @@
     $(#a #operator #x-var)$
   }
 
-  // Row 1 LHS depends on form. Wrap in box() to prevent the equation from
-  // breaking across lines when the cell gets tight. Row 1 uses the
-  // grouped (parenthesized) form.
+  // Row 1 LHS — depends on form. Wrap in box() to prevent the equation
+  // from breaking across lines.
   let row1-lhs = box(if form == 1 {
     // const-first: b + (ax)
     $#b + #ax-grouped$
@@ -94,41 +97,29 @@
     $#ax-grouped + #b$
   })
 
-  // Work-row LHS. When the problem is solved, we show `ax =` and `x =` as
-  // explicit steps so the worked example teaches the procedure. Row 2
-  // uses the bare form (no parens) — it's already isolated by `=`. When
-  // unsolved, the student gets blank lines to write free-form work.
-  // Answer-only mode: skip the intermediate (row 2) but keep the final
-  // answer (row 3). Row 2's "ax =" and intermediate are what students
-  // write as scratch work — an answer key doesn't need them.
+  // Solved-mode content for rows 2 and 3 — always built (so we can
+  // measure them) and conditionally `hide(...)` in non-solved modes.
+  // Hiding keeps the bounding box stable: blank, answer-only, and
+  // worked all reserve identical horizontal/vertical space.
   let show-intermediate = solved and not answer-only
-  let row2-lhs = if show-intermediate { box(ax-bare) } else { [] }
-  let row3-lhs = if solved { $#x-var$ } else { [] }
+  let row2-lhs-solved = box(ax-bare)
+  let row3-lhs-solved = $#x-var$
+  let row2-rhs-solved = $#intermediate$
+  let row3-rhs-solved = $#x-val$
 
-  // Reserve fixed horizontal space on the right of each `=` so solved and
-  // unsolved problems occupy the same bounding box.
-  let slot-width = 2.6em
-  let row1-right = $#c$  // always shown; c is part of the given equation
-  let row2-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if show-intermediate { $#intermediate$ }
-  }))
-  let row3-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if solved { $#x-val$ }
-  }))
+  let row1-rhs = $#c$
+  let row2-lhs = if show-intermediate { row2-lhs-solved } else { hide(row2-lhs-solved) }
+  let row2-rhs = if show-intermediate { row2-rhs-solved } else { hide(row2-rhs-solved) }
+  let row3-lhs = if solved { row3-lhs-solved } else { hide(row3-lhs-solved) }
+  let row3-rhs = if solved { row3-rhs-solved } else { hide(row3-rhs-solved) }
 
-  let content = box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
-    columns: (auto, auto, auto),
-    column-gutter: 0.3em,
-    row-gutter: problem-line-height,
-    align: (right + horizon, center + horizon, left + horizon),
-    row1-lhs, sym.eq, row1-right,
-    row2-lhs, sym.eq, row2-right,
-    row3-lhs, sym.eq, row3-right,
-  ))
-
-  // Self-pad + self-align so the worksheet-grid doesn't have to know
-  // anything style-specific about this component. 0.3cm left / 1.5cm
-  // right — the extra right pad keeps the answer column from kissing
-  // the next cell. right+top to keep the equals-column rhythm.
-  align(right + top, pad(left: 0.3cm, right: 1.5cm, content))
+  equation-rows(
+    (
+      (row1-lhs, row1-rhs),
+      (row2-lhs, row2-rhs),
+      (row3-lhs, row3-rhs),
+    ),
+    col-width: col-width,
+    debug: debug,
+  )
 }

@@ -4,10 +4,10 @@
 //      x² = ___           √x = ___
 //       x = ___            x = ___
 //
-// Six equation forms covering both families. Three-row grid mirrors
-// algebra-two-step so the algebra worksheets feel uniform: row 1 is
-// the given equation, row 2 isolates the squared / rooted term, row
-// 3 is `x = ___`. The `=` column aligns vertically across all rows.
+// Six equation forms covering both families. Three-row layout via
+// `equation-rows` mirrors algebra-two-step so the algebra worksheets
+// feel uniform: row 1 is the given equation, row 2 isolates the
+// squared / rooted term, row 3 is `x = ___`.
 //
 // `data` = (form, b, inner, answer, c)
 //   form = 0 → x² + b = c       (square family, canonical plus)
@@ -20,13 +20,18 @@
 // `inner` = integer beneath the operator (x for squares, √x = r for roots).
 // `answer` = solution shown in row 3 (= inner for squares, = inner² for roots).
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-features, problem-line-height
+#import "/lib/problems/shared.typ": problem-font, problem-text-size-horizontal, problem-features
+#import "/lib/problems/_layouts/equation-rows.typ": equation-rows
 
 // `opts` keys:
 //   variable: string (default "x") — the variable glyph
+//   col-width: auto | length. When auto, each problem self-sizes from
+//     its own rows. Pass an explicit length from the worksheet
+//     template to align `=` across multiple problems.
 // `mode` = "blank" | "worked" | "answer-only".
 #let algebra-square-root-problem(data, mode: "blank", opts: (:), debug: false) = {
   let variable = opts.at("variable", default: "x")
+  let col-width = opts.at("col-width", default: auto)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -47,10 +52,7 @@
     features: problem-features,
   )
   // Math mode pinned to Fira Math — same convention as algebra-two-step.
-  // Keeps multi-digit numbers as single atoms and gives proper √ / ^
-  // metrics.
   show math.equation: set text(font: "Fira Math", features: ())
-  let debug-box = if debug { 1pt + red } else { none }
 
   // Variable in STIX Two Text italic so it reads as a classical LaTeX
   // variable; same rendering as one-step / two-step. Noto Color Emoji
@@ -62,55 +64,42 @@
   )
 
   // The "inner" expression on the LHS — `x²` for square forms,
-  // `√x` for root forms. Both are single math atoms so they slot into
-  // the row-1 equation alongside `+ b` / `− b` without parens.
+  // `√x` for root forms.
   let is-root = form >= 3
   let lhs-inner = if is-root { $sqrt(#x-var)$ } else { $#x-var^2$ }
 
-  // Row 1 LHS depends on form. Wrap in box() to prevent the equation
-  // from breaking across lines under tight cells.
+  // Row 1 LHS depends on form.
   let row1-lhs = box(if form == 0 or form == 3 {
-    // canonical plus
     $#lhs-inner + #b$
   } else if form == 1 or form == 4 {
-    // const-first plus
     $#b + #lhs-inner$
   } else {
-    // forms 2 / 5: canonical minus
     $#lhs-inner - #b$
   })
 
-  // Work-row LHS: when solved, row 2 shows the isolated `x² =` or
-  // `√x =`, then row 3 shows `x = answer`. When unsolved, both rows
-  // are blank for free-form work. Answer-only mode skips row 2 (the
-  // intermediate is scratch work — an answer key doesn't need it) but
-  // keeps row 3 so the answer-page grid aligns with the problem grid.
+  // Solved-mode content for rows 2 and 3 — always built (so we can
+  // measure them) and conditionally `hide(...)` in non-solved modes.
+  // Hiding keeps the bounding box stable across blank / answer-only /
+  // worked: each mode reserves identical horizontal/vertical space.
   let show-intermediate = solved and not answer-only
-  let row2-lhs = if show-intermediate { box(lhs-inner) } else { [] }
-  let row3-lhs = if solved { $#x-var$ } else { [] }
+  let row2-lhs-solved = box(lhs-inner)
+  let row3-lhs-solved = $#x-var$
+  let row2-rhs-solved = $#intermediate$
+  let row3-rhs-solved = $#answer$
 
-  // Reserve a fixed-width slot to the right of each `=` so blank /
-  // worked / answer-only problems share the same bounding box.
-  let slot-width = 2.6em
-  let row1-right = $#c$
-  let row2-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if show-intermediate { $#intermediate$ }
-  }))
-  let row3-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if solved { $#answer$ }
-  }))
+  let row1-rhs = $#c$
+  let row2-lhs = if show-intermediate { row2-lhs-solved } else { hide(row2-lhs-solved) }
+  let row2-rhs = if show-intermediate { row2-rhs-solved } else { hide(row2-rhs-solved) }
+  let row3-lhs = if solved { row3-lhs-solved } else { hide(row3-lhs-solved) }
+  let row3-rhs = if solved { row3-rhs-solved } else { hide(row3-rhs-solved) }
 
-  let content = box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
-    columns: (auto, auto, auto),
-    column-gutter: 0.3em,
-    row-gutter: problem-line-height,
-    align: (right + horizon, center + horizon, left + horizon),
-    row1-lhs, sym.eq, row1-right,
-    row2-lhs, sym.eq, row2-right,
-    row3-lhs, sym.eq, row3-right,
-  ))
-
-  // Self-pad + self-align: same convention as one-step / two-step. The
-  // 1.5cm right pad keeps the answer column from kissing the next cell.
-  align(right + top, pad(left: 0.3cm, right: 1.5cm, content))
+  equation-rows(
+    (
+      (row1-lhs, row1-rhs),
+      (row2-lhs, row2-rhs),
+      (row3-lhs, row3-rhs),
+    ),
+    col-width: col-width,
+    debug: debug,
+  )
 }

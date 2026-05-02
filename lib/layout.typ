@@ -45,6 +45,16 @@
       columns: range(num-cols).map(_ => 1fr),
       rows: range(num-rows).map(_ => 1fr),
       stroke: debug-grid,
+      // Center each problem horizontally in its cell. When a
+      // component's bounding box is symmetric around `=` (col1 = col3
+      // in `equation-rows`), centering puts `=` at the cell's
+      // horizontal center — and since every cell is the same 1fr
+      // width, that's the same x-coordinate across the whole column.
+      // So `=` signs line up vertically without the worksheet
+      // template having to pre-compute uniform col-widths and pass
+      // them down. Vertical alignment stays at the top so the rows
+      // read naturally and the writing space stays below the problem.
+      align: center + top,
       ..range(num-problems).map(idx => {
         component(problems.at(idx), mode: mode-at(idx), opts: opts, debug: debug)
       })
