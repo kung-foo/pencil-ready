@@ -4,6 +4,13 @@
 // Enums are declared as `const` arrays of string literals and the TypeScript
 // types are derived via `(typeof X)[number]`, so each enum lives in exactly
 // one place and can be iterated for select-option rendering.
+//
+// Some kinds use the concept-level system (`lib/levels.ts`) instead of
+// exposing raw params: the configurator emits `?level=...` to the
+// browser URL, and `worksheetUrl()` expands it back to the raw params
+// the server expects.
+
+import { levelParams } from "./levels";
 
 export const FORMATS = ["pdf", "png", "svg"] as const;
 export type Format = (typeof FORMATS)[number];
@@ -34,6 +41,9 @@ export const WORKSHEET_KINDS = [
     "algebra-one-step",
     "algebra-two-step",
     "algebra-square-root",
+    "decimal-add",
+    "decimal-subtract",
+    "decimal-multiply",
 ] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
 
@@ -69,7 +79,11 @@ export type KindConfig =
     | { kind: "subtract"; digits?: string; borrow?: BorrowMode }
     | { kind: "multiply"; digits?: string }
     | { kind: "simple-divide"; max_quotient?: number }
-    | { kind: "long-divide"; digits?: string; remainder?: boolean }
+    | {
+          kind: "long-divide";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
     | {
           kind: "mult-drill";
           multiplicand?: string;
@@ -105,27 +119,35 @@ export type KindConfig =
       }
     | {
           kind: "algebra-two-step";
-          a_range?: string;
-          b_range?: string;
-          x_range?: string;
-          implicit?: boolean;
-          mix_forms?: boolean;
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
       }
     | {
           kind: "algebra-one-step";
-          a_range?: string;
-          b_range?: string;
-          x_range?: string;
-          add?: boolean;
-          subtract?: boolean;
-          multiply?: boolean;
-          divide?: boolean;
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
       }
     | {
           kind: "algebra-square-root";
           b_range?: string;
           squares?: boolean;
           roots?: boolean;
+      }
+    | {
+          kind: "decimal-add";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "decimal-subtract";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "decimal-multiply";
+          /** Concept-level preset id (see `lib/levels.ts`). Expanded to
+           * raw multiplier/digit params at API-fetch time. */
+          level?: string;
       };
 
 export type WorksheetConfig = SharedConfig & KindConfig;
@@ -187,12 +209,7 @@ export function parseConfig(
         case "simple-divide":
             return { ...shared, kind, max_quotient: n("max_quotient") };
         case "long-divide":
-            return {
-                ...shared,
-                kind,
-                digits: s("digits"),
-                remainder: b("remainder"),
-            };
+            return { ...shared, kind, level: s("level") };
         case "mult-drill":
             return {
                 ...shared,
@@ -243,27 +260,9 @@ export function parseConfig(
                 proper_only: b("proper_only"),
             };
         case "algebra-two-step":
-            return {
-                ...shared,
-                kind,
-                a_range: s("a_range"),
-                b_range: s("b_range"),
-                x_range: s("x_range"),
-                implicit: b("implicit"),
-                mix_forms: b("mix_forms"),
-            };
+            return { ...shared, kind, level: s("level") };
         case "algebra-one-step":
-            return {
-                ...shared,
-                kind,
-                a_range: s("a_range"),
-                b_range: s("b_range"),
-                x_range: s("x_range"),
-                add: b("add"),
-                subtract: b("subtract"),
-                multiply: b("multiply"),
-                divide: b("divide"),
-            };
+            return { ...shared, kind, level: s("level") };
         case "algebra-square-root":
             return {
                 ...shared,
@@ -271,6 +270,15 @@ export function parseConfig(
                 b_range: s("b_range"),
                 squares: b("squares"),
                 roots: b("roots"),
+            };
+        case "decimal-add":
+        case "decimal-subtract":
+            return { ...shared, kind, level: s("level") };
+        case "decimal-multiply":
+            return {
+                ...shared,
+                kind,
+                level: s("level"),
             };
     }
 }
@@ -286,12 +294,28 @@ function asEnum<T extends readonly string[]>(
 
 /** Build the API URL the server serves for a given config. Names are
  * appended here (not in `configToSearchParams`) so they reach the server
- * without polluting the shareable browser URL. */
+ * without polluting the shareable browser URL.
+ *
+ * For kinds that use the level system (`lib/levels.ts`), the `level=...`
+ * query param is replaced with the level's raw params (digits,
+ * decimal_places, etc.) so the server — which knows nothing about
+ * levels — receives the expanded form. The browser URL still shows just
+ * `?level=...` (set by `configToSearchParams`). */
 export function worksheetUrl(
     cfg: WorksheetConfig,
     names?: { student?: string },
 ): string {
     const qs = configToSearchParams(cfg);
+    const levelValue = qs.get("level");
+    if (levelValue) {
+        const expanded = levelParams(cfg.kind, levelValue);
+        if (expanded) {
+            qs.delete("level");
+            for (const [k, v] of Object.entries(expanded)) {
+                qs.set(k, String(v));
+            }
+        }
+    }
     if (names?.student) qs.set("student_name", names.student);
     const s = qs.toString();
     return `/api/worksheets/${cfg.kind}${s ? `?${s}` : ""}`;

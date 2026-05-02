@@ -273,6 +273,80 @@ the user, not by the assistant — there's a corresponding rule in
 `CLAUDE.md`. When stories fail in the assistant's flow, surface the
 diff paths and stop.
 
+## Concept levels
+
+Some worksheet kinds expose their configuration through a small set
+of named **levels** instead of raw parameter knobs. Each level is a
+curated preset — a handful of underlying params bundled under a
+concept-flavored label and an example problem — and the configurator
+shows them as a vertical picker with one selectable row per level.
+
+- Definitions live in [`frontend/astro/src/lib/levels.ts`](./frontend/astro/src/lib/levels.ts).
+- The browser URL stores `?level=N` (1-based index, consistent across
+  kinds — `level=1` always means "first concept of whatever you're
+  on"). `worksheetUrl()` expands that to the raw query params the
+  server expects, so the backend remains unaware of levels.
+- Level labels are concept-flavored, not difficulty-flavored
+  ("Tenths × whole", "Plus & minus", "Smaller values"). The student
+  is expected to work through *all* the levels — labels avoid
+  "easy/medium/hard" or "challenge" framing that would imply level 3
+  is bonus content.
+
+### When to use levels
+
+Use levels when one or more of these is true:
+
+- **Many invalid combinations.** Decimal multiplication's full param
+  matrix (`top digits` × `top dp` × `multiplier digits` × `multiplier
+  dp`) has plenty of unproductive combos (4-dp top × 4-dp bottom = 8
+  decimal places in the answer, won't fit a cell). A curated set of
+  three concrete shapes is cleaner than a slider grid.
+- **Curriculum has a natural progression.** Decimal addition: tenths
+  → hundredths. One-step equations: additive inverse → multiplicative
+  inverse → both. Two-step: smaller values → larger values. Picking
+  the right level is "where is the student in the curriculum",
+  which a parent can answer.
+- **The shape can change between levels, not just magnitude.** Long
+  division: 2-digit / 3-digit / 4-digit-with-remainders are different
+  enough algorithms to warrant their own preset (and own
+  problem-count + columns).
+
+### When NOT to use levels
+
+Stick with raw knobs (text inputs, range sliders, toggles) when:
+
+- **The param space is small and every combo is meaningful.**
+  Algebra-square-root has just two toggles (squares, roots) and all
+  three combinations (squares only, roots only, both) are valid.
+  Levels would add ceremony without simplifying.
+- **The teacher's intent is targeted, not progression-shaped.**
+  Multiplication / division drills are about picking *which specific
+  table* to drill ("the 7s today"). A teacher wants the input box,
+  not three preset levels.
+- **A single linear axis already maps cleanly to a slider.** Simple
+  division's `max_quotient` is already one slider — wrapping it in
+  three levels is overhead.
+
+### Adding levels to a new worksheet kind
+
+1. Add an entry under `WORKSHEET_LEVELS` in `lib/levels.ts` — a
+   `Level[]` with `label`, optional `example`, and a `params` dict
+   that maps to the kind's raw query params.
+2. Update the kind's TS config type in `lib/api.ts` to
+   `{ kind: "...", level?: string }` and its case in `parseConfig`
+   to read just `level: s("level")`.
+3. Replace its `case` in `WorksheetConfig.tsx`'s `KindSpecific`
+   switch with the shared `<LevelPicker>` call (the existing cases
+   for `decimal-multiply` etc. are the template).
+4. Add the kind to the `levelKinds` list in
+   `WorksheetIsland.tsx`'s `applyFirstVisitDefaults` so first-visit
+   loads default to level 1.
+
+The Rust server stays untouched — levels are a frontend concern and
+the API still accepts the raw params directly. That escape hatch is
+deliberate: a future "advanced mode" UI can reintroduce raw knobs
+without server work.
+
 ## Brand
 
 Logo, palette, and the pixel-pencil underline used on the web header

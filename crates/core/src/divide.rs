@@ -27,6 +27,8 @@ pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             pad_width: 0,
             implicit: false,
             variable: "x".to_string(),
+            decimal_places: Vec::new(),
+            reserve_remainder: false,
         },
     })
 }
@@ -61,6 +63,8 @@ pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             pad_width: 0,
             implicit: false,
             variable: "x".to_string(),
+            decimal_places: Vec::new(),
+            reserve_remainder: false,
         },
     })
 }

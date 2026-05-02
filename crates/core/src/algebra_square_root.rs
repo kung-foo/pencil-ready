@@ -63,6 +63,8 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             pad_width: 0,
             implicit: false,
             variable,
+            decimal_places: Vec::new(),
+            reserve_remainder: false,
         },
     })
 }

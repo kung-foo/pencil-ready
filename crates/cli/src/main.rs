@@ -462,6 +462,78 @@ enum Command {
         include_whole: bool,
     },
 
+    /// Decimal column addition (e.g. 1.23 + 4.56)
+    DecimalAdd {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "12")]
+        problems: u32,
+
+        #[arg(long, default_value = "4")]
+        cols: u32,
+
+        /// Integer-part digits per operand, comma-separated. e.g. "2,2" or "1-2,1-2".
+        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::fixed(2), DigitRange::fixed(2)])]
+        digits: Vec<DigitRange>,
+
+        /// Decimal places shared by every operand and answer (1-4).
+        #[arg(long, default_value = "2")]
+        decimal_places: u32,
+    },
+
+    /// Decimal column subtraction (e.g. 5.67 − 1.23)
+    DecimalSubtract {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "12")]
+        problems: u32,
+
+        #[arg(long, default_value = "4")]
+        cols: u32,
+
+        #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::fixed(2), DigitRange::fixed(2)])]
+        digits: Vec<DigitRange>,
+
+        #[arg(long, default_value = "2")]
+        decimal_places: u32,
+    },
+
+    /// Decimal multiplication. Whole multiplier (e.g. 2.5 × 3) by
+    /// default; pass --bottom-decimal-places > 0 for decimal × decimal
+    /// (e.g. 123.4 × 5.6).
+    DecimalMultiply {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "12")]
+        problems: u32,
+
+        #[arg(long, default_value = "4")]
+        cols: u32,
+
+        /// Integer-part digit count of the top (decimal) operand.
+        #[arg(long, default_value = "2")]
+        digits: DigitRange,
+
+        /// Decimal places on the top operand (1-4).
+        #[arg(long, default_value = "1")]
+        decimal_places: u32,
+
+        /// Multiplier integer-part minimum value (0-99).
+        #[arg(long, default_value = "2")]
+        multiplier_min: u32,
+
+        /// Multiplier integer-part maximum value (0-99).
+        #[arg(long, default_value = "9")]
+        multiplier_max: u32,
+
+        /// Decimal places on the multiplier. 0 = whole number (default).
+        #[arg(long, default_value = "0")]
+        bottom_decimal_places: u32,
+    },
+
     /// Generate a multi-page PDF with one of each worksheet type.
     ///
     /// All worksheets use their defaults plus --solve-first and --seed 42
@@ -691,6 +763,57 @@ fn resolve(command: Command) -> Resolved {
                 max_numerator,
                 include_improper: !proper_only,
                 include_whole,
+            },
+        },
+        Command::DecimalAdd {
+            global,
+            problems,
+            cols,
+            digits,
+            decimal_places,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::DecimalAdd {
+                digits,
+                decimal_places,
+            },
+        },
+        Command::DecimalSubtract {
+            global,
+            problems,
+            cols,
+            digits,
+            decimal_places,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::DecimalSubtract {
+                digits,
+                decimal_places,
+            },
+        },
+        Command::DecimalMultiply {
+            global,
+            problems,
+            cols,
+            digits,
+            decimal_places,
+            multiplier_min,
+            multiplier_max,
+            bottom_decimal_places,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::DecimalMultiply {
+                digits,
+                decimal_places,
+                multiplier_min,
+                multiplier_max,
+                bottom_decimal_places,
             },
         },
         Command::All { .. } => unreachable!("Command::All is handled before resolve()"),
@@ -933,6 +1056,36 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             8,
             2,
         ),
+        (
+            "decimal-add",
+            WorksheetType::DecimalAdd {
+                digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+                decimal_places: 2,
+            },
+            12,
+            4,
+        ),
+        (
+            "decimal-subtract",
+            WorksheetType::DecimalSubtract {
+                digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+                decimal_places: 2,
+            },
+            12,
+            4,
+        ),
+        (
+            "decimal-multiply",
+            WorksheetType::DecimalMultiply {
+                digits: DigitRange::fixed(2),
+                decimal_places: 1,
+                multiplier_min: 2,
+                multiplier_max: 9,
+                bottom_decimal_places: 0,
+            },
+            12,
+            4,
+        ),
     ];
 
     let mut bodies = Vec::with_capacity(sheets.len());
@@ -964,6 +1117,9 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/algebra/square-root.typ": algebra-square-root-problem
+#import "/lib/problems/decimal/add.typ": decimal-add-problem
+#import "/lib/problems/decimal/subtract.typ": decimal-subtract-problem
+#import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)

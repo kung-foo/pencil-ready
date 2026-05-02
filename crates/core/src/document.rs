@@ -45,6 +45,13 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
         WorksheetType::AlgebraOneStep { .. } => 6.0,
         WorksheetType::AlgebraSquareRoot { .. } => 6.0,
+        // Decimal worksheets: max_digits is already the encoded digit
+        // count (int + dp); add 1 for the decimal point.
+        WorksheetType::DecimalAdd { .. }
+        | WorksheetType::DecimalSubtract { .. }
+        | WorksheetType::DecimalMultiply { .. } => {
+            f64::max(2.5, (max_digits + 1) as f64 * 0.55 + 0.4)
+        }
         _ => f64::max(2.2, max_digits as f64 * 0.55 + 0.6),
     }
 }
@@ -94,6 +101,23 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
             r = opts.answer_rows,
             p = opts.pad_width,
         ),
+        WorksheetType::DecimalAdd { .. }
+        | WorksheetType::DecimalSubtract { .. }
+        | WorksheetType::DecimalMultiply { .. } => {
+            let dp_inner = opts
+                .decimal_places
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            // Typst array: trailing comma forces 1-tuple-as-array syntax
+            // when there's a single entry; harmless for longer arrays.
+            format!(
+                "operator: {operator_arg}, width: {w}cm, decimal-places: ({dp},)",
+                w = opts.width_cm,
+                dp = dp_inner,
+            )
+        }
         WorksheetType::LongDivision { .. } => format!(
             "width: {w}cm, answer-rows: {r}",
             w = opts.width_cm,
@@ -281,6 +305,9 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/algebra/square-root.typ": algebra-square-root-problem
 #import "/lib/problems/fraction/equivalence.typ": fraction-equivalence-problem
+#import "/lib/problems/decimal/add.typ": decimal-add-problem
+#import "/lib/problems/decimal/subtract.typ": decimal-subtract-problem
+#import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
 
 #set document(
   title: "{doc_title}",

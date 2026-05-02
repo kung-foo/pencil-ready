@@ -7,6 +7,9 @@ mod add;
 mod algebra_one_step;
 mod algebra_square_root;
 mod algebra_two_step;
+mod decimal_add;
+mod decimal_mult;
+mod decimal_sub;
 mod div_drill;
 mod divide;
 mod fraction_equiv;
@@ -259,6 +262,43 @@ pub enum WorksheetType {
         /// Include `√x ± b = c` problems.
         roots: bool,
     },
+    /// Decimal column addition. Operands and answer all share the same
+    /// number of decimal places, so the printed decimal points line up
+    /// column-wise. Values flow through `Sheet.problems` as scaled
+    /// integers (e.g. `1.23` → `123`), and the typst component
+    /// re-introduces the decimal point at render time using the
+    /// `decimal-places` opt.
+    DecimalAdd {
+        /// Per-operand integer-part digit count (e.g. `2,2` for two
+        /// 2-digit-integer operands). Length determines operand count.
+        digits: Vec<DigitRange>,
+        /// Decimal places shared by every operand and the answer.
+        decimal_places: u32,
+    },
+    /// Decimal column subtraction. Always 2 operands; first is always ≥
+    /// second so the answer is non-negative. Same encoding as
+    /// `DecimalAdd`.
+    DecimalSubtract {
+        digits: Vec<DigitRange>,
+        decimal_places: u32,
+    },
+    /// Decimal multiplication. Top operand has `decimal_places` dp, the
+    /// multiplier (bottom) has `bottom_decimal_places` (0 = whole), and
+    /// the answer's dp is the sum. Single answer-row layout — partial
+    /// products with the dp shift come later.
+    DecimalMultiply {
+        /// Integer-part digit count of the top (decimal) operand.
+        digits: DigitRange,
+        /// Decimal places on the top operand.
+        decimal_places: u32,
+        /// Multiplier integer-part value range (e.g. 2..=9). Inclusive.
+        /// When `bottom_decimal_places > 0` these bound the integer
+        /// part; the random fractional part is drawn separately.
+        multiplier_min: u32,
+        multiplier_max: u32,
+        /// Decimal places on the multiplier. 0 = whole number.
+        bottom_decimal_places: u32,
+    },
 }
 
 impl WorksheetType {
@@ -279,6 +319,9 @@ impl WorksheetType {
             WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
             WorksheetType::FractionEquiv { .. } => "fraction-equivalence-problem",
             WorksheetType::AlgebraSquareRoot { .. } => "algebra-square-root-problem",
+            WorksheetType::DecimalAdd { .. } => "decimal-add-problem",
+            WorksheetType::DecimalSubtract { .. } => "decimal-subtract-problem",
+            WorksheetType::DecimalMultiply { .. } => "decimal-multiply-problem",
         }
     }
 
@@ -383,6 +426,15 @@ impl WorksheetType {
                 let w = if b_range.max <= 30 { 7.3 } else { 8.0 };
                 (w, 4.1)
             }
+
+            // Decimal worksheets: `max_digits` is the encoded digit
+            // count (integer + dp), so visible-glyph count is
+            // max_digits + 1 (the decimal point). Single answer-row.
+            WorksheetType::DecimalAdd { .. }
+            | WorksheetType::DecimalSubtract { .. }
+            | WorksheetType::DecimalMultiply { .. } => {
+                (decimal_stack_width(max_digits + 1), 3.5)
+            }
         }
     }
 
@@ -467,6 +519,31 @@ impl WorksheetType {
             WorksheetType::AlgebraSquareRoot { b_range, .. } => {
                 document::digit_count(100u32.max(b_range.max))
             }
+            // Decimal worksheets — encoded digit count (integer part +
+            // decimal places). The widest sum's integer part can be 1
+            // wider than its operands' (carry); decimal_places is on
+            // top of that.
+            WorksheetType::DecimalAdd {
+                digits,
+                decimal_places,
+            } => digits.iter().map(|r| r.max).max().unwrap_or(2) + 1 + *decimal_places,
+            WorksheetType::DecimalSubtract {
+                digits,
+                decimal_places,
+            } => digits.iter().map(|r| r.max).max().unwrap_or(2) + *decimal_places,
+            // Decimal multiply: encoded answer up to top_max * bot_max
+            // = 10^(top_int+top_dp+bot_int+bot_dp). The bot integer
+            // digit count comes from `multiplier_max`.
+            WorksheetType::DecimalMultiply {
+                digits,
+                decimal_places,
+                multiplier_max,
+                bottom_decimal_places,
+                ..
+            } => {
+                let bot_int = document::digit_count((*multiplier_max).max(1));
+                digits.max + decimal_places + bot_int + bottom_decimal_places
+            }
         }
     }
 }
@@ -479,6 +556,20 @@ fn vertical_stack_width(max_digits: u32) -> f32 {
         3 => 2.6,
         4 => 3.1,
         _ => 3.7, // 5+ digits
+    }
+}
+
+/// Width for decimal-stack cells. `total_glyphs` counts integer digits +
+/// decimal point + decimal places. Roughly 0.55cm per glyph plus a small
+/// padding allowance.
+fn decimal_stack_width(total_glyphs: u32) -> f32 {
+    match total_glyphs {
+        0..=3 => 2.8,
+        4 => 3.1,
+        5 => 3.6,
+        6 => 4.1,
+        7 => 4.6,
+        _ => 5.2,
     }
 }
 
@@ -701,7 +792,7 @@ impl Chrome {
 /// matches once. The redundancy with `WorksheetType`'s discriminator
 /// is real but represents a different dimension (which layout
 /// primitive, not which problems).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ComponentOpts {
     /// Typst expression yielding the operator content (e.g.
     /// `"sym.plus"`). Empty string for long-division.
@@ -725,6 +816,14 @@ pub struct ComponentOpts {
     /// Variable glyph in algebra problems. Validated to a single
     /// unicode scalar upstream.
     pub variable: String,
+    /// Per-slot decimal places, one entry per number in each problem
+    /// tuple (operands + answer). Empty for non-decimal worksheets.
+    pub decimal_places: Vec<u32>,
+    /// Long-division only: when true, every cell reserves overline
+    /// width for the worst-case `Q r N` answer, so brackets render
+    /// uniformly across cells even when individual problems have no
+    /// remainder.
+    pub reserve_remainder: bool,
 }
 
 /// Pure data a generator produces. Zero awareness of chrome or paging
@@ -774,6 +873,9 @@ impl Document {
             WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
             WorksheetType::FractionEquiv { .. } => fraction_equiv::generate(params)?,
             WorksheetType::AlgebraSquareRoot { .. } => algebra_square_root::generate(params)?,
+            WorksheetType::DecimalAdd { .. } => decimal_add::generate(params)?,
+            WorksheetType::DecimalSubtract { .. } => decimal_sub::generate(params)?,
+            WorksheetType::DecimalMultiply { .. } => decimal_mult::generate(params)?,
         };
         let chrome = Chrome::from_params(params);
         let max_digits = sheet.worksheet.max_digits_bound();
@@ -1175,6 +1277,49 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 );
             }
         }
+        WorksheetType::DecimalAdd {
+            digits,
+            decimal_places,
+        } => {
+            validate_digit_ranges(digits)?;
+            validate_decimal_places(*decimal_places)?;
+        }
+        WorksheetType::DecimalSubtract {
+            digits,
+            decimal_places,
+        } => {
+            validate_digit_ranges(digits)?;
+            if digits.len() > 2 {
+                bail!(
+                    "decimal subtract supports max 2 operands, got {}",
+                    digits.len()
+                );
+            }
+            validate_decimal_places(*decimal_places)?;
+        }
+        WorksheetType::DecimalMultiply {
+            digits,
+            decimal_places,
+            multiplier_min,
+            multiplier_max,
+            bottom_decimal_places,
+        } => {
+            validate_digit_range(*digits, "decimal multiply top operand")?;
+            validate_decimal_places(*decimal_places)?;
+            // Multiplier integer part 0-99. With bottom_decimal_places=0
+            // and min=0 the multiplier could be 0 — students get the
+            // trivial × 0 = 0 case but it isn't a generation failure.
+            if *multiplier_max > 99 || multiplier_min > multiplier_max {
+                bail!(
+                    "multiplier integer part must be 0-99 with min ≤ max, got {multiplier_min}-{multiplier_max}"
+                );
+            }
+            if *bottom_decimal_places > 4 {
+                bail!(
+                    "bottom-decimal-places must be 0-4, got {bottom_decimal_places}"
+                );
+            }
+        }
         WorksheetType::AlgebraSquareRoot {
             b_range,
             variable,
@@ -1250,6 +1395,13 @@ fn validate_digit_range(r: DigitRange, label: &str) -> Result<()> {
 fn validate_max_quotient(mq: u32) -> Result<()> {
     if mq < 2 || mq > 12 {
         bail!("max-quotient must be 2-12, got {mq}");
+    }
+    Ok(())
+}
+
+fn validate_decimal_places(dp: u32) -> Result<()> {
+    if dp == 0 || dp > 4 {
+        bail!("decimal-places must be 1-4, got {dp}");
     }
     Ok(())
 }
@@ -1354,6 +1506,8 @@ mod tests {
                 pad_width: 0,
                 implicit: false,
                 variable: "x".to_string(),
+                decimal_places: Vec::new(),
+                reserve_remainder: false,
             },
         };
         let chrome = Chrome {

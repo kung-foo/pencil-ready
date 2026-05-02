@@ -590,6 +590,95 @@ impl AlgebraOneStepSpecific {
     }
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct DecimalAddSpecific {
+    /// Comma-separated integer-part digit counts per operand (e.g. "2,2").
+    #[serde(default)]
+    #[param(value_type = String, example = "2,2")]
+    digits: Option<String>,
+    /// Decimal places shared by every operand and answer (1-4).
+    #[serde(default)]
+    decimal_places: Option<u32>,
+}
+
+impl DecimalAddSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::DecimalAdd {
+                digits: digits_or(self.digits, &[2, 2])?,
+                decimal_places: self.decimal_places.unwrap_or(2),
+            },
+            12,
+            4,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct DecimalSubtractSpecific {
+    #[serde(default)]
+    #[param(value_type = String, example = "2,2")]
+    digits: Option<String>,
+    #[serde(default)]
+    decimal_places: Option<u32>,
+}
+
+impl DecimalSubtractSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::DecimalSubtract {
+                digits: digits_or(self.digits, &[2, 2])?,
+                decimal_places: self.decimal_places.unwrap_or(2),
+            },
+            12,
+            4,
+        ))
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct DecimalMultiplySpecific {
+    /// Integer-part digit count of the top decimal operand. "N" or "N-M".
+    #[serde(default)]
+    #[param(value_type = String, example = "2")]
+    digits: Option<String>,
+    /// Decimal places on the top operand (1-4).
+    #[serde(default)]
+    decimal_places: Option<u32>,
+    /// Multiplier integer-part minimum value (0-99).
+    #[serde(default)]
+    multiplier_min: Option<u32>,
+    /// Multiplier integer-part maximum value (0-99).
+    #[serde(default)]
+    multiplier_max: Option<u32>,
+    /// Decimal places on the multiplier. 0 = whole number (default).
+    #[serde(default)]
+    bottom_decimal_places: Option<u32>,
+}
+
+impl DecimalMultiplySpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let digits = match self.digits {
+            Some(s) => parse_digit_range(&s, "digits")?,
+            None => DigitRange::fixed(2),
+        };
+        Ok(shared.fold(
+            WorksheetType::DecimalMultiply {
+                digits,
+                decimal_places: self.decimal_places.unwrap_or(1),
+                multiplier_min: self.multiplier_min.unwrap_or(2),
+                multiplier_max: self.multiplier_max.unwrap_or(9),
+                bottom_decimal_places: self.bottom_decimal_places.unwrap_or(0),
+            },
+            12,
+            4,
+        ))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
@@ -967,6 +1056,54 @@ async fn handle_algebra_square_root(
     render(&s, "algebra-square-root", p.build(shared), &headers)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/decimal-add",
+    params(SharedParams, DecimalAddSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_decimal_add(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<DecimalAddSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "decimal-add", p.build(shared), &headers)
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/decimal-subtract",
+    params(SharedParams, DecimalSubtractSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_decimal_subtract(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<DecimalSubtractSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "decimal-subtract", p.build(shared), &headers)
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/decimal-multiply",
+    params(SharedParams, DecimalMultiplySpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_decimal_multiply(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<DecimalMultiplySpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "decimal-multiply", p.build(shared), &headers)
+}
+
 // ---------------------------------------------------------------------------
 // Umami analytics proxy
 // ---------------------------------------------------------------------------
@@ -1239,6 +1376,9 @@ async fn main() {
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .routes(routes!(handle_algebra_square_root))
+        .routes(routes!(handle_decimal_add))
+        .routes(routes!(handle_decimal_subtract))
+        .routes(routes!(handle_decimal_multiply))
         .with_state(state.clone())
         .split_for_parts();
 

@@ -1,25 +1,30 @@
-//! Multiplication worksheet.
+//! Decimal subtraction worksheet.
+//!
+//! Same encoding as `decimal_add`: scaled integers, uniform
+//! `decimal_places` per worksheet. First operand is always ≥ second so
+//! the answer is non-negative.
 
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
 pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
-    let problems = generate_problems(params);
-    // Space needed below the line for partial products + final answer.
-    //   1-digit multiplier → 1 row (just the product)
-    //   N-digit multiplier (N ≥ 2) → N partials + 1 final sum = N+1 rows
-    let max_multiplier = problems.iter().map(|nums| nums[1]).max().unwrap_or(0);
-    let mult_digits = if max_multiplier == 0 {
-        1
-    } else {
-        max_multiplier.ilog10() + 1
+    let (digits, decimal_places) = match &params.worksheet {
+        WorksheetType::DecimalSubtract {
+            digits,
+            decimal_places,
+        } => (digits.clone(), *decimal_places),
+        _ => unreachable!(),
     };
-    let answer_rows = if mult_digits <= 1 { 1 } else { mult_digits + 1 };
+
+    let problems = generate_problems(&digits, decimal_places, params);
     let max_digits = document::max_digits(&problems);
     let operator = params
         .symbol
         .clone()
-        .unwrap_or_else(|| "sym.times".to_string());
+        .unwrap_or_else(|| "sym.minus".to_string());
+
+    let dp_list = vec![decimal_places; digits.len() + 1];
+
     Ok(Sheet {
         worksheet: params.worksheet.clone(),
         problems,
@@ -27,28 +32,34 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             operator,
             divide_operator: String::new(),
             width_cm: document::box_width_cm(&params.worksheet, max_digits),
-            answer_rows,
+            answer_rows: 1,
             pad_width: 0,
             implicit: false,
             variable: "x".to_string(),
-            decimal_places: Vec::new(),
+            decimal_places: dp_list,
             reserve_remainder: false,
         },
     })
 }
 
-fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
-    let digits = match &params.worksheet {
-        WorksheetType::Multiply { digits } => digits,
-        _ => unreachable!(),
-    };
-
+fn generate_problems(
+    digits: &[crate::DigitRange],
+    decimal_places: u32,
+    params: &WorksheetParams,
+) -> Vec<Vec<u32>> {
     use rand::rngs::SmallRng;
-    use rand::SeedableRng;
+    use rand::{Rng, SeedableRng};
 
     let mut rng = match params.seed {
         Some(s) => SmallRng::seed_from_u64(s),
         None => SmallRng::from_entropy(),
+    };
+
+    let scale = 10u32.pow(decimal_places);
+    let pick = |range: crate::DigitRange, rng: &mut SmallRng| -> u32 {
+        let int_part = range.random(rng);
+        let frac = rng.gen_range(0..scale);
+        int_part * scale + frac
     };
 
     let top_range = digits[0];
@@ -60,11 +71,13 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
     let mut attempts = 0;
 
     while problems.len() < total as usize && attempts < max_attempts {
-        let a = top_range.random(&mut rng);
-        let b = bot_range.random(&mut rng);
-        let candidate = vec![a, b];
+        let mut a = pick(top_range, &mut rng);
+        let mut b = pick(bot_range, &mut rng);
         attempts += 1;
-
+        if a < b {
+            std::mem::swap(&mut a, &mut b);
+        }
+        let candidate = vec![a, b];
         if !problems.contains(&candidate) {
             problems.push(candidate);
         }
@@ -72,11 +85,8 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
 
     crate::pad_with_duplicates(&mut problems, total as usize, &mut rng);
 
-    // Append the product so the typst component can render the final
-    // answer in solved mode. (Partial products for multi-digit multipliers
-    // aren't filled in — only the bottom line.)
     problems
         .into_iter()
-        .map(|nums| vec![nums[0], nums[1], nums[0] * nums[1]])
+        .map(|nums| vec![nums[0], nums[1], nums[0] - nums[1]])
         .collect()
 }

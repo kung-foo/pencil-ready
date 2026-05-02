@@ -11,6 +11,7 @@ import {
     type WorksheetConfig,
     type WorksheetKind,
 } from "@/lib/api";
+import { defaultLevel } from "@/lib/levels";
 import { useNames } from "@/lib/useNames";
 import { useWorksheet } from "@/lib/useWorksheet";
 
@@ -39,21 +40,25 @@ function applyFirstVisitDefaults(
     cfg: WorksheetConfig,
     search: URLSearchParams,
 ): WorksheetConfig {
-    if (cfg.kind === "algebra-one-step") {
-        const noToggleInUrl =
-            !search.has("add") &&
-            !search.has("subtract") &&
-            !search.has("multiply") &&
-            !search.has("divide");
-        if (noToggleInUrl) {
-            return { ...cfg, add: true, subtract: true };
-        }
-    }
     if (cfg.kind === "algebra-square-root") {
         const noToggleInUrl = !search.has("squares") && !search.has("roots");
         if (noToggleInUrl) {
             return { ...cfg, squares: true, roots: true };
         }
+    }
+    // Kinds that use the level system: seed with the first level when
+    // none is in the URL, so the API URL expands to a concrete preset
+    // rather than relying on server fallback defaults.
+    const levelKinds: WorksheetKind[] = [
+        "decimal-add",
+        "decimal-subtract",
+        "decimal-multiply",
+        "algebra-one-step",
+        "algebra-two-step",
+        "long-divide",
+    ];
+    if (levelKinds.includes(cfg.kind) && !search.has("level")) {
+        return { ...cfg, level: defaultLevel(cfg.kind) };
     }
     return cfg;
 }

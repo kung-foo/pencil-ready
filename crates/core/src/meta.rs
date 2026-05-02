@@ -92,6 +92,12 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::FractionEquiv { .. }, Form::Slug) => "equivalent-fractions",
         (WorksheetType::AlgebraSquareRoot { .. }, Form::Title) => "Squares and Square Roots",
         (WorksheetType::AlgebraSquareRoot { .. }, Form::Slug) => "squares-and-square-roots",
+        (WorksheetType::DecimalAdd { .. }, Form::Title) => "Decimal addition",
+        (WorksheetType::DecimalAdd { .. }, Form::Slug) => "decimal-addition",
+        (WorksheetType::DecimalSubtract { .. }, Form::Title) => "Decimal subtraction",
+        (WorksheetType::DecimalSubtract { .. }, Form::Slug) => "decimal-subtraction",
+        (WorksheetType::DecimalMultiply { .. }, Form::Title) => "Decimal multiplication",
+        (WorksheetType::DecimalMultiply { .. }, Form::Slug) => "decimal-multiplication",
     }
 }
 

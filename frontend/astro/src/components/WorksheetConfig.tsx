@@ -33,6 +33,7 @@ import {
     FORMATS,
     type WorksheetConfig,
 } from "@/lib/api";
+import { levelsFor, defaultLevel, type Level } from "@/lib/levels";
 import type { Names } from "@/lib/useNames";
 
 export function WorksheetConfigPanel({
@@ -533,30 +534,6 @@ function KindSpecific({
                 />
             );
 
-        case "long-divide": {
-            const [dLo, dHi] = dashToRange(cfg.digits, [3, 3]);
-            return (
-                <div className="space-y-4">
-                    <RangeSliderField
-                        label="Dividend digits"
-                        min={1}
-                        max={6}
-                        value={[dLo, dHi]}
-                        onCommit={([lo, hi]) =>
-                            patch("digits", rangeToDash(lo, hi))
-                        }
-                    />
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="remainder">Allow remainders</Label>
-                        <Switch
-                            id="remainder"
-                            checked={cfg.remainder ?? false}
-                            onCheckedChange={(v) => patch("remainder", v)}
-                        />
-                    </div>
-                </div>
-            );
-        }
 
         case "mult-drill": {
             const [mLo, mHi] = dashToRange(cfg.multiplier, [1, 10]);
@@ -675,128 +652,20 @@ function KindSpecific({
             );
         }
 
-        case "algebra-two-step": {
-            const [aLo, aHi] = dashToRange(cfg.a_range, [2, 10]);
-            const [bLo, bHi] = dashToRange(cfg.b_range, [1, 30]);
-            const [xLo, xHi] = dashToRange(cfg.x_range, [0, 20]);
+        case "long-divide":
+        case "algebra-two-step":
+        case "algebra-one-step":
+        case "decimal-add":
+        case "decimal-subtract":
+        case "decimal-multiply": {
+            const levels = levelsFor(cfg.kind) ?? [];
+            const current = cfg.level ?? defaultLevel(cfg.kind);
             return (
-                <div className="space-y-4">
-                    <RangeSliderField
-                        label="Coefficient (a)"
-                        min={2}
-                        max={20}
-                        value={[aLo, aHi]}
-                        onCommit={([lo, hi]) =>
-                            patch("a_range", rangeToDash(lo, hi))
-                        }
-                    />
-                    <RangeSliderField
-                        label="Constant (b)"
-                        min={1}
-                        max={50}
-                        value={[bLo, bHi]}
-                        onCommit={([lo, hi]) =>
-                            patch("b_range", rangeToDash(lo, hi))
-                        }
-                    />
-                    <RangeSliderField
-                        label="Answer (x)"
-                        min={0}
-                        max={30}
-                        value={[xLo, xHi]}
-                        onCommit={([lo, hi]) =>
-                            patch("x_range", rangeToDash(lo, hi))
-                        }
-                    />
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="implicit">Implicit form (4x)</Label>
-                        <Switch
-                            id="implicit"
-                            checked={cfg.implicit ?? false}
-                            onCheckedChange={(v) => patch("implicit", v)}
-                        />
-                    </div>
-                </div>
-            );
-        }
-
-        case "algebra-one-step": {
-            const [aLo, aHi] = dashToRange(cfg.a_range, [2, 10]);
-            const [bLo, bHi] = dashToRange(cfg.b_range, [1, 30]);
-            const [xLo, xHi] = dashToRange(cfg.x_range, [0, 20]);
-            // The four toggles are always defined booleans by the time they hit
-            // here — parseConfig fills in the homepage-default (add+sub on) when
-            // the URL has no toggle keys, and fills explicit values otherwise.
-            const onAdd = cfg.add ?? false;
-            const onSub = cfg.subtract ?? false;
-            const onMul = cfg.multiply ?? false;
-            const onDiv = cfg.divide ?? false;
-            // Disable the last enabled toggle so users can't switch them all off
-            // (the server would reject the request).
-            const enabledCount =
-                Number(onAdd) + Number(onSub) + Number(onMul) + Number(onDiv);
-            const lockToggle = (currentlyOn: boolean) =>
-                enabledCount === 1 && currentlyOn;
-            return (
-                <div className="space-y-4">
-                    <FieldGroup label="Operations">
-                        <OpToggle
-                            id="op-add"
-                            label="Addition"
-                            checked={onAdd}
-                            disabled={lockToggle(onAdd)}
-                            onChange={(v) => patch("add", v)}
-                        />
-                        <OpToggle
-                            id="op-sub"
-                            label="Subtraction"
-                            checked={onSub}
-                            disabled={lockToggle(onSub)}
-                            onChange={(v) => patch("subtract", v)}
-                        />
-                        <OpToggle
-                            id="op-mul"
-                            label="Multiplication"
-                            checked={onMul}
-                            disabled={lockToggle(onMul)}
-                            onChange={(v) => patch("multiply", v)}
-                        />
-                        <OpToggle
-                            id="op-div"
-                            label="Division"
-                            checked={onDiv}
-                            disabled={lockToggle(onDiv)}
-                            onChange={(v) => patch("divide", v)}
-                        />
-                    </FieldGroup>
-                    <RangeSliderField
-                        label="Coefficient / divisor (a)"
-                        min={2}
-                        max={12}
-                        value={[aLo, aHi]}
-                        onCommit={([lo, hi]) =>
-                            patch("a_range", rangeToDash(lo, hi))
-                        }
-                    />
-                    <RangeSliderField
-                        label="Constant (b)"
-                        min={1}
-                        max={50}
-                        value={[bLo, bHi]}
-                        onCommit={([lo, hi]) =>
-                            patch("b_range", rangeToDash(lo, hi))
-                        }
-                    />
-                    <RangeSliderField
-                        label="Answer (x)"
-                        min={0}
-                        max={30}
-                        value={[xLo, xHi]}
-                        onCommit={([lo, hi]) =>
-                            patch("x_range", rangeToDash(lo, hi))
-                        }
-                    />
-                </div>
+                <LevelPicker
+                    levels={levels}
+                    value={current}
+                    onChange={(v) => patch("level", v)}
+                />
             );
         }
 
@@ -830,6 +699,65 @@ function KindSpecific({
             );
         }
     }
+}
+
+/** Vertical concept-level picker. Shows three (or however many) named
+ * presets as a column of selectable rows; each row labels a concrete
+ * progression step ("Tenths × whole", etc.) plus an example problem.
+ * Used by kinds whose raw param matrix is too large to expose
+ * directly — see `lib/levels.ts`. */
+function LevelPicker({
+    levels,
+    value,
+    onChange,
+}: {
+    levels: readonly Level[];
+    value: string | undefined;
+    onChange: (next: string) => void;
+}) {
+    return (
+        <div className="flex flex-col gap-2">
+            {levels.map((level, idx) => {
+                const id = String(idx + 1);
+                const active = id === value;
+                return (
+                    <button
+                        key={id}
+                        type="button"
+                        onClick={() => onChange(id)}
+                        aria-pressed={active}
+                        className={
+                            "group flex cursor-pointer overflow-hidden rounded-md border text-sm transition-colors " +
+                            (active
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-input bg-background hover:bg-muted")
+                        }
+                    >
+                        <div className="flex flex-1 flex-col items-start gap-0.5 px-3 py-2 text-left">
+                            <span className="font-medium">{level.label}</span>
+                            {level.example && (
+                                <span className="text-xs text-muted-foreground">
+                                    e.g. {level.example}
+                                </span>
+                            )}
+                        </div>
+                        <div
+                            className={
+                                "flex items-center justify-center border-l px-1 text-black transition-colors " +
+                                (active
+                                    ? "border-pencil-no-2 bg-[#fff4d9]"
+                                    : "border-[#fde18c] bg-[#fffaee] group-hover:border-pencil-no-2 group-hover:bg-[#fff4d9]")
+                            }
+                        >
+                            <span className="text-[10px] font-semibold uppercase tracking-wider [writing-mode:vertical-rl]">
+                                Level {idx + 1}
+                            </span>
+                        </div>
+                    </button>
+                );
+            })}
+        </div>
+    );
 }
 
 function OpToggle({

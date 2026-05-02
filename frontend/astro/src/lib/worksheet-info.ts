@@ -25,6 +25,10 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
         kinds: ["fraction-equiv", "fraction-simplify", "fraction-mult"],
     },
     {
+        title: "Decimals",
+        kinds: ["decimal-add", "decimal-subtract", "decimal-multiply"],
+    },
+    {
         title: "Pre-algebra",
         kinds: ["algebra-one-step", "algebra-two-step", "algebra-square-root"],
     },
@@ -231,6 +235,49 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
             "Isolate the variable by undoing operations in reverse order: subtract the constant, then divide by the coefficient.",
             "Keep the equation balanced — whatever you do on one side, do on the other.",
             "Read three canonical forms: (ax) + b = c, b + (ax) = c, (ax) − b = c.",
+        ],
+    },
+    "decimal-add": {
+        title: "Decimal addition",
+        summary:
+            "Add decimal numbers in columns, lining up the decimal points.",
+        prerequisites: [
+            "Whole-number column addition with carrying.",
+            "Read a decimal as 'point' followed by digits in the tenths, hundredths places.",
+        ],
+        learning: [
+            "Line up decimal points first, then add column-by-column from the right.",
+            "Carry across the decimal point exactly as you would in whole-number addition.",
+            "Pad with trailing zeros so every operand has the same number of decimal places.",
+        ],
+    },
+    "decimal-subtract": {
+        title: "Decimal subtraction",
+        summary:
+            "Subtract decimal numbers in columns, lining up the decimal points.",
+        prerequisites: [
+            "Whole-number column subtraction with borrowing.",
+            "Decimal addition (lining up decimal points).",
+        ],
+        learning: [
+            "Line up decimal points and subtract column-by-column from the right.",
+            "Borrow across columns, including across the decimal point.",
+            "Read the answer as a decimal, not a whole number.",
+        ],
+    },
+    "decimal-multiply": {
+        title: "Decimal multiplication",
+        summary:
+            "Multiply decimals — by a whole number or by another decimal. Multiply as if both were whole, then count decimal places to position the point.",
+        prerequisites: [
+            "Single-digit times tables.",
+            "Whole-number column multiplication.",
+            "Reading a decimal number's place values (tenths, hundredths).",
+        ],
+        learning: [
+            "Multiply as if both numbers were whole, then place the decimal point.",
+            "The answer's decimal places equal the sum of each operand's decimal places (e.g. 2.5 × 3.4 → 1 + 1 = 2 decimal places).",
+            "Sanity-check the answer's magnitude — 2.5 × 3 should be near 7, not 75 or 0.75.",
         ],
     },
     "algebra-square-root": {
