@@ -3,4 +3,4 @@
 #set page(width: 18cm, height: auto, margin: 0.3cm)
 #set text(font: body-font)
 
-#worksheet-header()
+#worksheet-header(debug: true)

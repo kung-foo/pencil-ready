@@ -2,4 +2,4 @@
 #set page(width: auto, height: auto, margin: 0.3cm)
 
 // Reducible proper fraction — the canonical simplification case.
-#fraction-simplification-problem((6, 8))
+#fraction-simplification-problem((6, 8), debug: true)

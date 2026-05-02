@@ -8,4 +8,4 @@
 //
 // Example: 0b1010 + 0b0110 = 0b10000 (decimal 10 + 6 = 16). Wider width
 // than the default since 4-bit operands + operator won't fit in 2.8em.
-#addition-basic-problem((1010, 110, 10000), mode: "worked", opts: (operator: [#sym.plus], width: 4.5em, pad-width: 4))
+#addition-basic-problem((1010, 110, 10000), mode: "worked", opts: (operator: [#sym.plus], width: 4.5em, pad-width: 4), debug: true)

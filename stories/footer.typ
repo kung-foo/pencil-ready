@@ -8,4 +8,4 @@
 #set page(width: 18cm, height: auto, margin: 0pt)
 #set text(font: body-font)
 
-#worksheet-footer(pencil-ready-content)
+#worksheet-footer(pencil-ready-content, debug: true)

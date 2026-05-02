@@ -25,7 +25,7 @@
   margin: (top: 3.2cm, bottom: 2.2cm, left: 1.5cm, right: 1.5cm),
   header-ascent: 0.8cm,
   footer-descent: 0.4cm,
-  header: pad(top: 0.7cm, worksheet-header(student-name: "Luke Skywalker", debug: false)),
+  header: pad(top: 0.7cm, worksheet-header(student-name: "Luke Skywalker", debug: true)),
   footer: pad(bottom: 0.7cm, worksheet-footer(pencil-ready-content)),
 )
 #set text(font: body-font, size: 10pt)
@@ -47,7 +47,7 @@
   ),
   addition-basic-problem,
   num-cols: 4,
-  debug: false,
+  debug: true,
   opts: (operator: [#sym.plus], width: 2.25cm, answer-rows: 1, pad-width: 0),
 )
 

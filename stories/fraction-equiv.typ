@@ -2,4 +2,4 @@
 #set page(width: auto, height: auto, margin: 0.3cm)
 
 // Blank — missing right denominator: 1/3 = 2/□
-#fraction-equivalence-problem((1, 3, 2, 6, 3))
+#fraction-equivalence-problem((1, 3, 2, 6, 3), debug: true)

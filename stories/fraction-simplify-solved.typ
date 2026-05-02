@@ -3,4 +3,4 @@
 
 // Worked: 6/8 → 3/4. Exercises the "reduce a proper fraction" branch
 // of the answer-rendering logic.
-#fraction-simplification-problem((6, 8), mode: "worked")
+#fraction-simplification-problem((6, 8), mode: "worked", debug: true)

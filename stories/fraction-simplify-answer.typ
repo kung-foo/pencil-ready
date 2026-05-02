@@ -5,4 +5,4 @@
 // step, so "worked" and "answer-only" are equivalent — this story is
 // here so any future divergence in the answer-only branch shows up
 // visually.
-#fraction-simplification-problem((11, 4), mode: "answer-only")
+#fraction-simplification-problem((11, 4), mode: "answer-only", debug: true)

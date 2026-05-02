@@ -3,4 +3,4 @@
 
 // Answer-key rendering: the quotient sits above the bracket, but the
 // divide-multiply-subtract-bring-down work below is suppressed.
-#division-long-problem((756, 3, 252), mode: "answer-only", opts: (width: 3.9em, answer-rows: 6))
+#division-long-problem((756, 3, 252), mode: "answer-only", opts: (width: 3.9em, answer-rows: 6), debug: true)
