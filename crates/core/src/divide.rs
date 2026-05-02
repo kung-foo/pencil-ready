@@ -64,7 +64,7 @@ pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             implicit: false,
             variable: "x".to_string(),
             decimal_places: Vec::new(),
-            reserve_remainder: false,
+            reserve_remainder: remainder,
         },
     })
 }
@@ -153,6 +153,20 @@ fn generate_long_problems(
     }
 
     crate::pad_with_duplicates(&mut problems, total as usize, &mut rng);
+
+    // When solve-first is on AND we're in remainder mode, the worked
+    // first problem only earns its keep if it actually has a remainder
+    // — otherwise the worked example shows a clean division and the
+    // student never sees how `r=N` gets written. Swap the first
+    // problem with the earliest one that has a non-zero remainder.
+    if remainder && params.solve_first && problems.len() > 1 {
+        let first_has_rem = problems[0][0] % problems[0][1] > 0;
+        if !first_has_rem {
+            if let Some(idx) = problems.iter().position(|p| p[0] % p[1] > 0) {
+                problems.swap(0, idx);
+            }
+        }
+    }
 
     problems
 }

@@ -62,6 +62,12 @@
   let answer-color = opts.at("answer-color", default: none)
   let cell-align = opts.at("align", default: left + top)
   let cell-pad-left = opts.at("pad-left", default: 0.5cm)
+  // When the worksheet allows remainders, reserve overline width for
+  // a worst-case `dddd r N` answer in every cell — even cells whose
+  // actual answer has no remainder. Without this, individual cells
+  // would size their overline to their own quotient, so the row
+  // would have visually uneven brackets (some short, some long).
+  let reserve-remainder = opts.at("reserve-remainder", default: false)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -75,8 +81,21 @@
   let debug-box = if debug { 1pt + red } else { none }
   let dividend-str = str(data.at(0))
   let divisor-str = str(data.at(1))
-  // Optional quotient at index 2 — generator pushes it when available.
+  // Quotient and remainder are rendered as separate slots: the
+  // quotient sits above the dividend (digits column-aligned with the
+  // dividend digits, just like a no-remainder problem), and `r=N` is
+  // a smaller annotation to the right of the bracket overline. This
+  // keeps the overline length identical to the non-remainder case
+  // and preserves the standard "digits above digits" alignment.
   let quotient-str = if data.len() > 2 { str(data.at(2)) } else { "" }
+  let remainder-val = if data.len() > 2 {
+    calc.rem(data.at(0), data.at(1))
+  } else { 0 }
+  let has-remainder = remainder-val > 0
+  let remainder-str = if has-remainder { "r=" + str(remainder-val) } else { "" }
+  // Smaller font for the `r=N` annotation so it reads as auxiliary
+  // info, not part of the main quotient.
+  let remainder-size-factor = 0.75
 
   // 1.3em per row ≈ one typeset line at this size.
   let work-space = 1.3em * answer-rows
@@ -96,6 +115,24 @@
       let overshoot = m.height * 0.25
       let column-gutter = 0.25em
 
+      // Width of the `r=N` annotation slot to the right of the
+      // overline. Worst case is `r=N` for any single-digit N (divisor
+      // is 1-9, so remainder is 0-8, all single-digit at the same
+      // monospace width). When `reserve-remainder` is on, every cell
+      // reserves this slot so the bounding box (and the bracket
+      // position relative to the cell's right edge) stays uniform
+      // across blank, solved, and answer-only modes — `r=N` just
+      // doesn't paint when there's no remainder.
+      let r-slot-width = if reserve-remainder {
+        measure(text("r=8", size: problem-text-size * remainder-size-factor)).width + 0.5em
+      } else {
+        0pt
+      }
+      // Overline length stays the dividend width — same as the
+      // no-remainder case. The bracket curve + overline footprint
+      // doesn't grow when `r=N` is present.
+      let content-width = m.width
+
       // The bracket curve is `place`d, so it doesn't contribute to the
       // dividend-area-box's natural width. Without an explicit width,
       // typst's bounding box ends at the dividend's right edge and the
@@ -103,9 +140,10 @@
       // but visible on the page. That's fine for the worksheet (each
       // cell is fixed-width and left-aligned) but breaks centering for
       // single-cell renderings like the homepage thumbs. Pinning the
-      // box width to `division-bracket`'s `overline-end` (bulge + dividend
-      // + 0.7em) means the bounding rect truly bounds what you see.
-      let dividend-area-width = bulge + m.width + m.height * 0.7
+      // box width to `division-bracket`'s `overline-end` (bulge +
+      // content + 0.7em) plus the reserved `r=N` slot means the
+      // bounding rect truly bounds what you see.
+      let dividend-area-width = bulge + content-width + m.height * 0.7 + r-slot-width
       grid(
         columns: (auto, auto),
         column-gutter: column-gutter,
@@ -122,8 +160,14 @@
           // Width extends to `bulge + 0.2em + m.width` so the quotient
           // right edge lines up with the dividend's right edge.
           if solved {
-            box(
-              width: bulge + 0.2em + m.width,
+            // Two-column layout for the quotient row:
+            //   col 1 — pure quotient, right-aligned to dividend's
+            //           right edge so digits stack above dividend.
+            //   col 2 — `r=N` (smaller) padded a bit past the
+            //           dividend's right edge, only painted when
+            //           there's a non-zero remainder.
+            grid(
+              columns: (bulge + 0.2em + content-width, r-slot-width),
               align(right + bottom, text(
                 quotient-str,
                 font: resolved-answer-font,
@@ -131,13 +175,25 @@
                 top-edge: "cap-height",
                 bottom-edge: "baseline",
               )),
+              if has-remainder {
+                align(left + bottom, pad(left: 0.4em, text(
+                  remainder-str,
+                  size: problem-text-size * remainder-size-factor,
+                  font: resolved-answer-font,
+                  fill: resolved-answer-color,
+                  top-edge: "cap-height",
+                  bottom-edge: "baseline",
+                )))
+              } else {
+                []
+              },
             )
           } else {
             v(answer-space)
           }
           pad(left: bulge + 0.2em, top: 0.45em, dividend-content)
           v(overshoot)
-          place(bottom + left, division-bracket(m.width, m.height))
+          place(bottom + left, division-bracket(content-width, m.height))
         }),
       )
 

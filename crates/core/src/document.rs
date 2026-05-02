@@ -119,9 +119,10 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
             )
         }
         WorksheetType::LongDivision { .. } => format!(
-            "width: {w}cm, answer-rows: {r}",
+            "width: {w}cm, answer-rows: {r}, reserve-remainder: {rr}",
             w = opts.width_cm,
             r = opts.answer_rows,
+            rr = opts.reserve_remainder,
         ),
         WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => {
             format!("operator: {operator_arg}")

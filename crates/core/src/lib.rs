@@ -364,11 +364,17 @@ impl WorksheetType {
 
             // Long division: unique layout. Height grows with dividend
             // digits (each digit contributes ~2 rows of work space).
-            WorksheetType::LongDivision { digits, .. } => match digits.max {
-                1..=2 => (3.8, 6.0),
-                3 => (3.8, 8.0),
-                _ => (4.4, 10.0), // 4+ dividend digits
-            },
+            // When `remainder` is on, the answer is rendered as `Q r N`,
+            // which is wider than just the quotient — bump cell width so
+            // the bracket overline + suffix fit inside the cell.
+            WorksheetType::LongDivision { digits, remainder } => {
+                let (w, h) = match digits.max {
+                    1..=2 => (3.8, 6.0),
+                    3 => (3.8, 8.0),
+                    _ => (4.4, 10.0),
+                };
+                if *remainder { (w + 1.2, h) } else { (w, h) }
+            }
 
             // Horizontal drills — same primitive for multiplication and
             // division. d1x1 fits in 4.5cm; d2x1 needs 5.0cm.
@@ -1555,12 +1561,19 @@ mod tests {
         };
         assert_eq!(mul_3x2.cell_size_cm(3), (2.6, 5.5));
 
-        // division-long-d3-blank: 3-digit dividend → 3.8 × 8.0
+        // division-long-d3-no-remainder: 3-digit dividend → 3.8 × 8.0.
+        // With remainder=true the cell widens by 1.2cm to fit the
+        // `Q r N` answer key suffix.
         let long_d3 = WorksheetType::LongDivision {
+            digits: DigitRange::fixed(3),
+            remainder: false,
+        };
+        assert_eq!(long_d3.cell_size_cm(3), (3.8, 8.0));
+        let long_d3_rem = WorksheetType::LongDivision {
             digits: DigitRange::fixed(3),
             remainder: true,
         };
-        assert_eq!(long_d3.cell_size_cm(3), (3.8, 8.0));
+        assert_eq!(long_d3_rem.cell_size_cm(3), (5.0, 8.0));
 
         // multiplication-drill-d1x1: 4.5 × 1.0
         let mult_drill = WorksheetType::MultiplicationDrill {
