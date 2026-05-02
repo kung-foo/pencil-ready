@@ -10,14 +10,31 @@
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features, problem-line-height
 
 // `data` = (whole, numerator, denominator).
-// `opts.operator` = typst content (e.g. `[#sym.times]`).
+// `opts` keys (with defaults):
+//   operator: typst content (e.g. `[#sym.times]`). Required.
+//   answer-font: typst font for solved-mode answers. Default: none =
+//     inherit problem-font / Fira Math.
+//   answer-color: color for solved-mode answers. Default: none = inherit.
+//   align: alignment of the cell in its container. Default
+//     `right + top`. Pass `center + horizon` for thumbnail rendering.
+//   slot-width: width of each answer slot. Default 3.2em — sized for
+//     fixed worksheet-grid alignment. Pass smaller for thumb use.
 // `mode` = "blank" | "worked" | "answer-only". "worked" fills in the
 // multiply-across intermediate + simplified answer; "answer-only"
 // suppresses the multiply-across and shows only the simplified result.
 #let fraction-multiplication-problem(data, mode: "blank", opts: (:), debug: false) = {
   let operator = opts.at("operator")
+  let answer-font = opts.at("answer-font", default: none)
+  let answer-color = opts.at("answer-color", default: none)
+  let cell-align = opts.at("align", default: right + top)
+  let slot-width = opts.at("slot-width", default: 3.2em)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
+
+  // Resolve answer styling once. set rules inside `if` are scoped to
+  // the if-block, so we resolve to concrete values up front.
+  let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
+  let resolved-answer-color = if answer-color != none { answer-color } else { black }
   // NOTE: do NOT set tracking on the outer text — math.frac inherits the
   // outer text settings and inserts a visible gap between digits of multi-
   // digit numerators/denominators (e.g. "10" rendered as "1 0"). Apply
@@ -45,15 +62,42 @@
     message: "fraction-multiplication: whole×num not divisible by den")
   let final = calc.quo(inter-num, d)
 
+  // Wrap solved-mode answer content in a scope that overrides the
+  // outer text font and the math.equation show-rule's font, so a
+  // configured handwriting font reaches the digits inside math.frac
+  // too. When `answer-font` is not set we leave the math equation
+  // on Fira Math (the outer show-rule's default) so existing
+  // worksheet/story rendering is unchanged.
+  //
+  // Handwriting fonts aren't math fonts: the default math.frac bar
+  // renders too thin (or invisibly). The show rule on math.frac
+  // replaces it with an explicit stack-of-digits-and-line.
+  let style-answer = body => if answer-font != none {
+    {
+      set text(font: resolved-answer-font, fill: resolved-answer-color)
+      show math.equation: set text(font: resolved-answer-font, features: ())
+      show math.frac: it => stack(
+        align(center, it.num),
+        v(0.05em),
+        line(length: 0.9em, stroke: 0.8pt + resolved-answer-color),
+        v(0.05em),
+        align(center, it.denom),
+      )
+      body
+    }
+  } else {
+    body
+  }
+
   // Reserve fixed horizontal space on the right so solved and unsolved
   // problems occupy the same width — the worksheet grid stays aligned.
-  let slot-width = 3.2em
+  // Caller can override slot-width for thumb-style centering.
   let row1-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if solved and not answer-only { $#str(inter-num)/#str(d)$ }
+    if solved and not answer-only { style-answer($#str(inter-num)/#str(d)$) }
   }))
   let row2-right = box(width: slot-width, height: 1em, align(left + horizon, {
     if solved {
-      text(tracking: problem-tracking, str(int(final)))
+      style-answer(text(tracking: problem-tracking, str(int(final))))
     }
   }))
 
@@ -82,6 +126,7 @@
 
   // Self-pad + self-align so the worksheet-grid doesn't have to know
   // anything style-specific about this component. 0.3cm left/right
-  // breathing room; right+top to keep the answer-column rhythm.
-  align(right + top, pad(left: 0.3cm, right: 0.3cm, content))
+  // breathing room; default `right + top` keeps the answer-column
+  // rhythm in multi-column worksheet rendering.
+  align(cell-align, pad(left: 0.3cm, right: 0.3cm, content))
 }

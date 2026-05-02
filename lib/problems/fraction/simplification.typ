@@ -21,11 +21,25 @@
 #import "/lib/problems/shared.typ": problem-font, problem-text-size-horizontal, problem-tracking, problem-features
 
 // `data` = (numerator, denominator).
-// `opts` is ignored (no operator / locale-specific symbols here — the
-// fraction bar and `=` are universal).
+// `opts` keys (with defaults):
+//   answer-font: typst font name for the solved answer. Default: none =
+//     inherit problem-font / Fira Math (the equation default).
+//   answer-color: color for the solved answer. Default: none = inherit.
+//   align: alignment of the cell within its container. Default
+//     `left + horizon`. Pass `center + horizon` for single-cell
+//     thumbnail rendering.
+//   slot-width: width of the answer slot. Default 3.5em — sized to
+//     hold a mixed-number answer (e.g. "11 3/4") with writing room
+//     above the underline in blank mode. Pass a smaller value for
+//     thumbnail use where the slot's blank-line purpose doesn't apply
+//     and a wide empty slot pushes the visible content off-center.
 // `mode` = "blank" | "worked" | "answer-only". "worked" and "answer-only"
 // are rendered identically — there's no intermediate step to suppress.
 #let fraction-simplification-problem(data, mode: "blank", opts: (:), debug: false) = {
+  let answer-font = opts.at("answer-font", default: none)
+  let answer-color = opts.at("answer-color", default: none)
+  let cell-align = opts.at("align", default: left + horizon)
+  let slot-width-opt = opts.at("slot-width", default: 3.5em)
   let solved = mode != "blank"
   // NOTE: do NOT set tracking on outer text — math.frac inherits it and
   // breaks multi-digit numerators / denominators (e.g. "17" → "1 7").
@@ -35,6 +49,11 @@
     features: problem-features,
   )
   show math.equation: set text(font: "Fira Math", features: ())
+
+  // Resolve answer styling once. set rules inside an `if` are scoped
+  // to the if-block, so we resolve to concrete values up front.
+  let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
+  let resolved-answer-color = if answer-color != none { answer-color } else { black }
   let debug-box = if debug { 1pt + red } else { none }
 
   let num = data.at(0)
@@ -73,15 +92,43 @@
   // vertical middle sits at the fraction-bar axis, so a ~2.4em slot
   // pushes the bottom stroke ~1.2em below that axis. That's enough
   // room for a kid to write a fraction or mixed number above the line.
-  let slot-width = 3.5em
+  let slot-width = slot-width-opt
   let slot-height = 2.4em
+  // Wrap solved-answer rendering in a scope that overrides both the
+  // outer text font and the math.equation show-rule's font, so a
+  // configured handwriting font reaches the digit glyphs inside
+  // math.frac too. When `answer-font` is not set we leave the math
+  // equation on Fira Math (the outer show-rule's default) so the
+  // baseline rendering is unchanged for non-thumb callers.
+  //
+  // Handwriting fonts aren't math fonts, so the default math.frac
+  // bar renders too thin (or invisibly). The show rule on math.frac
+  // replaces it with an explicit stack-of-digits-and-line so the
+  // fraction reads as a fraction in handwritten output too.
+  let answer-rendered = if answer-font != none {
+    {
+      set text(font: resolved-answer-font, fill: resolved-answer-color)
+      show math.equation: set text(font: resolved-answer-font, features: ())
+      show math.frac: it => stack(
+        align(center, it.num),
+        v(0.05em),
+        line(length: 0.9em, stroke: 0.8pt + resolved-answer-color),
+        v(0.05em),
+        align(center, it.denom),
+      )
+      answer
+    }
+  } else {
+    answer
+  }
+
   let right-slot = box(
     width: slot-width,
     height: slot-height,
     stroke: if solved { none } else { (bottom: 0.5pt) },
     // Solved: center the answer vertically on the fraction axis.
     // Blank: content is empty; the bottom stroke defines the line.
-    align(center + horizon, if solved { answer }),
+    align(center + horizon, if solved { answer-rendered }),
   )
 
   // 3-column grid keeps the `=` at a consistent axis. `horizon` centers
@@ -95,5 +142,5 @@
   ))
 
   // Self-pad + self-align so the worksheet-grid stays style-agnostic.
-  align(left + horizon, pad(left: 0.3cm, right: 0.3cm, content))
+  align(cell-align, pad(left: 0.3cm, right: 0.3cm, content))
 }

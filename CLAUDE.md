@@ -45,6 +45,10 @@ pencilready-logo-spec.md             — brand mark / pencil underline spec
 - Dedup logic in generators uses `pad_with_duplicates` (in
   `pencil-ready-core`'s `lib.rs`) so narrow constraint spaces still
   fill a page — don't re-introduce "bail on < N unique" guards.
+- **Never run `make stories-approve` yourself.** Visual-regression
+  baselines are reviewed by a human. When `make stories-check` fails,
+  surface the diff (path printed in the failure line) and let the
+  user decide whether to approve.
 - Frontend is single-framework (Astro). Don't reintroduce a React SPA
   under `frontend/react/` — the Astro site with React islands covers
   both SEO and interactivity.

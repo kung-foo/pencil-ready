@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs
 
 build:
 	cargo build
@@ -54,6 +54,18 @@ thumbs: $(THUMB_SVGS)
 
 $(THUMB_DIR)/%.svg: $(THUMB_DIR)/thumb-%.typ
 	typst compile --root . --font-path fonts $< $@
+
+# Iteration helper: rasterize each thumb SVG to a 400px-wide PNG so
+# you can eyeball changes without round-tripping through the Astro
+# build. Outputs to output/thumbs/<kind>.png.
+THUMB_PNG_DIR := output/thumbs
+THUMB_PNGS := $(patsubst $(THUMB_DIR)/%.svg,$(THUMB_PNG_DIR)/%.png,$(THUMB_SVGS))
+
+thumb-pngs: $(THUMB_PNGS)
+
+$(THUMB_PNG_DIR)/%.png: $(THUMB_DIR)/%.svg
+	@mkdir -p $(THUMB_PNG_DIR)
+	rsvg-convert -w 400 $< -o $@
 
 # --- Frontend + prod-shaped local run ---
 
