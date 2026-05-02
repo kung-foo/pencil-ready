@@ -11,5 +11,5 @@
 // the letters (Noto Color Emoji's baseline is near the bottom of each
 // glyph, which clashes with the body text's metrics).
 #let pencil-ready-content = [
-  *Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, #box(baseline: -20%)[🇳🇴] — #link("https://pencilready.com")[pencilready.com]
+  *Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, #box(baseline: -20%)[🇳🇴] — #link("https://pencilready.com")[pencilready.com] — #link("https://creativecommons.org/licenses/by/4.0/")[CC BY 4.0]
 ]

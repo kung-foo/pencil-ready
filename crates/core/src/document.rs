@@ -285,7 +285,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #set document(
   title: "{doc_title}",
   author: "Pencil Ready",
-  description: "Printable math worksheet — https://pencilready.com",
+  description: "Printable math worksheet — https://pencilready.com — licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)",
   keywords: ("math", "worksheet", "{doc_kind}", "pencilready.com"),
 )
 

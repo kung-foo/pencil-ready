@@ -22,7 +22,63 @@ import Layout from "../layouts/Layout.astro";
                 </p>
             </header>
 
-            <section class="space-y-4">
+            <nav
+                aria-label="On this page"
+                class="text-sm text-muted-foreground"
+            >
+                <ul class="flex flex-wrap gap-x-4 gap-y-1">
+                    <li>
+                        <a
+                            href="#why-this-exists"
+                            class="underline underline-offset-2 hover:text-primary"
+                        >
+                            Why this exists
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#using-the-worksheets"
+                            class="underline underline-offset-2 hover:text-primary"
+                        >
+                            Using the worksheets
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#whats-inside"
+                            class="underline underline-offset-2 hover:text-primary"
+                        >
+                            What's inside
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#open-source"
+                            class="underline underline-offset-2 hover:text-primary"
+                        >
+                            Open source
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#whats-next"
+                            class="underline underline-offset-2 hover:text-primary"
+                        >
+                            What's next
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#credits"
+                            class="underline underline-offset-2 hover:text-primary"
+                        >
+                            Credits
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <section id="why-this-exists" class="space-y-4 scroll-mt-8">
                 <h2 class="text-xl font-semibold">Why this exists</h2>
                 <p>
                     Pencil Ready started as a tool for one 5th grader learning
@@ -50,7 +106,50 @@ import Layout from "../layouts/Layout.astro";
                 </p>
             </section>
 
-            <section class="space-y-4">
+            <section id="using-the-worksheets" class="space-y-4 scroll-mt-8">
+                <h2 class="text-xl font-semibold">Using the worksheets</h2>
+                <p>
+                    The PDFs you download from Pencil Ready are released under <a
+                        href="https://creativecommons.org/licenses/by/4.0/"
+                        class="underline underline-offset-2 hover:text-primary"
+                        rel="license noopener">Creative Commons BY 4.0</a
+                    >. In plain English:
+                </p>
+                <ul class="list-disc pl-6 space-y-2">
+                    <li>
+                        <strong>Print as many as you need.</strong> A class set,
+                        a stack for the staff room, a copy for every student in
+                        your school — all fine.
+                    </li>
+                    <li>
+                        <strong>Share them.</strong> Post on your classroom site,
+                        drop into Google Classroom, hand off to a colleague,
+                        email to a parent.
+                    </li>
+                    <li>
+                        <strong>Edit them.</strong> Cross out problems, scribble
+                        notes in the margins, scan and mark up. Once you print
+                        a worksheet, it's yours to mark up however you like.
+                    </li>
+                    <li>
+                        <strong>Use them at work.</strong> Tutors, after-school
+                        programs, paid courses, printed workbooks — yes, this
+                        includes commercial use.
+                    </li>
+                </ul>
+                <p>
+                    The one thing the license asks: if you <em>republish</em> the
+                    worksheets — on a website, in a workbook, as part of a
+                    curriculum package — credit Pencil Ready and link back to <a
+                        href="https://pencilready.com"
+                        class="underline underline-offset-2 hover:text-primary"
+                        >pencilready.com</a
+                    >. For everyday classroom use — print, hand out, recycle —
+                    there's nothing else to think about.
+                </p>
+            </section>
+
+            <section id="whats-inside" class="space-y-4 scroll-mt-8">
                 <h2 class="text-xl font-semibold">What's inside</h2>
                 <p>
                     Every worksheet is generated server-side by a Rust program
@@ -73,7 +172,7 @@ import Layout from "../layouts/Layout.astro";
                 </p>
             </section>
 
-            <section class="space-y-4">
+            <section id="open-source" class="space-y-4 scroll-mt-8">
                 <h2 class="text-xl font-semibold">Open source</h2>
                 <p>
                     The entire project — Rust generators, Typst templates, Astro
@@ -81,7 +180,8 @@ import Layout from "../layouts/Layout.astro";
                         href="https://github.com/kung-foo/pencil-ready"
                         class="underline underline-offset-2 hover:text-primary"
                         rel="noopener">github.com/kung-foo/pencil-ready</a
-                    >. Clone it, self-host it, fork it, or <a
+                    >. The source code is released under the MIT license — clone
+                    it, self-host it, fork it, or <a
                         href="https://github.com/kung-foo/pencil-ready/issues"
                         class="underline underline-offset-2 hover:text-primary"
                         rel="noopener">file an issue</a
@@ -90,7 +190,7 @@ import Layout from "../layouts/Layout.astro";
                 </p>
             </section>
 
-            <section class="space-y-4">
+            <section id="whats-next" class="space-y-4 scroll-mt-8">
                 <h2 class="text-xl font-semibold">What's next</h2>
                 <p>
                     The worksheet catalog grows when a new topic comes up in the
@@ -100,7 +200,7 @@ import Layout from "../layouts/Layout.astro";
                 </p>
             </section>
 
-            <section class="space-y-4">
+            <section id="credits" class="space-y-4 scroll-mt-8">
                 <h2 class="text-xl font-semibold">Credits</h2>
                 <p>
                     Built with Rust, Typst, Astro, React, Tailwind, shadcn/ui,

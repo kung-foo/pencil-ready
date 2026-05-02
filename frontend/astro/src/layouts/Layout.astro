@@ -8,7 +8,6 @@ import "../styles/global.css";
 // in the HTML — no extra round trip. The public/ files remain the single
 // source of truth (favicon link still references /rainbow-heart.svg).
 import heartSvgRaw from "../../public/rainbow-heart.svg?raw";
-import githubSvgRaw from "../../public/github.svg?raw";
 
 interface Props {
     title: string;
@@ -223,13 +222,12 @@ const umami = {
                 <span class="mx-2">—</span>
                 made with <InlineIcon svg={heartSvgRaw} /> in Oslo
                 <span class="mx-2">—</span>
+                worksheets licensed
                 <a
-                    href="https://github.com/kung-foo/pencil-ready"
+                    href="/about/#using-the-worksheets"
                     class="hover:text-foreground transition-colors"
-                    rel="noopener"
-                    aria-label="Source on GitHub"
                 >
-                    <InlineIcon svg={githubSvgRaw} /> source
+                    CC BY 4.0
                 </a>
                 {
                     /* Rewritten at response time by the Rust server (see
