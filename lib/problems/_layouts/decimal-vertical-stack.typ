@@ -27,6 +27,11 @@
   let operator = opts.at("operator")
   let width = opts.at("width", default: 3.5em)
   let dp-list = opts.at("decimal-places", default: (0,) * data.len())
+  // Optional answer-font / answer-color: matches the vertical-stack
+  // primitive so homepage thumbs can pass `..thumb-answer-style` and
+  // get the handwriting + graphite-pencil look on the filled answer.
+  let answer-font = opts.at("answer-font", default: none)
+  let answer-color = opts.at("answer-color", default: none)
   let solved = mode != "blank"
 
   set text(font: problem-font, size: problem-text-size, tracking: problem-tracking, features: problem-features)
@@ -82,6 +87,12 @@
       line(length: 100%, stroke: 0.8pt)
       if solved {
         v(-0.65em)
+        // Apply optional handwriting font + graphite color to just the
+        // answer line. Set rules inside `if` are scoped to this block
+        // so they don't leak to subsequent renders.
+        let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
+        let resolved-answer-color = if answer-color != none { answer-color } else { black }
+        set text(font: resolved-answer-font, fill: resolved-answer-color)
         align(right, text(answer-str))
       }
     },

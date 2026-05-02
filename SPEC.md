@@ -273,6 +273,62 @@ the user, not by the assistant — there's a corresponding rule in
 `CLAUDE.md`. When stories fail in the assistant's flow, surface the
 diff paths and stop.
 
+## Homepage thumbnails
+
+Each worksheet kind has a small A4-ratio SVG thumbnail rendered on
+the homepage card grid. Sources live in
+`frontend/astro/src/assets/thumbs/thumb-<kind>.typ` and compile to
+sibling `.svg` files via `make thumbs`; `WorksheetThumb.astro`
+inlines or lazy-loads them per route.
+
+### Convention: rendered with a handwritten answer
+
+Every thumbnail renders with `mode: "worked"` and spreads
+`..thumb-answer-style` into the problem component's `opts`. That
+combination paints the answer in the bundled handwriting font
+(`Architects Daughter`) at a graphite-pencil grey (`#4a4a4a`) — so
+the card reads as a printed problem with the student's filled-in
+answer, not a finished worksheet. It's the brand cue: "you (the
+kid) did this."
+
+Concretely, every thumb source looks like:
+
+```typst
+#import "/lib/thumb-page.typ": thumb-answer-style, thumb-page
+#import "/lib/problems/<folder>/<file>.typ": <component>
+
+#show: thumb-page
+
+#<component>(
+  (...data...),
+  mode: "worked",
+  opts: (operator: [...], ..thumb-answer-style),
+)
+```
+
+For the convention to actually fire, the problem component must
+**read `answer-font` and `answer-color` from `opts`** and apply them
+just to the answer (not the whole problem). The shared
+`vertical-stack` and `decimal-vertical-stack` primitives already do
+this; new components should follow the same pattern (see
+`lib/problems/_layouts/decimal-vertical-stack.typ` for the
+2-line `set text` block).
+
+### Adding a thumbnail for a new kind
+
+1. Pick a problem with a clean, recognisable shape — small numbers,
+   no edge cases, and a final answer that reads at thumbnail size.
+2. Write `thumb-<kind>.typ` following the template above.
+3. Run `make thumbs` to compile to SVG; `make thumb-pngs` to
+   rasterize for visual review without a full Astro build.
+4. Register the thumb in `frontend/astro/src/components/WorksheetThumb.astro`
+   (both the eager-import and lazy-URL maps).
+
+`make thumbs` only re-runs when the `.typ` source changes; if you
+edit a shared component (e.g. the layout primitive) and the thumb
+needs re-rendering, `touch` the thumb sources or run
+`make thumb-pngs --always-make`.
+
 ## Concept levels
 
 Some worksheet kinds expose their configuration through a small set
