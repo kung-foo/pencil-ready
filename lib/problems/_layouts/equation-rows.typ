@@ -28,6 +28,7 @@
   col-width: auto,
   row-gutter: 1.3em,
   symmetric: true,
+  rhs-align: left + horizon,
   debug: false,
 ) = {
   context {
@@ -62,12 +63,17 @@
     let eq-w = measure(sym.eq).width
 
     // Build grid cells: each row contributes (LHS right-aligned in
-    // col1) (= centered in col2) (RHS left-aligned in col3).
+    // col1) (= centered in col2) (RHS aligned per `rhs-align` in
+    // col3 — default `left + horizon` puts the RHS adjacent to `=`).
+    // Pass `center + horizon` for layouts where col3 holds varied
+    // content widths across rows (e.g. fraction-mult: "60/4" then
+    // "15") and you want the values to stack vertically aligned by
+    // their centers rather than by their left edges.
     let cells = ()
     for (lhs, rhs) in rows {
       cells.push(align(right + horizon, lhs))
       cells.push(align(center + horizon, sym.eq))
-      cells.push(align(left + horizon, rhs))
+      cells.push(align(rhs-align, rhs))
     }
 
     // Top inset so above-cap-height content (superscripts, fraction

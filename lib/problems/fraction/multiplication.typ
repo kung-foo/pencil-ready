@@ -35,6 +35,14 @@
   // wider than the RHS, so the bbox would otherwise have visible
   // dead space after the RHS.
   let symmetric = opts.at("symmetric", default: true)
+  // RHS alignment in col3. Default `center + horizon` so the
+  // intermediate fraction (e.g. `12/4`) and the final integer
+  // answer (`3`) stack vertically aligned by their centres rather
+  // than both hugging `=` — the integer reads as "the simplified
+  // form of the fraction above it" instead of floating off to the
+  // left. Callers can pass `left + horizon` for the older "answer
+  // hugs `=`" look.
+  let rhs-align = opts.at("rhs-align", default: center + horizon)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -144,6 +152,7 @@
     ),
     col-width: col-width,
     symmetric: symmetric,
+    rhs-align: rhs-align,
     debug: debug,
   )
 }
