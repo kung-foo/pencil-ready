@@ -87,13 +87,34 @@
       line(length: 100%, stroke: 0.8pt)
       if solved {
         v(-0.65em)
-        // Apply optional handwriting font + graphite color to just the
-        // answer line. Set rules inside `if` are scoped to this block
-        // so they don't leak to subsequent renders.
-        let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
-        let resolved-answer-color = if answer-color != none { answer-color } else { black }
-        set text(font: resolved-answer-font, fill: resolved-answer-color)
-        align(right, text(answer-str))
+        // Shift the answer text horizontally so its decimal point
+        // sits at the same x as the operand decimal points. A non-
+        // monospace handwriting font (e.g. `Architects Daughter`
+        // from `thumb-answer-style`) would otherwise leave the dot
+        // visibly off-column when right-aligned alongside monospace
+        // operands. The shift is the difference in width of the
+        // post-dot suffix measured in the operand vs answer font;
+        // when handwriting is narrower (the common case) we add
+        // right padding to push the answer text left until the dot
+        // lines up. No-op when the answer has no decimal point or
+        // the fonts happen to match.
+        context {
+          let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
+          let resolved-answer-color = if answer-color != none { answer-color } else { black }
+          let dot-pos = answer-str.position(".")
+          let delta = if dot-pos != none {
+            let after-dot = answer-str.slice(dot-pos + 1)
+            let in-op = measure(text(after-dot)).width
+            let in-answer = measure(text(after-dot, font: resolved-answer-font)).width
+            in-op - in-answer
+          } else { 0pt }
+          set text(font: resolved-answer-font, fill: resolved-answer-color)
+          if delta > 0pt {
+            align(right, pad(right: delta, text(answer-str)))
+          } else {
+            align(right, text(answer-str))
+          }
+        }
       }
     },
   ))
