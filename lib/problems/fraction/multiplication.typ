@@ -1,13 +1,16 @@
-// Horizontal fraction problem: two-step layout
+// Whole-number × proper-fraction problem.
 //
-//   8 × 1/2 = ___
-//           = ___
+//   30 × 7/10 = 21/10
+//             = 21
 //
-// Row 1 holds the multiply-across intermediate (a fraction).
-// Row 2 holds the simplified integer answer.
-// The `=` signs align vertically to reinforce the equals-column habit.
+// Two-row layout via `equation-rows`. Row 1 holds `whole × n/d` on the
+// left and the multiply-across intermediate fraction on the right.
+// Row 2's LHS is blank — the `=` carries the eye to the simplified
+// integer answer on the right. `equation-rows` makes col1 = col3
+// (symmetric around `=`) so the equals signs line up vertically.
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features, problem-line-height
+#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size-horizontal, problem-tracking, problem-features
+#import "/lib/problems/_layouts/equation-rows.typ": equation-rows
 
 // `data` = (whole, numerator, denominator).
 // `opts` keys (with defaults):
@@ -15,10 +18,9 @@
 //   answer-font: typst font for solved-mode answers. Default: none =
 //     inherit problem-font / Fira Math.
 //   answer-color: color for solved-mode answers. Default: none = inherit.
-//   align: alignment of the cell in its container. Default
-//     `right + top`. Pass `center + horizon` for thumbnail rendering.
-//   slot-width: width of each answer slot. Default 3.2em — sized for
-//     fixed worksheet-grid alignment. Pass smaller for thumb use.
+//   col-width: auto | length. When auto, each problem self-sizes from
+//     its own rows. Pass an explicit length from the worksheet template
+//     to align `=` across multiple problems.
 // `mode` = "blank" | "worked" | "answer-only". "worked" fills in the
 // multiply-across intermediate + simplified answer; "answer-only"
 // suppresses the multiply-across and shows only the simplified result.
@@ -26,8 +28,7 @@
   let operator = opts.at("operator")
   let answer-font = opts.at("answer-font", default: none)
   let answer-color = opts.at("answer-color", default: none)
-  let cell-align = opts.at("align", default: right + top)
-  let slot-width = opts.at("slot-width", default: 3.2em)
+  let col-width = opts.at("col-width", default: auto)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -35,27 +36,27 @@
   // the if-block, so we resolve to concrete values up front.
   let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
   let resolved-answer-color = if answer-color != none { answer-color } else { black }
-  // NOTE: do NOT set tracking on the outer text — math.frac inherits the
-  // outer text settings and inserts a visible gap between digits of multi-
-  // digit numerators/denominators (e.g. "10" rendered as "1 0"). Apply
-  // tracking only to the whole-number where we need it.
+  // NOTE: do NOT set tracking on the outer text — math.frac inherits
+  // the outer text settings and inserts a visible gap between digits
+  // of multi-digit numerators/denominators (e.g. "10" rendered as
+  // "1 0"). Apply tracking only to the whole-number where we need it.
   set text(
     font: problem-font,
     size: problem-text-size-horizontal,
     features: problem-features,
   )
-  // Use Fira Math for equations (math font controls the digit rendering
-  // inside math.frac — the outer text font doesn't propagate there).
+  // Use Fira Math for equations (math font controls the digit
+  // rendering inside math.frac — the outer text font doesn't
+  // propagate there).
   show math.equation: set text(font: "Fira Math", features: ())
-  let debug-box = if debug { 1pt + red } else { none }
+
   let whole-v = data.at(0)
   let whole = str(whole-v)
   let n = data.at(1)
   let d = data.at(2)
 
-  // Worked-answer values (only rendered when solved: true).
-  // The generator guarantees divisibility; assert loudly so a bad
-  // input (whole×n not divisible by d) fails the compile instead of
+  // Worked-answer values. The generator guarantees divisibility;
+  // assert loudly so a bad input fails the compile instead of
   // silently truncating in `str(int(...))` on the answer-key page.
   let inter-num = whole-v * n
   assert(calc.rem(inter-num, d) == 0,
@@ -64,10 +65,10 @@
 
   // Wrap solved-mode answer content in a scope that overrides the
   // outer text font and the math.equation show-rule's font, so a
-  // configured handwriting font reaches the digits inside math.frac
-  // too. When `answer-font` is not set we leave the math equation
-  // on Fira Math (the outer show-rule's default) so existing
-  // worksheet/story rendering is unchanged.
+  // configured handwriting font reaches digits inside math.frac too.
+  // When `answer-font` is not set we leave equations on Fira Math
+  // (the outer show-rule's default) so worksheet/story rendering is
+  // unchanged.
   //
   // Handwriting fonts aren't math fonts: the default math.frac bar
   // renders too thin (or invisibly). The show rule on math.frac
@@ -89,44 +90,42 @@
     body
   }
 
-  // Reserve fixed horizontal space on the right so solved and unsolved
-  // problems occupy the same width — the worksheet grid stays aligned.
-  // Caller can override slot-width for thumb-style centering.
-  let row1-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if solved and not answer-only { style-answer($#str(inter-num)/#str(d)$) }
-  }))
-  let row2-right = box(width: slot-width, height: 1em, align(left + horizon, {
-    if solved {
-      style-answer(text(tracking: problem-tracking, str(int(final))))
-    }
-  }))
-
   let op-box = box(width: 1.2em, align(center, {
     set text(font: operator-font)
     operator
   }))
 
-  let lhs = {
+  // LHS for row 1: the printed `whole × n/d` expression. Tracking is
+  // applied only to the whole-number (math.frac would expand the
+  // numerator's digits if tracking propagated into the equation).
+  let row1-lhs = {
     text(tracking: problem-tracking, whole)
     op-box
     box($#str(n)/#str(d)$)
   }
 
-  // 3-column grid keeps the `=` signs aligned across both rows.
-  // Row 1: [whole × n/d] [=] [intermediate slot]
-  // Row 2: [          ] [=] [integer      slot]
-  let content = box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.4em, x: 0.2em), grid(
-    columns: (auto, auto, auto),
-    column-gutter: 0.3em,
-    row-gutter: problem-line-height,
-    align: (right + horizon, center + horizon, left + horizon),
-    lhs, sym.eq, row1-right,
-    [], sym.eq, row2-right,
-  ))
+  // Solved-mode row content — always built so `equation-rows` can
+  // measure the bounding rect from the solved version. `hide(...)` in
+  // non-solved modes keeps the bounding rect identical between blank
+  // and worked.
+  let row1-rhs-solved = style-answer($#str(inter-num)/#str(d)$)
+  let row2-rhs-solved = style-answer(text(tracking: problem-tracking, str(int(final))))
 
-  // Self-pad + self-align so the worksheet-grid doesn't have to know
-  // anything style-specific about this component. 0.3cm left/right
-  // breathing room; default `right + top` keeps the answer-column
-  // rhythm in multi-column worksheet rendering.
-  align(cell-align, pad(left: 0.3cm, right: 0.3cm, content))
+  let row1-rhs = if solved and not answer-only {
+    row1-rhs-solved
+  } else {
+    hide(row1-rhs-solved)
+  }
+  let row2-rhs = if solved { row2-rhs-solved } else { hide(row2-rhs-solved) }
+
+  // Row 2 LHS is blank — the `=` carries the eye over to the
+  // simplified integer.
+  equation-rows(
+    (
+      (row1-lhs, row1-rhs),
+      ([], row2-rhs),
+    ),
+    col-width: col-width,
+    debug: debug,
+  )
 }

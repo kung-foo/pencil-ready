@@ -49,16 +49,16 @@
       cells.push(align(left + horizon, rhs))
     }
 
-    // Top inset is generous (0.6em) so superscripts like `x²` get
-    // breathing room above the bounding rect — typst's math layout
-    // measures equations by cap-height, so an exponent's ascender
-    // isn't part of the equation's reported height. Tightening the
-    // top inset makes the `²` poke against the box's top edge.
-    // Bottom inset stays small since descenders below the baseline
-    // are rare in this grid.
+    // Top inset so above-cap-height content (superscripts, fraction
+    // numerators) gets breathing room above the bounding rect. Typst's
+    // math layout reports equation height by cap-height, so an
+    // exponent's ascender or a math.frac's numerator isn't part of the
+    // reported frame — without padding they poke against the box's
+    // top edge. 0.5em is enough for typical superscripts and
+    // single-line fractions.
     box(
       stroke: if debug { 1pt + red } else { none },
-      inset: (top: 0.6em, bottom: 0.4em, x: 0.2em),
+      inset: (top: 0.5em, bottom: 0.4em, x: 0.2em),
       grid(
         columns: (col-w, eq-w, col-w),
         column-gutter: 0.3em,

@@ -1,5 +1,5 @@
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
-#set page(width: auto, height: auto, margin: 0.3cm)
+#set page(width: auto, height: auto, margin: 0.5em)
 
 // Answer-key rendering: skips the multiply-across intermediate in row 1,
 // shows only the simplified integer in row 2. Layout (the two-row grid
