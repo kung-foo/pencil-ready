@@ -47,12 +47,21 @@
   // or a plain string for all other slots. Solved value is styled
   // via the answer-font/answer-color opts when set; without an
   // explicit override we render plain to keep baseline rendering
-  // (and the visual-regression stories) unchanged.
+  // (and the visual-regression stories) unchanged. Handwritten
+  // answers get a size bump (1.4em) so they read at roughly the
+  // same x-height as the printed digits — handwriting fonts are
+  // visually smaller than the equivalent printed glyph at the same
+  // pt size.
   let slot(val, idx) = if missing == idx {
     box(width: blank-w, height: blank-h, stroke: 0.8pt,
       align(center + horizon, if solved {
         if answer-font != none {
-          text(font: resolved-answer-font, fill: resolved-answer-color, str(val))
+          text(
+            font: resolved-answer-font,
+            fill: resolved-answer-color,
+            size: 1.4em,
+            str(val),
+          )
         } else {
           str(val)
         }
@@ -69,13 +78,16 @@
   // Explicit height so the bounding rect matches the visible extent
   // — typst's math layout reports a frame smaller than the slot's
   // 1.6em visible height, which makes any caller's `align(center +
-  // horizon)` center an undersized box. 3em = slot top above axis
-  // (~1.5em) + denom below axis (~1em) + breathing room.
+  // horizon)` center an undersized box. 2.4em = slot extent above
+  // the bar (~1.5em) + denom below (~1em) less a touch of overlap
+  // since the slot's bottom and the bar's top share a hair of space.
+  // Inner `align(horizon)` sits the equation at the box's vertical
+  // center so a centered outer box has the equation at page center.
   let content = box(
     stroke: debug-box,
     inset: (x: 0.4em, y: 0.3em),
-    height: 3em,
-    $#a / #b = #c / #d$,
+    height: 2.4em,
+    align(horizon, $#a / #b = #c / #d$),
   )
 
   align(cell-align, pad(left: 0.2cm, right: 0.2cm, content))

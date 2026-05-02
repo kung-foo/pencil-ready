@@ -29,6 +29,12 @@
   let answer-font = opts.at("answer-font", default: none)
   let answer-color = opts.at("answer-color", default: none)
   let col-width = opts.at("col-width", default: auto)
+  // symmetric col1 = col3 keeps `=` at the bbox center for cross-cell
+  // alignment in the worksheet grid. Default true (worksheet usage).
+  // Pass false from a thumb where the LHS (`whole × n/d`) is much
+  // wider than the RHS, so the bbox would otherwise have visible
+  // dead space after the RHS.
+  let symmetric = opts.at("symmetric", default: true)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -75,15 +81,26 @@
   // replaces it with an explicit stack-of-digits-and-line.
   let style-answer = body => if answer-font != none {
     {
-      set text(font: resolved-answer-font, fill: resolved-answer-color)
+      // Bump the answer text size — handwriting fonts read smaller
+      // than printed digits at the same pt size.
+      set text(font: resolved-answer-font, fill: resolved-answer-color, size: 1.4em)
       show math.equation: set text(font: resolved-answer-font, features: ())
-      show math.frac: it => stack(
-        align(center, it.num),
-        v(0.05em),
-        line(length: 0.9em, stroke: 0.8pt + resolved-answer-color),
-        v(0.05em),
-        align(center, it.denom),
-      )
+      // Custom math.frac rendering with the bar shifted to the math
+      // axis via `box(baseline: …)` — without it the stack reports
+      // a baseline at its bottom and the bar lands below `=`. Bar
+      // length sized via `context measure()` to the wider of num /
+      // denom so multi-digit numerators (e.g. "60") aren't cut off
+      // by a fixed 0.9em line.
+      show math.frac: it => context {
+        let bar-w = calc.max(measure(it.num).width, measure(it.denom).width) + 0.2em
+        box(baseline: 0.5em, stack(
+          align(center, it.num),
+          v(0.15em),
+          line(length: bar-w, stroke: 0.8pt + resolved-answer-color),
+          v(0.15em),
+          align(center, it.denom),
+        ))
+      }
       body
     }
   } else {
@@ -126,6 +143,7 @@
       ([], row2-rhs),
     ),
     col-width: col-width,
+    symmetric: symmetric,
     debug: debug,
   )
 }

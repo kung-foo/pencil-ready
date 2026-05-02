@@ -35,7 +35,7 @@
   set page(
     width: width,
     height: height,
-    margin: 8pt,
+    margin: 0pt,
     // `background` renders behind the content across the full page
     // (margin included) — so this rect *is* the page outline.
     background: rect(

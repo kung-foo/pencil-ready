@@ -4,17 +4,20 @@
 #import "/lib/thumb-page.typ": thumb-page, thumb-answer-style
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 
-#show: thumb-page.with(width: 150pt)
+#show: thumb-page.with(width: 130pt)
 
-#fraction-multiplication-problem(
+// Component returns its tight bounding rect; the thumb owns the
+// centering. align(center + horizon, …) puts the visible content at
+// the page's geometric center so the A4 page-shape feels balanced.
+#align(center + horizon, fraction-multiplication-problem(
   (20, 3, 4),
   mode: "worked",
+  // symmetric: false → bbox tracks visible content (no dead space
+  // after the narrower RHS) so the centered thumb is visually
+  // balanced left/right. Worksheet grid still uses default symmetric.
   opts: (
     operator: [#sym.times],
-    align: center + horizon,
-    // Tighter slot than worksheet default (3.2em → 1.5em) so the
-    // visible content tracks the bounding box and centers properly.
-    "slot-width": 1.5em,
+    symmetric: false,
     ..thumb-answer-style,
   ),
-)
+))

@@ -107,15 +107,23 @@
   // fraction reads as a fraction in handwritten output too.
   let answer-rendered = if answer-font != none {
     {
-      set text(font: resolved-answer-font, fill: resolved-answer-color)
+      // Bump the answer text size — handwriting fonts read smaller
+      // than printed digits at the same pt size.
+      set text(font: resolved-answer-font, fill: resolved-answer-color, size: 1.4em)
       show math.equation: set text(font: resolved-answer-font, features: ())
-      show math.frac: it => stack(
+      // Custom math.frac rendering for handwriting (the math font's
+      // bar is too thin/invisible). The stack itself doesn't carry
+      // the math-axis position through, so wrap in `box(baseline:
+      // …)` to shift the stack upward by half its height — that
+      // puts the drawn bar at the equation's math axis (where `=`
+      // sits) rather than below it.
+      show math.frac: it => box(baseline: 0.5em, stack(
         align(center, it.num),
-        v(0.05em),
+        v(0.15em),
         line(length: 0.9em, stroke: 0.8pt + resolved-answer-color),
-        v(0.05em),
+        v(0.15em),
         align(center, it.denom),
-      )
+      ))
       answer
     }
   } else {

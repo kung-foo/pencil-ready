@@ -23,20 +23,41 @@
 // pre-pass that measures every problem on the page) to force uniform
 // column widths across multiple problems so their `=` signs align.
 
-#let equation-rows(rows, col-width: auto, row-gutter: 1.3em, debug: false) = {
+#let equation-rows(
+  rows,
+  col-width: auto,
+  row-gutter: 1.3em,
+  symmetric: true,
+  debug: false,
+) = {
   context {
     // Measure each row's LHS and RHS to find the widest cell on each side.
-    // col-width then collapses both sides to a single symmetric value.
     let lhs-max = 0pt
     let rhs-max = 0pt
     for (lhs, rhs) in rows {
       lhs-max = calc.max(lhs-max, measure(lhs).width)
       rhs-max = calc.max(rhs-max, measure(rhs).width)
     }
-    let col-w = if col-width == auto {
-      calc.max(lhs-max, rhs-max)
+    // `symmetric: true` (default): col1 = col3 = max(lhs-max, rhs-max).
+    // Puts `=` at the visual center of the bounding rect — when the
+    // worksheet grid centers each cell, every problem's `=` lands at
+    // the same x in its column.
+    //
+    // `symmetric: false`: col1 = lhs-max, col3 = rhs-max. Tighter
+    // bounding rect with no right-side slack, but `=` no longer sits
+    // at the bbox center. Use for single-problem renderings (thumbs)
+    // where the worksheet-grid alignment doesn't apply.
+    //
+    // `col-width` (when not auto) overrides both — useful for a
+    // worksheet template that pre-measures and forces a uniform
+    // width across multiple problems on a page.
+    let (col1-w, col3-w) = if col-width != auto {
+      (col-width, col-width)
+    } else if symmetric {
+      let w = calc.max(lhs-max, rhs-max)
+      (w, w)
     } else {
-      col-width
+      (lhs-max, rhs-max)
     }
     let eq-w = measure(sym.eq).width
 
@@ -60,7 +81,7 @@
       stroke: if debug { 1pt + red } else { none },
       inset: (top: 0.5em, bottom: 0.4em, x: 0.2em),
       grid(
-        columns: (col-w, eq-w, col-w),
+        columns: (col1-w, eq-w, col3-w),
         column-gutter: 0.3em,
         row-gutter: row-gutter,
         ..cells,
