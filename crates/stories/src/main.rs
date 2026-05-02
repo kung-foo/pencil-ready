@@ -168,8 +168,18 @@ fn cmd_approve(root: &Path, story: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// Directional diff: baseline-only pixels in RED, current-only in GREEN,
-/// shared content dimmed to gray. Returns None if no meaningful change.
+/// Directional diff with canvas-size awareness.
+///
+/// Inside the overlap (each image centered on the union canvas):
+///   - baseline-only darker → RED ("removed")
+///   - current-only darker  → GREEN ("added")
+///   - shared content       → dim gray
+///
+/// Outside the overlap (one image has pixels there, the other doesn't):
+///   - baseline-only area  → ORANGE  ("canvas shrank" — area lost from current)
+///   - current-only area   → BLUE    ("canvas grew"   — area new in current)
+///
+/// Returns None if no meaningful change.
 fn directional_diff(
     baseline: &Path,
     current: &Path,
@@ -178,46 +188,78 @@ fn directional_diff(
     let base = image::open(baseline).context("read baseline")?;
     let curr = image::open(current).context("read current")?;
 
-    if base.dimensions() != curr.dimensions() {
-        // Different dimensions = definitely changed. Write a simple marker image
-        // and report the mismatch.
-        let (w, h) = curr.dimensions();
-        let mut marker: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(w, h);
-        for px in marker.pixels_mut() {
-            *px = Rgba([255, 200, 0, 255]); // amber: dimensions differ
-        }
-        marker.save(out)?;
-        return Ok(Some((u32::MAX, u32::MAX)));
-    }
+    let (bw, bh) = base.dimensions();
+    let (cw, ch) = curr.dimensions();
 
-    let (w, h) = base.dimensions();
-    let mut out_img: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(w, h);
+    // Union canvas; place each input centered. When dims match this
+    // collapses to the original same-canvas comparison.
+    let uw = bw.max(cw);
+    let uh = bh.max(ch);
+    let base_off_x = (uw - bw) / 2;
+    let base_off_y = (uh - bh) / 2;
+    let curr_off_x = (uw - cw) / 2;
+    let curr_off_y = (uh - ch) / 2;
+
+    let mut out_img: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(uw, uh);
     let mut n_removed = 0u32;
     let mut n_added = 0u32;
 
-    for y in 0..h {
-        for x in 0..w {
-            let da = darkness(&base.get_pixel(x, y));
-            let db = darkness(&curr.get_pixel(x, y));
+    // Coords inside the source image, or None if (x, y) on the union
+    // canvas falls outside that image's centered placement.
+    let map = |x: u32, y: u32, off_x: u32, off_y: u32, w: u32, h: u32| {
+        let sx = x.checked_sub(off_x)?;
+        let sy = y.checked_sub(off_y)?;
+        if sx < w && sy < h { Some((sx, sy)) } else { None }
+    };
 
-            let common = da.min(db);
-            let removed = da.saturating_sub(db);
-            let added = db.saturating_sub(da);
+    for y in 0..uh {
+        for x in 0..uw {
+            let in_base = map(x, y, base_off_x, base_off_y, bw, bh);
+            let in_curr = map(x, y, curr_off_x, curr_off_y, cw, ch);
 
-            let dim = common / 2;
-            let r = 255u8.saturating_sub(dim).saturating_sub(added);
-            let g = 255u8.saturating_sub(dim).saturating_sub(removed);
-            let b = 255u8
-                .saturating_sub(dim)
-                .saturating_sub(removed)
-                .saturating_sub(added);
-            out_img.put_pixel(x, y, Rgba([r, g, b, 255]));
+            match (in_base, in_curr) {
+                (Some((bx, by)), Some((cx, cy))) => {
+                    let da = darkness(&base.get_pixel(bx, by));
+                    let db = darkness(&curr.get_pixel(cx, cy));
 
-            if removed > 8 {
-                n_removed += 1;
-            }
-            if added > 8 {
-                n_added += 1;
+                    let common = da.min(db);
+                    let removed = da.saturating_sub(db);
+                    let added = db.saturating_sub(da);
+
+                    let dim = common / 2;
+                    let r = 255u8.saturating_sub(dim).saturating_sub(added);
+                    let g = 255u8.saturating_sub(dim).saturating_sub(removed);
+                    let b = 255u8
+                        .saturating_sub(dim)
+                        .saturating_sub(removed)
+                        .saturating_sub(added);
+                    out_img.put_pixel(x, y, Rgba([r, g, b, 255]));
+
+                    if removed > 8 {
+                        n_removed += 1;
+                    }
+                    if added > 8 {
+                        n_added += 1;
+                    }
+                }
+                (Some(_), None) => {
+                    // Canvas shrank: baseline had this region, current
+                    // doesn't. Warm orange band along the lost edge.
+                    out_img.put_pixel(x, y, Rgba([255, 165, 0, 255]));
+                    n_removed += 1;
+                }
+                (None, Some(_)) => {
+                    // Canvas grew: current has this region, baseline
+                    // didn't. Cool blue band along the new edge.
+                    out_img.put_pixel(x, y, Rgba([0, 165, 255, 255]));
+                    n_added += 1;
+                }
+                (None, None) => {
+                    // Unreachable: every (x, y) on the union canvas
+                    // is inside at least one source. White as a safe
+                    // fallback if the geometry ever becomes off.
+                    out_img.put_pixel(x, y, Rgba([255, 255, 255, 255]));
+                }
             }
         }
     }
