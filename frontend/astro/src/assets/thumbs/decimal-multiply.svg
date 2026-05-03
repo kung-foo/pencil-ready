@@ -20,10 +20,18 @@
                     </g>
                 </g>
                 <path class="typst-shape" fill="none" stroke="#000000" stroke-width="0.8" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" transform="matrix(1 0 0 1 0 60.770769230769226)" d="M 0 0h 77 "/>
-                <g class="typst-text" transform="matrix(1 0 0 -1 40.794921875 87.37272235576921)">
-                    <use xlink:href="#gBBFEF4F2A53785B343D80283D066594" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
-                    <use xlink:href="#g93C4BEBDB6FAFFAC3774343BFF8B3C72" x="15.53515625" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
-                    <use xlink:href="#g18FF3CA032CB4A3A629C2A62E4DDFD2A" x="20.62890625" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                <g class="typst-group">
+                    <g>
+                        <g class="typst-text" transform="matrix(1 0 0 -1 31.38626802884615 87.37272235576921)">
+                            <use xlink:href="#gBBFEF4F2A53785B343D80283D066594" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                        </g>
+                        <g class="typst-text" transform="matrix(1 0 0 -1 52.145432692307686 87.37272235576921)">
+                            <use xlink:href="#g93C4BEBDB6FAFFAC3774343BFF8B3C72" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                        </g>
+                        <g class="typst-text" transform="matrix(1 0 0 -1 61.442683293269226 87.37272235576921)">
+                            <use xlink:href="#g18FF3CA032CB4A3A629C2A62E4DDFD2A" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                        </g>
+                    </g>
                 </g>
             </g>
         </g>

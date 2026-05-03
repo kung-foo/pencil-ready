@@ -87,33 +87,29 @@
       line(length: 100%, stroke: 0.8pt)
       if solved {
         v(-0.65em)
-        // Shift the answer text horizontally so its decimal point
-        // sits at the same x as the operand decimal points. A non-
-        // monospace handwriting font (e.g. `Architects Daughter`
-        // from `thumb-answer-style`) would otherwise leave the dot
-        // visibly off-column when right-aligned alongside monospace
-        // operands. The shift is the difference in width of the
-        // post-dot suffix measured in the operand vs answer font;
-        // when handwriting is narrower (the common case) we add
-        // right padding to push the answer text left until the dot
-        // lines up. No-op when the answer has no decimal point or
-        // the fonts happen to match.
+        // Per-character grid so EVERY column lines up with the
+        // operands above — the leftmost digit, the decimal point,
+        // and every fractional digit. Right-aligning a single
+        // handwriting-font text run gets only one column right; any
+        // glyph-width difference (handwriting being narrower than
+        // monospace, or its `.` being narrower) drifts the rest off-
+        // column. Each character sits in a `digit-pitch`-wide cell
+        // matching the operand row's per-glyph advance and is
+        // centered within its cell so the visible glyph sits where
+        // the operand glyph would.
         context {
           let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
           let resolved-answer-color = if answer-color != none { answer-color } else { black }
-          let dot-pos = answer-str.position(".")
-          let delta = if dot-pos != none {
-            let after-dot = answer-str.slice(dot-pos + 1)
-            let in-op = measure(text(after-dot)).width
-            let in-answer = measure(text(after-dot, font: resolved-answer-font)).width
-            in-op - in-answer
-          } else { 0pt }
+          // Measure operand digit-pitch in problem-font scope BEFORE
+          // switching to the answer font.
+          let digit-pitch = measure(text("00")).width - measure(text("0")).width
+          let chars = answer-str.clusters()
           set text(font: resolved-answer-font, fill: resolved-answer-color)
-          if delta > 0pt {
-            align(right, pad(right: delta, text(answer-str)))
-          } else {
-            align(right, text(answer-str))
-          }
+          align(right, grid(
+            columns: (digit-pitch,) * chars.len(),
+            rows: (auto,),
+            ..chars.map(c => align(center + bottom, text(c))),
+          ))
         }
       }
     },

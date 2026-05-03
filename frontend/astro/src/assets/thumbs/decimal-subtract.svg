@@ -24,11 +24,21 @@
                     </g>
                 </g>
                 <path class="typst-shape" fill="none" stroke="#000000" stroke-width="0.8" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" transform="matrix(1 0 0 1 0 60.770769230769226)" d="M 0 0h 77 "/>
-                <g class="typst-text" transform="matrix(1 0 0 -1 29.635967548076927 87.37272235576921)">
-                    <use xlink:href="#gECF48D4F8211BFE64EFEA0ABA10D5B43" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
-                    <use xlink:href="#g93C4BEBDB6FAFFAC3774343BFF8B3C72" x="13.193359375" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
-                    <use xlink:href="#gECF48D4F8211BFE64EFEA0ABA10D5B43" x="18.287109375" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
-                    <use xlink:href="#gECF48D4F8211BFE64EFEA0ABA10D5B43" x="31.48046875" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                <g class="typst-group">
+                    <g>
+                        <g class="typst-text" transform="matrix(1 0 0 -1 17.018704927884613 87.37272235576921)">
+                            <use xlink:href="#gECF48D4F8211BFE64EFEA0ABA10D5B43" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                        </g>
+                        <g class="typst-text" transform="matrix(1 0 0 -1 36.606971153846146 87.37272235576921)">
+                            <use xlink:href="#g93C4BEBDB6FAFFAC3774343BFF8B3C72" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                        </g>
+                        <g class="typst-text" transform="matrix(1 0 0 -1 48.09562800480769 87.37272235576921)">
+                            <use xlink:href="#gECF48D4F8211BFE64EFEA0ABA10D5B43" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                        </g>
+                        <g class="typst-text" transform="matrix(1 0 0 -1 63.63408954326923 87.37272235576921)">
+                            <use xlink:href="#gECF48D4F8211BFE64EFEA0ABA10D5B43" x="0" y="0" fill="#4a4a4a" fill-rule="nonzero"/>
+                        </g>
+                    </g>
                 </g>
             </g>
         </g>
