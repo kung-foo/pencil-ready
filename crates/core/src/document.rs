@@ -11,7 +11,8 @@ use anyhow::Result;
 
 use crate::{
     ComponentOpts, Document, FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM,
-    HEADER_PAD_TOP_CM, MARGINS_CM, RenderMode, WorksheetType,
+    HEADER_PAD_TOP_CM, MARGINS_CM, RenderMode, WorksheetType, chrome_height_cm,
+    margin_top_for_chrome,
 };
 
 fn page_modes(is_answer_page: bool, solve_first: bool, len: usize) -> Vec<RenderMode> {
@@ -186,15 +187,29 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     // Title + instructions for the problem-page header banner. Title
     // comes from `WorksheetType::title()` (the same string used for PDF
     // metadata above). Instructions default to the per-type sentence in
-    // `WorksheetType::instructions()`, but a caller can override via
-    // `WorksheetParams.instructions` (e.g. a teacher's custom prompt).
+    // `WorksheetType::instructions()` (None for drills); a caller can
+    // override via `WorksheetParams.instructions`.
     let header_title_arg = typst_string_literal(&sheet.worksheet.title(chrome.solve_first));
-    let header_instructions_arg = typst_string_literal(
-        chrome
-            .instructions
-            .as_deref()
-            .unwrap_or_else(|| sheet.worksheet.instructions()),
-    );
+    let resolved_instructions: Option<String> = match chrome.instructions.as_deref() {
+        Some(s) if !s.is_empty() => Some(s.to_string()),
+        Some(_) => None, // empty override = drop the section
+        None => sheet.worksheet.instructions().map(|s| s.to_string()),
+    };
+    let has_problem_instructions = resolved_instructions.is_some();
+    let header_instructions_arg = match &resolved_instructions {
+        Some(s) => typst_string_literal(s),
+        None => "none".to_string(),
+    };
+
+    // Per-page chrome heights. Problem pages get all sections that
+    // apply; the answer-key page is title-only since the user dropped
+    // the across-page alignment requirement (in exchange, drill answer
+    // pages — and any answer page where the problem page had
+    // instructions — gain back vertical space for the answer grid).
+    let problem_chrome_h = chrome_height_cm(true, true, has_problem_instructions);
+    let answer_chrome_h = chrome_height_cm(false, true, false);
+    let problem_margin_top = margin_top_for_chrome(problem_chrome_h);
+    let answer_margin_top = margin_top_for_chrome(answer_chrome_h);
 
     // Chunk problems across pages — `cells_per_page` is `cols ×
     // rows_per_page` computed upstream in `Document::from_params`.
@@ -270,18 +285,24 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
             ""
         };
 
-        // Answer-key region: swap in a header that hides the Name/Date
-        // row (a pre-filled student name on the answer key would be
-        // nonsense) and shows an "Answer Key" title instead. Re-emit the
-        // `#set page(header: ...)` once at the boundary; the rule applies
-        // to the page that follows the preceding pagebreak. Driven from
-        // here rather than from typst because the boundary index
-        // (first_answer_idx) lives in the rust pagination layer.
+        // Answer-key region: swap in a smaller chrome (title only —
+        // no Name/Date, no instructions). Re-emit `#set page(margin:
+        // ..., header: ...)` at the boundary so the new margin.top
+        // takes effect along with the new header callback. Driven from
+        // here rather than typst because the boundary index
+        // (`first_answer_idx`) lives in the rust pagination layer.
         if *is_answer_page && i == first_answer_idx {
             page_blocks.push_str(&format!(
-                r#"#set page(header: pad(top: {header_pad_top}cm, worksheet-header(show-name-date: false, title: "Answer Key", debug: {debug_str})))
+                r#"#set page(
+  margin: (top: {answer_margin_top}cm, bottom: {margin_bottom}cm, left: {margin_left}cm, right: {margin_right}cm),
+  header: pad(top: {header_pad_top}cm, worksheet-header(show-name-date: false, title: "Answer Key", debug: {debug_str})),
+)
 
-"#
+"#,
+                answer_margin_top = answer_margin_top,
+                margin_bottom = MARGINS_CM.bottom,
+                margin_left = MARGINS_CM.left,
+                margin_right = MARGINS_CM.right,
             ));
         }
 
@@ -309,8 +330,11 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     let doc_title = sheet.worksheet.title(chrome.solve_first);
     let doc_kind = sheet.worksheet.kind_slug();
 
-    // Interpolate chrome dimensions from Rust constants.
-    let margin_top = MARGINS_CM.top;
+    // Initial page setup uses the problem-page chrome — `margin.top`
+    // is sized for whatever sections the problem-page header has. The
+    // answer-key boundary above re-emits `#set page(margin: ..., ...)`
+    // when the chrome shrinks for the answer pages.
+    let margin_top = problem_margin_top;
     let margin_bottom = MARGINS_CM.bottom;
     let margin_left = MARGINS_CM.left;
     let margin_right = MARGINS_CM.right;

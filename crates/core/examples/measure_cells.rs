@@ -39,7 +39,12 @@ fn build_source(snippet: &str) -> String {
 // emitted toml. Shared with the rest of the pipeline via
 // `pencil_ready_core::content_area_cm(Paper::A4)`.
 fn a4_content_cm() -> (f32, f32) {
-    pencil_ready_core::content_area_cm(pencil_ready_core::Paper::A4)
+    // Use the worst-case chrome height (all three header sections) so
+    // the diagnostic columns reflect the most-constrained body area.
+    pencil_ready_core::content_area_cm(
+        pencil_ready_core::Paper::A4,
+        pencil_ready_core::HEADER_HEIGHT_CM,
+    )
 }
 
 struct Row {

@@ -689,23 +689,67 @@ pub struct Margins {
 }
 
 pub const MARGINS_CM: Margins = Margins {
-    // top accommodates the TALL chrome (Name/Date row + title-rule +
-    // 2-line instructions = 3.2cm box) at header-ascent 0.8cm + pad
-    // 0.7cm + box 3.2cm = 4.7cm, plus a small gap so the rule isn't
-    // jammed against the body grid. Bumped 3.2cm → 5.2cm when the
-    // title/instructions banner became part of the default layout;
-    // body grid loses ~2cm and pagination adjusts automatically via
-    // `Document::from_params`.
+    // `top` is overridden per-page by `margin_top_for_chrome` — chrome
+    // height varies with which sections are present (Name/Date, title,
+    // instructions). The constant here is just the worst-case (all
+    // three sections) used by callers that don't compute it themselves.
+    // bottom/left/right are constant across worksheets.
     top: 5.2,
     bottom: 2.2,
     left: 1.5,
     right: 1.5,
 };
 
-/// Height of `worksheet-header`'s box in `lib/header.typ` (TALL mode —
-/// Name/Date area + title-rule area + instructions area). The compact
-/// no-banner mode is 1.5cm, but real worksheets use the tall chrome.
-pub const HEADER_HEIGHT_CM: f32 = 3.2;
+// Section heights for the variable-chrome layout in `lib/header.typ`.
+// Mirror the typst constants of the same name; the two must stay in
+// sync.
+pub const NAME_DATE_SECTION_CM: f32 = 0.7;
+pub const TITLE_SECTION_CM: f32 = 0.85;
+pub const INSTRUCTIONS_SECTION_CM: f32 = 1.65;
+/// Legacy COMPACT chrome height — Name/Date + plain rule + bottom
+/// padding, used when neither title nor instructions is set.
+pub const COMPACT_CHROME_CM: f32 = 1.5;
+
+/// Worst-case chrome height (Name/Date + title + instructions). Used
+/// where a single conservative figure is needed (e.g. PDF metadata
+/// sizing); per-worksheet pagination uses [`chrome_height_cm`] instead.
+pub const HEADER_HEIGHT_CM: f32 =
+    NAME_DATE_SECTION_CM + TITLE_SECTION_CM + INSTRUCTIONS_SECTION_CM;
+
+/// Compute the chrome's box height in cm for the given combination of
+/// sections. Mirrors the typst layout in `lib/header.typ`.
+///
+/// The legacy compact case (Name/Date only, no title or instructions)
+/// returns 1.5cm to preserve existing story-baseline pixel positions.
+pub fn chrome_height_cm(show_name_date: bool, has_title: bool, has_instructions: bool) -> f32 {
+    if show_name_date && !has_title && !has_instructions {
+        return COMPACT_CHROME_CM;
+    }
+    let mut h = 0.0;
+    if show_name_date {
+        h += NAME_DATE_SECTION_CM;
+    }
+    if has_title {
+        h += TITLE_SECTION_CM;
+    } else if has_instructions && show_name_date {
+        // Plain divider rule between Name/Date and instructions when
+        // there's no title to provide one — small slot taken from the
+        // instructions section's budget.
+        h += 0.35;
+    }
+    if has_instructions {
+        h += INSTRUCTIONS_SECTION_CM;
+    }
+    h
+}
+
+/// Compute `margin.top` (in cm) needed to fit the given chrome above
+/// the body grid. Adds [`HEADER_ASCENT_CM`] (gap above header) +
+/// [`HEADER_PAD_TOP_CM`] (the `pad(top: ...)` wrapper around the
+/// header callback) to the chrome's box height.
+pub fn margin_top_for_chrome(chrome_h_cm: f32) -> f32 {
+    HEADER_ASCENT_CM + HEADER_PAD_TOP_CM + chrome_h_cm
+}
 /// Height of `worksheet-footer`'s box in `lib/footer.typ`.
 pub const FOOTER_HEIGHT_CM: f32 = 0.8;
 /// typst `header-ascent` — distance from page top to the top of the
@@ -721,15 +765,18 @@ pub const HEADER_PAD_TOP_CM: f32 = 0.7;
 /// `pad(bottom: ...)` applied around `worksheet-footer`.
 pub const FOOTER_PAD_BOTTOM_CM: f32 = 0.7;
 
-/// Body content area (grid region) on the given paper, in cm. Driven
-/// entirely by paper dimensions + `MARGINS_CM`; chrome lives in the
-/// margins via `page.header` / `page.footer` so the body area already
-/// excludes it. Used by pagination in step 7.
-pub fn content_area_cm(paper: Paper) -> (f32, f32) {
+/// Body content area (grid region) on the given paper, in cm.
+///
+/// `chrome_h_cm` is the worksheet's chrome height (see
+/// [`chrome_height_cm`]); that determines the page's top margin via
+/// [`margin_top_for_chrome`]. Footer/left/right margins are constant
+/// across worksheets, so only the top margin varies.
+pub fn content_area_cm(paper: Paper, chrome_h_cm: f32) -> (f32, f32) {
     let (pw, ph) = paper.dimensions_cm();
+    let margin_top = margin_top_for_chrome(chrome_h_cm);
     (
         pw - MARGINS_CM.left - MARGINS_CM.right,
-        ph - MARGINS_CM.top - MARGINS_CM.bottom,
+        ph - margin_top - MARGINS_CM.bottom,
     )
 }
 
@@ -787,9 +834,12 @@ impl Chrome {
         }
     }
 
-    /// Body content area (grid region) in cm on the configured paper.
-    pub fn content_area_cm(&self) -> (f32, f32) {
-        content_area_cm(self.paper)
+    /// Body content area (grid region) in cm on the configured paper,
+    /// for the given chrome height. Use [`Chrome::problem_chrome_h_cm`]
+    /// or compute directly via [`chrome_height_cm`] for the worksheet
+    /// at hand.
+    pub fn content_area_cm(&self, chrome_h_cm: f32) -> (f32, f32) {
+        content_area_cm(self.paper, chrome_h_cm)
     }
 }
 
@@ -902,7 +952,16 @@ impl Document {
         let chrome = Chrome::from_params(params);
         let max_digits = sheet.worksheet.max_digits_bound();
         let (cell_w, cell_h) = sheet.worksheet.cell_size_cm(max_digits);
-        let (area_w, area_h) = chrome.content_area_cm();
+        let chrome_h = chrome_height_cm(
+            true,
+            true,
+            chrome
+                .instructions
+                .as_deref()
+                .map(|s| !s.is_empty())
+                .unwrap_or_else(|| sheet.worksheet.instructions().is_some()),
+        );
+        let (area_w, area_h) = chrome.content_area_cm(chrome_h);
 
         // Paper-fit check: cols must fit in the content-area width.
         let max_cols = (area_w / cell_w).floor() as u32;
@@ -949,7 +1008,8 @@ impl Document {
     pub fn validate(&self) -> Result<()> {
         let max_digits = self.sheet.worksheet.max_digits_bound();
         let (cell_w, _) = self.sheet.worksheet.cell_size_cm(max_digits);
-        let (area_w, _) = self.chrome.content_area_cm();
+        // Width is independent of chrome height; use any value here.
+        let (area_w, _) = self.chrome.content_area_cm(0.0);
         let max_cols = (area_w / cell_w).floor() as u32;
         if self.cols > max_cols {
             bail!(
@@ -1455,16 +1515,46 @@ mod tests {
 
     #[test]
     fn content_area_cm_matches_hand_math() {
-        // A4 body = 21 − 1.5 − 1.5 wide, 29.7 − 5.2 − 2.2 tall.
-        // Top margin is 5.2cm to fit the TALL chrome (Name/Date +
-        // title-rule + instructions).
-        let (w, h) = content_area_cm(Paper::A4);
+        // A4 body = 21 − 1.5 − 1.5 wide. Height depends on chrome size.
+        // Worst-case chrome (3.2cm) → margin.top = 0.8 + 0.7 + 3.2 = 4.7cm.
+        let chrome_h = HEADER_HEIGHT_CM;
+        let (w, h) = content_area_cm(Paper::A4, chrome_h);
         assert!((w - 18.0).abs() < 0.01);
-        assert!((h - 22.3).abs() < 0.01);
-        // Letter body = 21.59 − 3.0 wide, 27.94 − 5.2 − 2.2 tall.
-        let (w, h) = content_area_cm(Paper::Letter);
+        assert!((h - (29.7 - 4.7 - 2.2)).abs() < 0.01);
+        let (w, h) = content_area_cm(Paper::Letter, chrome_h);
         assert!((w - 18.59).abs() < 0.01);
-        assert!((h - 20.54).abs() < 0.01);
+        assert!((h - (27.94 - 4.7 - 2.2)).abs() < 0.01);
+    }
+
+    #[test]
+    fn chrome_height_legacy_compact_preserved() {
+        // Name/Date only (no banner) keeps the legacy 1.5cm box for
+        // existing visual-regression baselines.
+        assert!((chrome_height_cm(true, false, false) - 1.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn chrome_height_drill_problem_page() {
+        // Drill problem page: name + title (no instructions). Should
+        // be ~1.55cm.
+        let h = chrome_height_cm(true, true, false);
+        assert!((h - (NAME_DATE_SECTION_CM + TITLE_SECTION_CM)).abs() < 0.001);
+    }
+
+    #[test]
+    fn chrome_height_full_problem_page() {
+        // Standard problem page: all three sections.
+        let h = chrome_height_cm(true, true, true);
+        assert!(
+            (h - (NAME_DATE_SECTION_CM + TITLE_SECTION_CM + INSTRUCTIONS_SECTION_CM)).abs() < 0.001
+        );
+    }
+
+    #[test]
+    fn chrome_height_answer_key_title_only() {
+        // Answer-key page: title only (no name/date, no instructions).
+        let h = chrome_height_cm(false, true, false);
+        assert!((h - TITLE_SECTION_CM).abs() < 0.001);
     }
 
     #[test]
