@@ -41,49 +41,33 @@ impl WorksheetType {
     /// internationalize alongside `title()` when Norwegian copy ships.
     pub fn instructions(&self) -> Option<&'static str> {
         match self {
-            WorksheetType::Add { binary: true, .. } => Some(
-                "Add each pair of binary numbers. Carry to the next column when the column sum is 2 or more.",
-            ),
-            WorksheetType::Add { .. } => Some(
-                "Add each pair of numbers. Carry over to the next column when the column sum is 10 or more.",
-            ),
-            WorksheetType::Subtract { .. } => Some(
-                "Subtract the bottom number from the top. Borrow from the next column when needed.",
-            ),
-            WorksheetType::Multiply { .. } => Some(
-                "Multiply each pair of numbers. Show your work in the space below each problem.",
-            ),
-            WorksheetType::SimpleDivision { .. } => Some(
-                "Divide each pair of numbers. Write the remainder when the division is not exact.",
-            ),
-            WorksheetType::LongDivision { .. } => Some(
-                "Solve each problem using long division. Write the quotient on top and the remainder if any.",
-            ),
-            WorksheetType::FractionMultiply { .. } => Some(
-                "Multiply each pair of fractions. Simplify your answer to lowest terms.",
-            ),
-            WorksheetType::FractionSimplify { .. } => {
-                Some("Simplify each fraction to its lowest terms.")
+            WorksheetType::Add { binary: true, .. } => Some("Add each pair of binary numbers."),
+            WorksheetType::Add { .. } => Some("Add each pair of numbers."),
+            WorksheetType::Subtract { .. } => Some("Subtract the bottom number from the top."),
+            WorksheetType::Multiply { .. } => Some("Multiply each pair of numbers."),
+            WorksheetType::SimpleDivision { .. } => Some("Divide each pair of numbers."),
+            WorksheetType::LongDivision { .. } => Some("Solve each problem using long division."),
+            // The worksheet is whole × n/d, not n/d × n/d — earlier
+            // copy ("each pair of fractions") was inaccurate.
+            WorksheetType::FractionMultiply { .. } => {
+                Some("Multiply each whole number by the fraction.")
             }
-            WorksheetType::FractionEquiv { .. } => Some(
-                "Fill in the missing number to make each pair of fractions equivalent.",
-            ),
-            WorksheetType::AlgebraTwoStep { .. } => Some(
-                "Solve for the variable in each two-step equation. Show your work below each problem.",
-            ),
-            WorksheetType::AlgebraOneStep { .. } => {
-                Some("Solve for the variable in each one-step equation.")
+            WorksheetType::FractionSimplify { .. } => Some("Simplify each fraction."),
+            WorksheetType::FractionEquiv { .. } => {
+                Some("Fill in the missing number to make the fractions equivalent.")
             }
-            WorksheetType::AlgebraSquareRoot { .. } => Some("Find each square or square root."),
-            WorksheetType::DecimalAdd { .. } => Some(
-                "Add each pair of decimal numbers. Line up the decimal points before you add.",
-            ),
-            WorksheetType::DecimalSubtract { .. } => Some(
-                "Subtract the bottom decimal from the top. Line up the decimal points before you subtract.",
-            ),
-            WorksheetType::DecimalMultiply { .. } => Some(
-                "Multiply each pair of decimal numbers. Count the decimal places in your answer.",
-            ),
+            // All three algebra worksheets ask the same question of
+            // the student — solve for the variable. The form on the
+            // page (one-step / two-step / square / square-root)
+            // differentiates the practice; the instruction does not.
+            WorksheetType::AlgebraOneStep { .. }
+            | WorksheetType::AlgebraTwoStep { .. }
+            | WorksheetType::AlgebraSquareRoot { .. } => {
+                Some("Solve each equation for the variable.")
+            }
+            WorksheetType::DecimalAdd { .. } => Some("Add each pair of decimal numbers."),
+            WorksheetType::DecimalSubtract { .. } => Some("Subtract the bottom number from the top."),
+            WorksheetType::DecimalMultiply { .. } => Some("Multiply each pair of decimal numbers."),
             // Drills are visually self-explanatory — no instruction
             // sentence. The chrome drops the instructions section.
             WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => None,
