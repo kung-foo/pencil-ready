@@ -58,35 +58,67 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         None => SmallRng::from_entropy(),
     };
 
-    // Enumerate every valid (num, den) pair. Filtering rules:
-    //   - skip num == den (unless include_whole): degenerate, answer is 1.
-    //   - skip num > den that reduces to a whole (unless include_whole).
+    // Enumerate every valid (num, den) pair, splitting into two pools:
+    //   - `needs_work`: requires reduction or improper→mixed conversion.
+    //   - `already_simplest`: proper fraction already in lowest terms
+    //     (no work for the student). Capped to keep the worksheet useful.
+    // Filtering rules:
     //   - skip num >= den when !include_improper.
-    let mut all: Vec<(u32, u32)> = Vec::new();
+    //   - skip num > den that reduces to a whole (unless include_whole).
+    let mut needs_work: Vec<(u32, u32)> = Vec::new();
+    let mut already_simplest: Vec<(u32, u32)> = Vec::new();
     for &den in denominators {
         for num in 1..=max_numerator {
             if !include_improper && num >= den {
                 continue;
             }
-            let rd = den / gcd(num, den);
+            let g = gcd(num, den);
+            let rd = den / g;
             // rd == 1 means the reduced denominator collapses — answer is
             // a pure whole number. Exclude unless explicitly requested.
             if !include_whole && rd == 1 {
                 continue;
             }
-            all.push((num, den));
+            // A proper fraction with gcd 1 is already in simplest form —
+            // the student writes it back unchanged. Improper fractions
+            // still need mixed-number conversion even when coprime.
+            if num < den && g == 1 {
+                already_simplest.push((num, den));
+            } else {
+                needs_work.push((num, den));
+            }
         }
     }
 
-    all.shuffle(&mut rng);
+    needs_work.shuffle(&mut rng);
+    already_simplest.shuffle(&mut rng);
+
     let total = params.total_problems() as usize;
+    const MAX_ALREADY_SIMPLEST: usize = 2;
+
+    let mut all: Vec<(u32, u32)> = if needs_work.is_empty() {
+        // Degenerate config (e.g. only 1/2 available) — fall back to
+        // already-simplest so we still produce a worksheet.
+        already_simplest
+    } else {
+        let already_take = MAX_ALREADY_SIMPLEST
+            .min(already_simplest.len())
+            .min(total);
+        let needs_target = total.saturating_sub(already_take);
+        if total > 0 && needs_work.len() > needs_target {
+            needs_work.truncate(needs_target);
+        }
+        // Pad needs-work first so duplicates don't push us over the
+        // already-simplest cap.
+        crate::pad_with_duplicates(&mut needs_work, needs_target, &mut rng);
+        needs_work.extend(already_simplest.into_iter().take(already_take));
+        needs_work
+    };
+
+    all.shuffle(&mut rng);
     if total > 0 && all.len() > total {
         all.truncate(total);
     }
-
-    // Narrow search spaces (e.g. denominators=[2] with no improper, no
-    // whole) can leave us under target. Pad with duplicates rather than
-    // returning a short worksheet — same policy as add/subtract.
     crate::pad_with_duplicates(&mut all, total, &mut rng);
 
     all.into_iter().map(|(n, d)| vec![n, d]).collect()
@@ -120,6 +152,22 @@ mod tests {
             let (n, d) = (p[0], p[1]);
             assert!(n < d, "{n}/{d} is improper but improper was disabled");
         }
+    }
+
+    #[test]
+    fn caps_already_simplest_proper_fractions() {
+        // Pool has many coprime proper fractions (7/12, 11/12, 5/6, …).
+        // Without a cap, ~half of problems would be no-work copy-overs.
+        let params = test_params(vec![2, 3, 4, 5, 6, 8, 10, 12], 20, false, false);
+        let problems = generate_problems(&params);
+        let count = problems
+            .iter()
+            .filter(|p| p[0] < p[1] && gcd(p[0], p[1]) == 1)
+            .count();
+        assert!(
+            count <= 2,
+            "expected at most 2 already-simplest proper fractions, got {count}"
+        );
     }
 
     #[test]
