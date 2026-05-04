@@ -28,6 +28,51 @@ impl WorksheetType {
     pub fn kind_slug(&self) -> &'static str {
         base_name(self, Form::Slug)
     }
+
+    /// Default instruction text rendered in the worksheet header
+    /// banner. One short imperative sentence per worksheet kind, kept
+    /// under ~120 characters so it wraps to at most two lines at 11pt
+    /// in the chrome's instructions slot. Callers can override via
+    /// `WorksheetParams.instructions`. English-only for now —
+    /// internationalize alongside `title()` when Norwegian copy ships.
+    pub fn instructions(&self) -> &'static str {
+        match self {
+            WorksheetType::Add { binary: true, .. } =>
+                "Add each pair of binary numbers. Carry to the next column when the column sum is 2 or more.",
+            WorksheetType::Add { .. } =>
+                "Add each pair of numbers. Carry over to the next column when the column sum is 10 or more.",
+            WorksheetType::Subtract { .. } =>
+                "Subtract the bottom number from the top. Borrow from the next column when needed.",
+            WorksheetType::Multiply { .. } =>
+                "Multiply each pair of numbers. Show your work in the space below each problem.",
+            WorksheetType::SimpleDivision { .. } =>
+                "Divide each pair of numbers. Write the remainder when the division is not exact.",
+            WorksheetType::LongDivision { .. } =>
+                "Solve each problem using long division. Write the quotient on top and the remainder if any.",
+            WorksheetType::MultiplicationDrill { .. } =>
+                "Solve each multiplication problem.",
+            WorksheetType::DivisionDrill { .. } =>
+                "Solve each division problem.",
+            WorksheetType::FractionMultiply { .. } =>
+                "Multiply each pair of fractions. Simplify your answer to lowest terms.",
+            WorksheetType::FractionSimplify { .. } =>
+                "Simplify each fraction to its lowest terms.",
+            WorksheetType::FractionEquiv { .. } =>
+                "Fill in the missing number to make each pair of fractions equivalent.",
+            WorksheetType::AlgebraTwoStep { .. } =>
+                "Solve for the variable in each two-step equation. Show your work below each problem.",
+            WorksheetType::AlgebraOneStep { .. } =>
+                "Solve for the variable in each one-step equation.",
+            WorksheetType::AlgebraSquareRoot { .. } =>
+                "Find each square or square root.",
+            WorksheetType::DecimalAdd { .. } =>
+                "Add each pair of decimal numbers. Line up the decimal points before you add.",
+            WorksheetType::DecimalSubtract { .. } =>
+                "Subtract the bottom decimal from the top. Line up the decimal points before you subtract.",
+            WorksheetType::DecimalMultiply { .. } =>
+                "Multiply each pair of decimal numbers. Count the decimal places in your answer.",
+        }
+    }
 }
 
 impl WorksheetParams {
@@ -119,6 +164,7 @@ mod tests {
             solve_first: false,
             include_answers: false,
             student_name: None,
+            instructions: None,
         }
     }
 

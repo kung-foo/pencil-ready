@@ -689,14 +689,23 @@ pub struct Margins {
 }
 
 pub const MARGINS_CM: Margins = Margins {
-    top: 3.2,
+    // top accommodates the TALL chrome (Name/Date row + title-rule +
+    // 2-line instructions = 3.2cm box) at header-ascent 0.8cm + pad
+    // 0.7cm + box 3.2cm = 4.7cm, plus a small gap so the rule isn't
+    // jammed against the body grid. Bumped 3.2cm → 5.2cm when the
+    // title/instructions banner became part of the default layout;
+    // body grid loses ~2cm and pagination adjusts automatically via
+    // `Document::from_params`.
+    top: 5.2,
     bottom: 2.2,
     left: 1.5,
     right: 1.5,
 };
 
-/// Height of `worksheet-header`'s box in `lib/header.typ`.
-pub const HEADER_HEIGHT_CM: f32 = 1.5;
+/// Height of `worksheet-header`'s box in `lib/header.typ` (TALL mode —
+/// Name/Date area + title-rule area + instructions area). The compact
+/// no-banner mode is 1.5cm, but real worksheets use the tall chrome.
+pub const HEADER_HEIGHT_CM: f32 = 3.2;
 /// Height of `worksheet-footer`'s box in `lib/footer.typ`.
 pub const FOOTER_HEIGHT_CM: f32 = 0.8;
 /// typst `header-ascent` — distance from page top to the top of the
@@ -757,6 +766,12 @@ pub struct Chrome {
     pub include_answers: bool,
     pub debug: bool,
     pub solve_first: bool,
+    /// Override for the worksheet's default instruction text. `None`
+    /// means use `WorksheetType::instructions()` for the type. `Some`
+    /// means render the provided string verbatim — used by callers
+    /// (typically the server) that want to ship custom copy without
+    /// touching the per-type defaults.
+    pub instructions: Option<String>,
 }
 
 impl Chrome {
@@ -768,6 +783,7 @@ impl Chrome {
             include_answers: p.include_answers,
             debug: p.debug,
             solve_first: p.solve_first,
+            instructions: p.instructions.clone(),
         }
     }
 
@@ -975,6 +991,9 @@ pub struct WorksheetParams {
     /// Pre-filled student name rendered on the Name line in a handwriting
     /// font. `None` leaves the blank signature line.
     pub student_name: Option<String>,
+    /// Override for the worksheet's default instruction text. `None`
+    /// uses `WorksheetType::instructions()`; `Some` is rendered verbatim.
+    pub instructions: Option<String>,
 }
 
 impl WorksheetParams {
@@ -1436,14 +1455,16 @@ mod tests {
 
     #[test]
     fn content_area_cm_matches_hand_math() {
-        // A4 body = 21 − 1.5 − 1.5 wide, 29.7 − 3.2 − 2.2 tall.
+        // A4 body = 21 − 1.5 − 1.5 wide, 29.7 − 5.2 − 2.2 tall.
+        // Top margin is 5.2cm to fit the TALL chrome (Name/Date +
+        // title-rule + instructions).
         let (w, h) = content_area_cm(Paper::A4);
         assert!((w - 18.0).abs() < 0.01);
-        assert!((h - 24.3).abs() < 0.01);
-        // Letter body = 21.59 − 3.0 wide, 27.94 − 5.4 tall.
+        assert!((h - 22.3).abs() < 0.01);
+        // Letter body = 21.59 − 3.0 wide, 27.94 − 5.2 − 2.2 tall.
         let (w, h) = content_area_cm(Paper::Letter);
         assert!((w - 18.59).abs() < 0.01);
-        assert!((h - 22.54).abs() < 0.01);
+        assert!((h - 20.54).abs() < 0.01);
     }
 
     #[test]
@@ -1485,6 +1506,7 @@ mod tests {
             solve_first: false,
             include_answers: false,
             student_name: None,
+            instructions: None,
         };
         let err = Document::from_params(&params).unwrap_err().to_string();
         assert!(
@@ -1522,6 +1544,7 @@ mod tests {
             include_answers: false,
             debug: false,
             solve_first: false,
+            instructions: None,
         };
         let doc = Document {
             sheet: sheet.clone(),

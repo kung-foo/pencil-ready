@@ -849,6 +849,7 @@ fn main() -> Result<()> {
         solve_first: global.solve_first,
         include_answers: global.include_answers,
         student_name: global.student_name,
+        instructions: None,
     };
 
     let root = global
@@ -915,6 +916,7 @@ fn default_params_for(
         // answer key.
         include_answers: false,
         student_name: global.student_name.clone(),
+        instructions: None,
     }
 }
 

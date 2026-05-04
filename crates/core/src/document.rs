@@ -74,12 +74,18 @@ pub fn digit_count(n: u32) -> u32 {
 
 fn header_name_arg(name: Option<&str>) -> String {
     match name {
-        Some(n) if !n.is_empty() => {
-            let escaped = n.replace('\\', "\\\\").replace('"', "\\\"");
-            format!("\"{escaped}\"")
-        }
+        Some(n) if !n.is_empty() => typst_string_literal(n),
         _ => "none".to_string(),
     }
+}
+
+/// Escape a Rust string into a typst double-quoted literal. Backslashes
+/// and quotes are the only characters with special meaning inside a
+/// typst string; everything else passes through verbatim, including
+/// non-ASCII unicode (typst sources are UTF-8).
+fn typst_string_literal(s: &str) -> String {
+    let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+    format!("\"{escaped}\"")
 }
 
 /// Format a ComponentOpts dict as a typst expression, emitting only
@@ -177,6 +183,19 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     // straight into the generated .typ source.
     let student_name_arg = header_name_arg(chrome.student_name.as_deref());
 
+    // Title + instructions for the problem-page header banner. Title
+    // comes from `WorksheetType::title()` (the same string used for PDF
+    // metadata above). Instructions default to the per-type sentence in
+    // `WorksheetType::instructions()`, but a caller can override via
+    // `WorksheetParams.instructions` (e.g. a teacher's custom prompt).
+    let header_title_arg = typst_string_literal(&sheet.worksheet.title(chrome.solve_first));
+    let header_instructions_arg = typst_string_literal(
+        chrome
+            .instructions
+            .as_deref()
+            .unwrap_or_else(|| sheet.worksheet.instructions()),
+    );
+
     // Chunk problems across pages — `cells_per_page` is `cols ×
     // rows_per_page` computed upstream in `Document::from_params`.
     let per_page = doc.cells_per_page.max(1) as usize;
@@ -205,6 +224,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     let first_answer_idx = pages.len();
     let component_name = sheet.worksheet.component_typst_name();
     let opts_text = opts_body(&sheet.worksheet, &sheet.opts);
+    let header_pad_top = HEADER_PAD_TOP_CM;
 
     for (i, (page, is_answer_page)) in page_sequence.iter().enumerate() {
         let problem_lines: String = page
@@ -250,6 +270,21 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
             ""
         };
 
+        // Answer-key region: swap in a header that hides the Name/Date
+        // row (a pre-filled student name on the answer key would be
+        // nonsense) and shows an "Answer Key" title instead. Re-emit the
+        // `#set page(header: ...)` once at the boundary; the rule applies
+        // to the page that follows the preceding pagebreak. Driven from
+        // here rather than from typst because the boundary index
+        // (first_answer_idx) lives in the rust pagination layer.
+        if *is_answer_page && i == first_answer_idx {
+            page_blocks.push_str(&format!(
+                r#"#set page(header: pad(top: {header_pad_top}cm, worksheet-header(show-name-date: false, title: "Answer Key", debug: {debug_str})))
+
+"#
+            ));
+        }
+
         page_blocks.push_str(&format!(
             r#"#worksheet-page(
   (
@@ -281,7 +316,6 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     let margin_right = MARGINS_CM.right;
     let header_ascent = HEADER_ASCENT_CM;
     let footer_descent = FOOTER_DESCENT_CM;
-    let header_pad_top = HEADER_PAD_TOP_CM;
     let footer_pad_bottom = FOOTER_PAD_BOTTOM_CM;
 
     Ok(format!(
@@ -327,7 +361,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
   margin: (top: {margin_top}cm, bottom: {margin_bottom}cm, left: {margin_left}cm, right: {margin_right}cm),
   header-ascent: {header_ascent}cm,
   footer-descent: {footer_descent}cm,
-  header: pad(top: {header_pad_top}cm, worksheet-header(student-name: {student_name_arg}, debug: {debug_str})),
+  header: pad(top: {header_pad_top}cm, worksheet-header(student-name: {student_name_arg}, title: {header_title_arg}, instructions: {header_instructions_arg}, debug: {debug_str})),
   footer: pad(bottom: {footer_pad_bottom}cm, worksheet-footer(pencil-ready-content, debug: {debug_str})),
 )
 #set text(font: body-font, size: 10pt)

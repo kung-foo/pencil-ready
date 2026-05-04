@@ -130,6 +130,7 @@ impl SharedParams {
             solve_first: self.solve_first.unwrap_or(false),
             include_answers: self.include_answers.unwrap_or(false),
             student_name: self.student_name.filter(|s| !s.is_empty()),
+            instructions: None,
         };
         (format, params)
     }
