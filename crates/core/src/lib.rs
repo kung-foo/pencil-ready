@@ -746,10 +746,27 @@ pub fn chrome_height_cm(show_name_date: bool, has_title: bool, has_instructions:
 /// Compute `margin.top` (in cm) needed to fit the given chrome above
 /// the body grid. Adds [`HEADER_ASCENT_CM`] (gap above header) +
 /// [`HEADER_PAD_TOP_CM`] (the `pad(top: ...)` wrapper around the
-/// header callback) to the chrome's box height.
+/// header callback) + the chrome's box height + [`CHROME_BODY_GAP_CM`].
+///
+/// The body-gap (matched to prod's pre-banner layout, where
+/// `MARGINS_CM.top` was 3.2cm vs chrome content of 3.0cm) gives typst
+/// a non-zero slack between the chrome bottom and the body-grid top.
+/// Without it the chrome content overflows upward — typst's
+/// page-header positioning collapses to zero-buffer when chrome fills
+/// the available margin exactly, which jams Name/Date against the
+/// page edge.
 pub fn margin_top_for_chrome(chrome_h_cm: f32) -> f32 {
-    HEADER_ASCENT_CM + HEADER_PAD_TOP_CM + chrome_h_cm
+    HEADER_ASCENT_CM + HEADER_PAD_TOP_CM + chrome_h_cm + CHROME_BODY_GAP_CM
 }
+
+/// Slack between chrome bottom and body-grid top — see
+/// [`margin_top_for_chrome`]. Empirically tuned to 0.6cm so Name/Date
+/// lands at the same y as the pre-banner prod layout (cap top at
+/// ~1.29cm from page top); smaller values jam the chrome against the
+/// page edge because typst's page-header positioning doesn't honour
+/// `pad(top: ...)` the way you'd expect when the chrome content
+/// fills the available margin space exactly.
+pub const CHROME_BODY_GAP_CM: f32 = 0.6;
 /// Height of `worksheet-footer`'s box in `lib/footer.typ`.
 pub const FOOTER_HEIGHT_CM: f32 = 0.8;
 /// typst `header-ascent` — distance from page top to the top of the
@@ -1524,14 +1541,16 @@ mod tests {
     #[test]
     fn content_area_cm_matches_hand_math() {
         // A4 body = 21 − 1.5 − 1.5 wide. Height depends on chrome size.
-        // Worst-case chrome (3.2cm) → margin.top = 0.8 + 0.7 + 3.2 = 4.7cm.
+        // Worst-case chrome (3.2cm) → margin.top = 0.8 + 0.7 + 3.2 + 0.2
+        // (body-gap) = 4.9cm.
         let chrome_h = HEADER_HEIGHT_CM;
+        let mtop = margin_top_for_chrome(chrome_h);
         let (w, h) = content_area_cm(Paper::A4, chrome_h);
         assert!((w - 18.0).abs() < 0.01);
-        assert!((h - (29.7 - 4.7 - 2.2)).abs() < 0.01);
+        assert!((h - (29.7 - mtop - 2.2)).abs() < 0.01);
         let (w, h) = content_area_cm(Paper::Letter, chrome_h);
         assert!((w - 18.59).abs() < 0.01);
-        assert!((h - (27.94 - 4.7 - 2.2)).abs() < 0.01);
+        assert!((h - (27.94 - mtop - 2.2)).abs() < 0.01);
     }
 
     #[test]
