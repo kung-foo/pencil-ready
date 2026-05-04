@@ -43,6 +43,12 @@ export type SharedConfig = {
     include_answers?: boolean;
     problems?: number;
     cols?: number;
+    /** Render a bottom-right QR code that links back to the configurator
+     * page. Off by default; enable per-page by adding `?qr=1` (or
+     * `?qr=true`) to the route URL. The API gates rendering on a
+     * validated `share_url`, so the QR only appears when both this
+     * toggle is on AND the page URL is on an allowed origin. */
+    qr?: boolean;
 };
 
 // Per-kind config (only the distinguishing params; rest fall back to API defaults).
@@ -166,6 +172,7 @@ export function parseConfig(
         include_answers: b("include_answers"),
         problems: n("problems"),
         cols: n("cols"),
+        qr: b("qr"),
     };
 
     switch (kind) {
@@ -296,13 +303,12 @@ export function worksheetUrl(
         }
     }
     if (names?.student) qs.set("student_name", names.student);
-    // QR rendering is gated server-side by `qr=true`. Disabled by
-    // default until a UI toggle lands — when it does, the block below
-    // should gate on the toggle. The server defaults `qr` to false, so
-    // simply not emitting the params is enough to suppress rendering;
-    // we keep the snapshot/build logic ready for the UI to enable.
-    const QR_ENABLED = false;
-    if (QR_ENABLED && typeof window !== "undefined" && cfg.seed !== undefined) {
+    // QR rendering is opt-in via `cfg.qr` (set by adding `?qr=1` or
+    // `?qr=true` to the route URL — see `parseConfig`). Server gates
+    // on a validated `share_url`, so we also need a stable seed (so
+    // the QR target reproduces the same worksheet) and a shareable
+    // origin (window.location is the page URL the QR points back to).
+    if (cfg.qr === true && typeof window !== "undefined" && cfg.seed !== undefined) {
         const shareTail = shareSearch.toString();
         const shareUrl = `${window.location.origin}/worksheets/${cfg.kind}/${shareTail ? `?${shareTail}` : ""}`;
         qs.set("share_url", shareUrl);

@@ -97,13 +97,13 @@ struct SharedParams {
     #[serde(default)]
     symbol: Option<String>,
     /// Render the first problem as a worked example.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
     solve_first: Option<bool>,
     /// Append an answer-key page showing just the final answers (PDF only).
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
     include_answers: Option<bool>,
     /// Draw debug borders around problem boxes and grid cells.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
     debug: Option<bool>,
     /// Pre-fill the student name on the header in a handwriting font.
     #[serde(default)]
@@ -111,7 +111,7 @@ struct SharedParams {
     /// Render a bottom-right QR code on every page. Off by default —
     /// callers that want one set `qr=true` (or `qr=1`) and supply a
     /// validated `share_url`. Without `share_url`, `qr=true` is a no-op.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
     qr: Option<bool>,
     /// URL the QR (when `qr=true`) encodes. Only allowed-origin URLs
     /// are honoured (see [`SHARE_URL_ALLOWED_PREFIXES`]); anything else
@@ -135,6 +135,57 @@ fn validated_share_url(s: Option<String>) -> Option<String> {
     } else {
         None
     }
+}
+
+/// Loose boolean deserializer for query-string params. Accepts the
+/// canonical `true`/`false` plus the common shortcuts `1`/`0`,
+/// `yes`/`no`, `on`/`off` (case-insensitive). Lets `?qr=1` or
+/// `?debug=on` work in addition to the strict serde default of
+/// `?qr=true`. An empty string deserializes as `None` so URLs like
+/// `?qr=` (param present, no value) don't break.
+fn deserialize_loose_bool<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::{Error, Visitor};
+    use std::fmt;
+
+    struct LooseBool;
+    impl<'de> Visitor<'de> for LooseBool {
+        type Value = Option<bool>;
+        fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            f.write_str("a boolean (true/false/1/0/yes/no/on/off)")
+        }
+        fn visit_bool<E: Error>(self, v: bool) -> Result<Self::Value, E> {
+            Ok(Some(v))
+        }
+        fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
+            match v.trim().to_ascii_lowercase().as_str() {
+                "" => Ok(None),
+                "true" | "1" | "yes" | "on" => Ok(Some(true)),
+                "false" | "0" | "no" | "off" => Ok(Some(false)),
+                other => Err(E::custom(format!(
+                    "expected boolean (true/false/1/0/yes/no/on/off), got {other:?}"
+                ))),
+            }
+        }
+        fn visit_string<E: Error>(self, v: String) -> Result<Self::Value, E> {
+            self.visit_str(&v)
+        }
+        fn visit_none<E: Error>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+        fn visit_unit<E: Error>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+        fn visit_some<D: serde::Deserializer<'de>>(
+            self,
+            deserializer: D,
+        ) -> Result<Self::Value, D::Error> {
+            deserializer.deserialize_any(LooseBool)
+        }
+    }
+    deserializer.deserialize_any(LooseBool)
 }
 
 impl SharedParams {
