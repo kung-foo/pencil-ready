@@ -29,6 +29,53 @@ export type Level = {
 /** Per-kind level definitions. The 1-based array position is the level
  * id (URL: `?level=1`); the first entry is the default. */
 export const WORKSHEET_LEVELS: Partial<Record<WorksheetKind, readonly Level[]>> = {
+    add: [
+        {
+            label: "2-digit, no carry",
+            example: "23 + 45",
+            params: { digits: "2,2", carry: "none" },
+        },
+        {
+            label: "2-digit with carry",
+            example: "47 + 38",
+            // `force` so every problem actually exercises carrying — `any`
+            // would let plain no-carry sums slip in and dilute the practice.
+            params: { digits: "2,2", carry: "force" },
+        },
+        {
+            label: "3-digit, mixed",
+            example: "346 + 278",
+            params: { digits: "3,3", carry: "any" },
+        },
+    ],
+    subtract: [
+        {
+            label: "2-digit, no borrow",
+            example: "67 − 24",
+            params: { digits: "2,2", borrow: "none" },
+        },
+        {
+            label: "2-digit with borrow",
+            example: "73 − 48",
+            // `force` so the kid actually practices borrowing every problem.
+            params: { digits: "2,2", borrow: "force" },
+        },
+        {
+            label: "3-digit, mixed",
+            example: "624 − 287",
+            // `any` lets borrow-across-zero cases appear naturally —
+            // a soft intro before level 4 forces ripple every time.
+            params: { digits: "3,3", borrow: "any" },
+        },
+        {
+            label: "3-digit, ripple borrow",
+            example: "403 − 178",
+            // `ripple` guarantees every problem chains the borrow through
+            // 2+ columns (e.g. across a 0). This is the case that
+            // typically trips kids up the most.
+            params: { digits: "3,3", borrow: "ripple" },
+        },
+    ],
     "decimal-add": [
         {
             label: "Tenths",

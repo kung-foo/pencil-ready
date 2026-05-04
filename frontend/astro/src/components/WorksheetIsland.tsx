@@ -50,6 +50,8 @@ function applyFirstVisitDefaults(
     // none is in the URL, so the API URL expands to a concrete preset
     // rather than relying on server fallback defaults.
     const levelKinds: WorksheetKind[] = [
+        "add",
+        "subtract",
         "decimal-add",
         "decimal-subtract",
         "decimal-multiply",

@@ -9,13 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -25,14 +18,7 @@ import {
     InputGroupInput,
 } from "@/components/ui/input-group";
 import { Shuffle } from "lucide-react";
-import {
-    BORROW_MODES,
-    BORROW_MODE_LABELS,
-    CARRY_MODES,
-    CARRY_MODE_LABELS,
-    FORMATS,
-    type WorksheetConfig,
-} from "@/lib/api";
+import { FORMATS, type WorksheetConfig } from "@/lib/api";
 import { levelsFor, defaultLevel, type Level } from "@/lib/levels";
 import type { Names } from "@/lib/useNames";
 
@@ -444,74 +430,6 @@ function KindSpecific({
         onChange({ ...cfg, [key]: value } as WorksheetConfig);
 
     switch (cfg.kind) {
-        case "add":
-            return (
-                <div className="space-y-4">
-                    <Field label="Digits (e.g. 2,2 or 2-4,2-4)">
-                        <Input
-                            value={cfg.digits ?? ""}
-                            placeholder="2,2"
-                            onChange={(e) => patch("digits", e.target.value)}
-                        />
-                    </Field>
-                    <Field label="Carrying">
-                        <Select
-                            value={cfg.carry ?? "any"}
-                            onValueChange={(v) => patch("carry", v)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {CARRY_MODES.map((m) => (
-                                    <SelectItem key={m} value={m}>
-                                        {CARRY_MODE_LABELS[m]}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </Field>
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="binary">Binary (base 2)</Label>
-                        <Switch
-                            id="binary"
-                            checked={cfg.binary ?? false}
-                            onCheckedChange={(v) => patch("binary", v)}
-                        />
-                    </div>
-                </div>
-            );
-
-        case "subtract":
-            return (
-                <div className="space-y-4">
-                    <Field label="Digits">
-                        <Input
-                            value={cfg.digits ?? ""}
-                            placeholder="2,2"
-                            onChange={(e) => patch("digits", e.target.value)}
-                        />
-                    </Field>
-                    <Field label="Borrowing">
-                        <Select
-                            value={cfg.borrow ?? "any"}
-                            onValueChange={(v) => patch("borrow", v)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {BORROW_MODES.map((m) => (
-                                    <SelectItem key={m} value={m}>
-                                        {BORROW_MODE_LABELS[m]}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </Field>
-                </div>
-            );
-
         case "multiply":
             return (
                 <Field label="Digits (e.g. 2,2 or 3,2)">
@@ -652,6 +570,8 @@ function KindSpecific({
             );
         }
 
+        case "add":
+        case "subtract":
         case "long-divide":
         case "algebra-two-step":
         case "algebra-one-step":

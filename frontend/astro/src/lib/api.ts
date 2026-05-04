@@ -15,18 +15,6 @@ import { levelParams } from "./levels";
 export const FORMATS = ["pdf", "png", "svg"] as const;
 export type Format = (typeof FORMATS)[number];
 
-export const CARRY_MODES = ["none", "any", "force", "ripple"] as const;
-export type CarryMode = (typeof CARRY_MODES)[number];
-
-export const BORROW_MODES = [
-    "none",
-    "no-across-zero",
-    "any",
-    "force",
-    "ripple",
-] as const;
-export type BorrowMode = (typeof BORROW_MODES)[number];
-
 export const WORKSHEET_KINDS = [
     "add",
     "subtract",
@@ -47,22 +35,6 @@ export const WORKSHEET_KINDS = [
 ] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
 
-/** Nicely-phrased labels for dropdowns. Keys mirror the array constants. */
-export const CARRY_MODE_LABELS: Record<CarryMode, string> = {
-    none: "None",
-    any: "Any",
-    force: "Force",
-    ripple: "Ripple (multi-column)",
-};
-
-export const BORROW_MODE_LABELS: Record<BorrowMode, string> = {
-    none: "None",
-    "no-across-zero": "No across zero",
-    any: "Any",
-    force: "Force",
-    ripple: "Ripple (multi-column)",
-};
-
 export type SharedConfig = {
     format: Format;
     seed?: number;
@@ -75,8 +47,16 @@ export type SharedConfig = {
 
 // Per-kind config (only the distinguishing params; rest fall back to API defaults).
 export type KindConfig =
-    | { kind: "add"; digits?: string; carry?: CarryMode; binary?: boolean }
-    | { kind: "subtract"; digits?: string; borrow?: BorrowMode }
+    | {
+          kind: "add";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "subtract";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
     | { kind: "multiply"; digits?: string }
     | { kind: "simple-divide"; max_quotient?: number }
     | {
@@ -190,20 +170,9 @@ export function parseConfig(
 
     switch (kind) {
         case "add":
-            return {
-                ...shared,
-                kind,
-                digits: s("digits"),
-                carry: asEnum(s("carry"), CARRY_MODES),
-                binary: b("binary"),
-            };
+            return { ...shared, kind, level: s("level") };
         case "subtract":
-            return {
-                ...shared,
-                kind,
-                digits: s("digits"),
-                borrow: asEnum(s("borrow"), BORROW_MODES),
-            };
+            return { ...shared, kind, level: s("level") };
         case "multiply":
             return { ...shared, kind, digits: s("digits") };
         case "simple-divide":
