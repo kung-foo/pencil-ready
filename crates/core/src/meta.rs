@@ -13,14 +13,9 @@
 use crate::{WorksheetParams, WorksheetType};
 
 impl WorksheetType {
-    /// Plain-English title. Adds " (worked example)" when `solve_first`
-    /// is on.
-    pub fn title(&self, solve_first: bool) -> String {
-        let mut t = base_name(self, Form::Title).to_string();
-        if solve_first {
-            t.push_str(" (worked example)");
-        }
-        t
+    /// Plain-English title.
+    pub fn title(&self) -> String {
+        base_name(self, Form::Title).to_string()
     }
 
     /// Kind-only slug, no solved/seed suffixes — suitable for PDF
@@ -78,7 +73,7 @@ impl WorksheetType {
 impl WorksheetParams {
     /// Plain-English title suitable for page headers or UI labels.
     pub fn title(&self) -> String {
-        self.worksheet.title(self.solve_first)
+        self.worksheet.title()
     }
 
     /// Filename-safe slug. Callers prefix (e.g. "pencil-ready-") and append
@@ -198,7 +193,10 @@ mod tests {
         });
         p.solve_first = true;
         p.seed = Some(42);
-        assert_eq!(p.title(), "Multiplication (worked example)");
+        // Title is unaffected by solve-first; the slug still gets the
+        // -solved suffix so a downloaded worked-example file is named
+        // distinctly from the regular worksheet.
+        assert_eq!(p.title(), "Multiplication");
         assert_eq!(p.slug(), "multiplication-solved-seed42");
     }
 }

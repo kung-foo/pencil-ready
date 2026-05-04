@@ -189,7 +189,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     // metadata above). Instructions default to the per-type sentence in
     // `WorksheetType::instructions()` (None for drills); a caller can
     // override via `WorksheetParams.instructions`.
-    let header_title_arg = typst_string_literal(&sheet.worksheet.title(chrome.solve_first));
+    let header_title_arg = typst_string_literal(&sheet.worksheet.title());
     let resolved_instructions: Option<String> = match chrome.instructions.as_deref() {
         Some(s) if !s.is_empty() => Some(s.to_string()),
         Some(_) => None, // empty override = drop the section
@@ -336,7 +336,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 
     // PDF metadata — shows up in the reader's Document Properties panel
     // and gets indexed when the file is ingested by content systems.
-    let doc_title = sheet.worksheet.title(chrome.solve_first);
+    let doc_title = sheet.worksheet.title();
     let doc_kind = sheet.worksheet.kind_slug();
 
     // Initial page setup uses the problem-page chrome — `margin.top`
