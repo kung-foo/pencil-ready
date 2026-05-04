@@ -84,6 +84,12 @@ impl MathWorld {
         // Load assets (like rainbow-heart.svg) as raw bytes.
         load_binary_files(root, "assets", &mut files)?;
 
+        // Load lib/**/*.wasm files (typst plugin binaries — currently
+        // just lib/zebra/zebra.wasm for the QR-code generator). They're
+        // resolved by typst via `plugin("zebra.wasm")` calls inside
+        // sibling .typ files, which need them in `files` to load.
+        load_lib_binaries(root, "lib", &mut files)?;
+
         Ok(Self {
             main_source,
             files,
@@ -207,6 +213,45 @@ fn load_binary_files(
                 subdir,
                 path.file_name().unwrap().to_string_lossy()
             );
+            let id = FileId::new(None, VirtualPath::new(&vpath));
+            let data = std::fs::read(&path)
+                .with_context(|| format!("reading {}", path.display()))?;
+            files.insert(id, Bytes::new(data));
+        }
+    }
+    Ok(())
+}
+
+/// Recursively load typst-plugin .wasm files from a subdirectory of
+/// the project root. Used for vendored typst packages whose .typ
+/// sources call `plugin("foo.wasm")`. Mirrors `visit_typ_sources` but
+/// inserts into the `files` map (raw bytes) instead of `sources`.
+fn load_lib_binaries(
+    root: &Path,
+    subdir: &str,
+    files: &mut HashMap<FileId, Bytes>,
+) -> Result<()> {
+    let dir = root.join(subdir);
+    if !dir.exists() {
+        return Ok(());
+    }
+    visit_lib_binaries(root, &dir, files)
+}
+
+fn visit_lib_binaries(
+    root: &Path,
+    dir: &Path,
+    files: &mut HashMap<FileId, Bytes>,
+) -> Result<()> {
+    for entry in std::fs::read_dir(dir).context("reading lib dir for plugins")? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            visit_lib_binaries(root, &path, files)?;
+        } else if path.extension().is_some_and(|e| e == "wasm") {
+            let rel = path.strip_prefix(root).unwrap_or(&path);
+            let vpath = format!("/{}", rel.to_string_lossy());
             let id = FileId::new(None, VirtualPath::new(&vpath));
             let data = std::fs::read(&path)
                 .with_context(|| format!("reading {}", path.display()))?;

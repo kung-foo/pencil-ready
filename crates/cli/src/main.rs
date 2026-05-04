@@ -850,6 +850,7 @@ fn main() -> Result<()> {
         include_answers: global.include_answers,
         student_name: global.student_name,
         instructions: None,
+        share_url: None,
     };
 
     let root = global
@@ -917,6 +918,7 @@ fn default_params_for(
         include_answers: false,
         student_name: global.student_name.clone(),
         instructions: None,
+        share_url: None,
     }
 }
 

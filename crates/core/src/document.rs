@@ -201,6 +201,15 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
         None => "none".to_string(),
     };
 
+    // Optional bottom-right QR. Set when the frontend (or any caller)
+    // wants the printed worksheet to carry a scannable URL — typically
+    // the same `?seed=...` that produced it, so a phone scan reopens
+    // the same worksheet.
+    let footer_share_url_arg = match chrome.share_url.as_deref() {
+        Some(s) if !s.is_empty() => typst_string_literal(s),
+        _ => "none".to_string(),
+    };
+
     // Per-page chrome heights. Problem pages get all sections that
     // apply; the answer-key page is title-only since the user dropped
     // the across-page alignment requirement (in exchange, drill answer
@@ -386,7 +395,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
   header-ascent: {header_ascent}cm,
   footer-descent: {footer_descent}cm,
   header: pad(top: {header_pad_top}cm, worksheet-header(student-name: {student_name_arg}, title: {header_title_arg}, instructions: {header_instructions_arg}, debug: {debug_str})),
-  footer: pad(bottom: {footer_pad_bottom}cm, worksheet-footer(pencil-ready-content, debug: {debug_str})),
+  footer: pad(bottom: {footer_pad_bottom}cm, worksheet-footer(pencil-ready-content, share-url: {footer_share_url_arg}, debug: {debug_str})),
 )
 #set text(font: body-font, size: 10pt)
 

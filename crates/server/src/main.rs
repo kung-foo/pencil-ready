@@ -108,6 +108,33 @@ struct SharedParams {
     /// Pre-fill the student name on the header in a handwriting font.
     #[serde(default)]
     student_name: Option<String>,
+    /// Render a bottom-right QR code on every page. Off by default —
+    /// callers that want one set `qr=true` (or `qr=1`) and supply a
+    /// validated `share_url`. Without `share_url`, `qr=true` is a no-op.
+    #[serde(default)]
+    qr: Option<bool>,
+    /// URL the QR (when `qr=true`) encodes. Only allowed-origin URLs
+    /// are honoured (see [`SHARE_URL_ALLOWED_PREFIXES`]); anything else
+    /// is silently dropped — a worksheet PDF lives forever once
+    /// printed, so an arbitrary `share_url` would let any caller mint a
+    /// scannable redirect to anywhere.
+    #[serde(default)]
+    share_url: Option<String>,
+}
+
+const SHARE_URL_ALLOWED_PREFIXES: &[&str] = &[
+    "https://pencilready.com/",
+    "http://localhost:",
+    "http://127.0.0.1:",
+];
+
+fn validated_share_url(s: Option<String>) -> Option<String> {
+    let s = s.filter(|v| !v.is_empty())?;
+    if SHARE_URL_ALLOWED_PREFIXES.iter().any(|p| s.starts_with(p)) {
+        Some(s)
+    } else {
+        None
+    }
 }
 
 impl SharedParams {
@@ -131,6 +158,14 @@ impl SharedParams {
             include_answers: self.include_answers.unwrap_or(false),
             student_name: self.student_name.filter(|s| !s.is_empty()),
             instructions: None,
+            // `qr=true` gates rendering; without it, `share_url` is
+            // ignored. Lets the same client send a share URL on every
+            // request and toggle the QR independently.
+            share_url: if self.qr.unwrap_or(false) {
+                validated_share_url(self.share_url)
+            } else {
+                None
+            },
         };
         (format, params)
     }

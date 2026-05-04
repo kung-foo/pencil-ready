@@ -233,6 +233,7 @@ mod tests {
             include_answers: false,
             student_name: None,
             instructions: None,
+            share_url: None,
         }
     }
 
@@ -250,6 +251,7 @@ mod tests {
             include_answers: false,
             student_name: None,
             instructions: None,
+            share_url: None,
         }
     }
 }

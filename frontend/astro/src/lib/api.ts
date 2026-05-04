@@ -269,12 +269,22 @@ function asEnum<T extends readonly string[]>(
  * query param is replaced with the level's raw params (digits,
  * decimal_places, etc.) so the server — which knows nothing about
  * levels — receives the expanded form. The browser URL still shows just
- * `?level=...` (set by `configToSearchParams`). */
+ * `?level=...` (set by `configToSearchParams`).
+ *
+ * When `cfg.seed` is set, a `share_url=` param is appended pointing back
+ * at the *frontend* route (with the original `level=...` form, not the
+ * expanded one). The server validates it against an allowed-origin list
+ * and embeds it as a QR code in the bottom-right of every page. */
 export function worksheetUrl(
     cfg: WorksheetConfig,
     names?: { student?: string },
 ): string {
     const qs = configToSearchParams(cfg);
+    // Snapshot the frontend-form qs (with `level=…`) before the API
+    // expansion below mutates it. This is what the QR points to so a
+    // scan lands on the same configurator state, not the expanded
+    // raw-params form (which `parseConfig` for level kinds ignores).
+    const shareSearch = new URLSearchParams(qs);
     const levelValue = qs.get("level");
     if (levelValue) {
         const expanded = levelParams(cfg.kind, levelValue);
@@ -286,6 +296,18 @@ export function worksheetUrl(
         }
     }
     if (names?.student) qs.set("student_name", names.student);
+    // QR rendering is gated server-side by `qr=true`. Disabled by
+    // default until a UI toggle lands — when it does, the block below
+    // should gate on the toggle. The server defaults `qr` to false, so
+    // simply not emitting the params is enough to suppress rendering;
+    // we keep the snapshot/build logic ready for the UI to enable.
+    const QR_ENABLED = false;
+    if (QR_ENABLED && typeof window !== "undefined" && cfg.seed !== undefined) {
+        const shareTail = shareSearch.toString();
+        const shareUrl = `${window.location.origin}/worksheets/${cfg.kind}/${shareTail ? `?${shareTail}` : ""}`;
+        qs.set("share_url", shareUrl);
+        qs.set("qr", "true");
+    }
     const s = qs.toString();
     return `/api/worksheets/${cfg.kind}${s ? `?${s}` : ""}`;
 }

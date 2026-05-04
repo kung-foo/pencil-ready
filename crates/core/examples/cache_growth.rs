@@ -59,6 +59,8 @@ fn params(kind_ix: u32, seed: u64) -> WorksheetParams {
         solve_first: false,
         include_answers: false,
         student_name: None,
+        instructions: None,
+        share_url: None,
     }
 }
 

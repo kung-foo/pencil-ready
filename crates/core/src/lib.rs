@@ -819,6 +819,10 @@ pub struct Chrome {
     /// (typically the server) that want to ship custom copy without
     /// touching the per-type defaults.
     pub instructions: Option<String>,
+    /// URL to encode as a QR code in the bottom-right page margin.
+    /// `None` skips the QR. Plumbed in from the frontend so the QR
+    /// resolves to the same `?seed=...` that produced the worksheet.
+    pub share_url: Option<String>,
 }
 
 impl Chrome {
@@ -831,6 +835,7 @@ impl Chrome {
             debug: p.debug,
             solve_first: p.solve_first,
             instructions: p.instructions.clone(),
+            share_url: p.share_url.clone(),
         }
     }
 
@@ -1054,6 +1059,9 @@ pub struct WorksheetParams {
     /// Override for the worksheet's default instruction text. `None`
     /// uses `WorksheetType::instructions()`; `Some` is rendered verbatim.
     pub instructions: Option<String>,
+    /// Optional URL to encode as a bottom-right QR code on every page.
+    /// Set by the server from a validated `share_url=` query param.
+    pub share_url: Option<String>,
 }
 
 impl WorksheetParams {
@@ -1597,6 +1605,7 @@ mod tests {
             include_answers: false,
             student_name: None,
             instructions: None,
+            share_url: None,
         };
         let err = Document::from_params(&params).unwrap_err().to_string();
         assert!(
@@ -1635,6 +1644,7 @@ mod tests {
             debug: false,
             solve_first: false,
             instructions: None,
+            share_url: None,
         };
         let doc = Document {
             sheet: sheet.clone(),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { navigate } from "astro:transitions/client";
 import { DownloadButton } from "@/components/DownloadButton";
 import { Preview } from "@/components/Preview";
@@ -73,8 +73,36 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
             typeof window === "undefined"
                 ? new URLSearchParams()
                 : new URLSearchParams(window.location.search);
-        return applyFirstVisitDefaults(parseConfig(kind, search), search);
+        const parsed = applyFirstVisitDefaults(
+            parseConfig(kind, search),
+            search,
+        );
+        // Lock a seed if the URL didn't already carry one. Required for the
+        // bottom-right share-URL QR to stay reproducible: without a seed,
+        // each render would yield a different worksheet from the URL the
+        // QR encodes. 6-digit seed matches the Shuffle button's range.
+        if (parsed.seed === undefined) {
+            return {
+                ...parsed,
+                seed: Math.floor(Math.random() * 1_000_000),
+            };
+        }
+        return parsed;
     });
+    // Sync the auto-locked seed back to the address bar on first mount, so
+    // the URL the user copies/shares matches the worksheet they're seeing.
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const qs = configToSearchParams(cfg).toString();
+        window.history.replaceState(
+            null,
+            "",
+            `/worksheets/${kind}/${qs ? `?${qs}` : ""}`,
+        );
+        // Intentionally empty deps — only run once after mount. Subsequent
+        // updates flow through `onChange` below.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const [names, patchNames] = useNames();
     const url = useMemo(() => worksheetUrl(cfg, names), [cfg, names]);
     const state = useWorksheet(url);
