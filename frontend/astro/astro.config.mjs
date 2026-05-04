@@ -92,8 +92,14 @@ export default defineConfig({
     react(),
     // Emits sitemap-index.xml + sitemap-0.xml at build time listing
     // every generated route (/, /worksheets/add/, ...). Search engines
-    // use these to discover URLs without crawling.
-    sitemap(),
+    // use these to discover URLs without crawling. Every entry gets
+    // the build's wall-clock as `lastmod` — coarse but honest enough:
+    // a deploy means "any page may have changed since you last crawled."
+    sitemap({
+      serialize(item) {
+        return { ...item, lastmod: new Date().toISOString() };
+      },
+    }),
   ],
   // Optimize SVG component imports at production-build time. See
   // `thumbSvgOptimizer` above for the content-hash-prefixed twist.
