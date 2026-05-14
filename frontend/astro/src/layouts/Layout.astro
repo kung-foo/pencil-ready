@@ -3,6 +3,7 @@ import { Font } from "astro:assets";
 import { ClientRouter } from "astro:transitions";
 import PencilRule from "../components/PencilRule.astro";
 import InlineIcon from "../components/InlineIcon.astro";
+import Stippled from "../components/Stippled.astro";
 import "../styles/global.css";
 // `?raw` reads the SVG files at build time so the markup ships inlined
 // in the HTML — no extra round trip. The public/ files remain the single
@@ -178,7 +179,8 @@ const umami = {
         </script>
     </head>
     <body class="min-h-screen flex flex-col">
-        <header
+        <Stippled
+            as="header"
             class="border-b px-3 py-1 flex items-center justify-between gap-4"
         >
             <div>
@@ -211,7 +213,7 @@ const umami = {
                     About
                 </a>
             </nav>
-        </header>
+        </Stippled>
         <main class="flex-1">
             <slot />
         </main>
@@ -239,6 +241,38 @@ const umami = {
                 </span>
             </div>
         </footer>
+        <!-- Stipple painter for Astro-rendered <canvas class="stipple-canvas">
+             elements (header, homepage cards, about panel). Their
+             markup is in source HTML via <Stippled>, so morph keeps
+             them across navigation; we just attach a one-time
+             ResizeObserver and repaint on each lifecycle event.
+             React-rendered canvases mark themselves with
+             data-stipple-react and run their own paint loop in a
+             useEffect (see StippleBg.tsx). -->
+        <script>
+            import { paintStipple } from "@/lib/stipple";
+
+            const init = () => {
+                document
+                    .querySelectorAll<HTMLCanvasElement>(
+                        "canvas.stipple-canvas",
+                    )
+                    .forEach((canvas) => {
+                        if (canvas.dataset.stippleReact) return;
+                        if (!canvas.dataset.stippleInit) {
+                            new ResizeObserver(() =>
+                                paintStipple(canvas),
+                            ).observe(canvas);
+                            canvas.dataset.stippleInit = "1";
+                        }
+                        paintStipple(canvas);
+                    });
+            };
+
+            init();
+            document.addEventListener("astro:after-swap", init);
+            document.addEventListener("astro:page-load", init);
+        </script>
         <!-- 12px hysteresis (on >32, off <20) avoids flicker when a
              scroll lands right on the boundary. Re-runs on
              astro:page-load so it survives ClientRouter swaps. -->

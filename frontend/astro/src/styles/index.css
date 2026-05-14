@@ -108,6 +108,19 @@
     * {
         @apply border-border;
     }
+    /* Pencil-yellow scrollbar. `scrollbar-color` is the standards-track
+       property, supported in Firefox + Chrome 121+/Safari 18+. WebKit
+       pseudo-elements catch older Chromium/Safari builds. */
+    html {
+        scrollbar-color: var(--color-pencil-no-2) transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--color-pencil-no-2);
+        border-radius: 0.25rem;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
     body {
         @apply bg-background text-foreground;
         font-family: var(--font-sans);
@@ -245,6 +258,59 @@
     h3 {
         font-size: 1.1em;
     }
+}
+
+/* Stipple noise overlay. Apply `class="stippled"` to any card-shaped
+   element to give it a faint two-tone speckle background. The painter
+   in Layout.astro discovers `.stippled` elements on page load, injects
+   a `<canvas class="stipple-canvas">` as the first child, and paints
+   the noise scaled to devicePixelRatio.
+
+   The canvas sits at z-index -1 inside an isolated stacking context,
+   so children paint above it without needing their own z-index. The
+   border-radius:inherit + overflow:hidden combo clips the speckle to
+   the parent's rounded corners (cards are typically rounded-xl).
+   Dots are translucent (low alpha) and rely on standard alpha
+   compositing — not mix-blend-mode — so the stipple renders the
+   same on opaque card backgrounds AND on transparent parents (the
+   header) where it composites onto whatever's behind. Opaque child
+   elements (level boxes, form controls) naturally occlude the
+   speckle beneath them. */
+.stippled {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+.stippled > canvas.stipple-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+/* Form controls inside a stippled surface use bg-transparent by
+   default (shadcn pattern — picks up the parent's bg). Inside a
+   stippled card the parent's "bg" is the speckle layer, which we
+   don't want bleeding through inputs/selects/textareas. Force an
+   opaque card-colored bg so these elements read as solid.
+
+   The `:not([data-slot="input-group-control"])` excludes the inner
+   <Input> inside an InputGroup — that inner element has h-9 and
+   overflows the InputGroup's content area (which is h-9 minus 2px
+   of border) by 1px top and bottom. With bg-transparent the
+   overflow is invisible; an opaque bg there would paint over the
+   parent's border. The InputGroup itself getting bg-card is
+   enough to occlude the speckle. */
+.stippled :is(
+    input:not([data-slot="input-group-control"]),
+    textarea:not([data-slot="input-group-control"]),
+    [data-slot="input-group"],
+    [data-slot="select-trigger"]
+) {
+    background-color: var(--card);
 }
 
 /* Safety net when the browser falls back to page-level printing

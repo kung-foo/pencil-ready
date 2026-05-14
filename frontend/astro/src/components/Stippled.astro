@@ -1,0 +1,25 @@
+---
+/*
+ * Wraps its content in an element with `class="stippled"` and emits
+ * a `<canvas class="stipple-canvas">` child. The painter in
+ * Layout.astro picks up the canvas at page-load and on each
+ * astro:after-swap. Styling rules live in index.css.
+ *
+ * `as` switches the wrapping tag — header, a, section, etc. All
+ * other props pass through (href, role, etc.). For React-rendered
+ * surfaces, use <StippleBg /> instead and put `className="stippled"`
+ * on the parent yourself.
+ */
+interface Props {
+    as?: string;
+    class?: string;
+    [key: string]: unknown;
+}
+
+const { as: Tag = "div", class: className, ...rest } = Astro.props;
+---
+
+<Tag class:list={["stippled", className]} {...rest}>
+    <canvas class="stipple-canvas"></canvas>
+    <slot />
+</Tag>
