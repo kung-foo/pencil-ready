@@ -22,7 +22,7 @@ export function paintStipple(canvas: HTMLCanvasElement): void {
     const size = dpr;
     const density = 0.04;
     ctx.clearRect(0, 0, w, h);
-    const black = "rgba(0, 0, 0, 0.07)";
+    const black = "rgba(0, 0, 0, 0.06)";
     const blue = "hsla(217, 70%, 50%, 0.1)";
     for (let y = 0; y < h; y += size) {
         for (let x = 0; x < w; x += size) {

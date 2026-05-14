@@ -108,6 +108,19 @@
     * {
         @apply border-border;
     }
+    /* Pencil-yellow scrollbar. `scrollbar-color` is the standards-track
+       property, supported in Firefox + Chrome 121+/Safari 18+. WebKit
+       pseudo-elements catch older Chromium/Safari builds. */
+    html {
+        scrollbar-color: var(--color-pencil-no-2) transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--color-pencil-no-2);
+        border-radius: 0.25rem;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
     body {
         @apply bg-background text-foreground;
         font-family: var(--font-sans);
