@@ -179,8 +179,9 @@ const umami = {
     </head>
     <body class="min-h-screen flex flex-col">
         <header
-            class="border-b px-3 py-1 flex items-center justify-between gap-4"
+            class="stippled border-b px-3 py-1 flex items-center justify-between gap-4"
         >
+            <canvas class="stipple-canvas"></canvas>
             <div>
                 <!-- inline-flex column sizes to the wordmark's natural
                      width; the PencilRule SVG inherits that width and
@@ -239,6 +240,90 @@ const umami = {
                 </span>
             </div>
         </footer>
+        <!-- Stipple painter for `<canvas class="stipple-canvas">`
+             elements (see index.css). Canvases live in source HTML at
+             each .stippled site so Astro's ClientRouter morph keeps
+             them across navigation. The painter just attaches a
+             one-time ResizeObserver and repaints. Idempotent via a
+             data-attribute marker, safe to call from any lifecycle
+             hook. Math.random per dot — pattern refreshes on each
+             paint, no seeding since dots are too small to read
+             individually. -->
+        <script is:inline>
+            (() => {
+                const paint = (canvas) => {
+                    const rect = canvas.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return;
+                    const dpr = window.devicePixelRatio || 1;
+                    const w = Math.round(rect.width * dpr);
+                    const h = Math.round(rect.height * dpr);
+                    if (canvas.width !== w) canvas.width = w;
+                    if (canvas.height !== h) canvas.height = h;
+                    const ctx = canvas.getContext("2d");
+                    const size = dpr;
+                    const density = 0.04;
+                    ctx.clearRect(0, 0, w, h);
+                    const black = "rgba(0, 0, 0, 0.07)";
+                    const blue = "hsla(217, 70%, 50%, 0.1)";
+                    for (let y = 0; y < h; y += size) {
+                        for (let x = 0; x < w; x += size) {
+                            if (Math.random() < density) {
+                                ctx.fillStyle =
+                                    Math.random() < 0.5 ? black : blue;
+                                ctx.fillRect(x, y, size, size);
+                            }
+                        }
+                    }
+                };
+                const init = () => {
+                    document
+                        .querySelectorAll("canvas.stipple-canvas")
+                        .forEach((canvas) => {
+                            if (!canvas.dataset.stippleInit) {
+                                new ResizeObserver(() => paint(canvas)).observe(
+                                    canvas,
+                                );
+                                canvas.dataset.stippleInit = "1";
+                            }
+                            paint(canvas);
+                        });
+                };
+                // Defer one frame so layout has settled, then retry
+                // a couple times: React islands (WorksheetConfig)
+                // hydrate asynchronously after astro:after-swap, and
+                // their canvas can briefly report 0×0 while CSS
+                // settles. init() is idempotent so repeats are free.
+                const scheduleInit = () => {
+                    requestAnimationFrame(init);
+                    setTimeout(init, 100);
+                    setTimeout(init, 400);
+                };
+                if (document.readyState === "loading")
+                    document.addEventListener(
+                        "DOMContentLoaded",
+                        scheduleInit,
+                        { once: true },
+                    );
+                else scheduleInit();
+                document.addEventListener("astro:after-swap", scheduleInit);
+                document.addEventListener("astro:page-load", scheduleInit);
+                // React islands hydrate after the above events, so
+                // canvases inside them (e.g. WorksheetConfig Card)
+                // appear later. Catch any new .stipple-canvas added
+                // to the DOM.
+                new MutationObserver((muts) => {
+                    for (const m of muts) {
+                        if (m.addedNodes.length) {
+                            scheduleInit();
+                            return;
+                        }
+                    }
+                }).observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                });
+            })();
+        </script>
         <!-- 12px hysteresis (on >32, off <20) avoids flicker when a
              scroll lands right on the boundary. Re-runs on
              astro:page-load so it survives ClientRouter swaps. -->

@@ -45,8 +45,10 @@ import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
                                     <li>
                                         <a
                                             href={`/worksheets/${kind}/`}
-                                            class="flex gap-3 h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
+                                            class="stippled flex gap-3 h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
                                         >
+                                            <canvas class="stipple-canvas"
+                                            ></canvas>
                                             <div class="flex-1 min-w-0">
                                                 <h3 class="font-semibold mb-1">
                                                     {info.title}

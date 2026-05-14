@@ -41,7 +41,8 @@ export function WorksheetConfigPanel({
     }
 
     return (
-        <Card className="w-full">
+        <Card className="stippled w-full">
+            <canvas className="stipple-canvas" />
             {/*<CardHeader>
         <CardTitle>Worksheet</CardTitle>
       </CardHeader>*/}
@@ -649,7 +650,7 @@ function LevelPicker({
                         className={
                             "group flex cursor-pointer overflow-hidden rounded-md border text-sm transition-colors " +
                             (active
-                                ? "border-primary bg-primary/10 text-primary"
+                                ? "border-primary bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] text-primary"
                                 : "border-input bg-background hover:bg-muted")
                         }
                     >
