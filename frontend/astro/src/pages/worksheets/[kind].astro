@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import Stippled from "../../components/Stippled.astro";
 import { WORKSHEET_KINDS, type WorksheetKind } from "../../lib/api";
 import { WORKSHEET_INFO } from "../../lib/worksheet-info";
 import { WorksheetIsland } from "../../components/WorksheetIsland";
@@ -76,8 +77,9 @@ const info = WORKSHEET_INFO[kind];
         </WorksheetIsland>
 
         <aside>
-            <div class="stippled rounded-xl border bg-card text-card-foreground shadow">
-                <canvas class="stipple-canvas"></canvas>
+            <Stippled
+                class="rounded-xl border bg-card text-card-foreground shadow"
+            >
                 <div class="px-6 pt-4 pb-0">
                     <h2 class="text-lg pb-0 border-b border-pencil-no-2">
                         About this worksheet
@@ -150,7 +152,7 @@ const info = WORKSHEET_INFO[kind];
                         </ul>
                     </div>
                 </div>
-            </div>
+            </Stippled>
         </aside>
     </div>
 </Layout>

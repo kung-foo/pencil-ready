@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Stippled from "../components/Stippled.astro";
 import WorksheetThumb from "../components/WorksheetThumb.astro";
 import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
 ---
@@ -43,12 +44,11 @@ import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
                                 const info = WORKSHEET_INFO[kind];
                                 return (
                                     <li>
-                                        <a
+                                        <Stippled
+                                            as="a"
                                             href={`/worksheets/${kind}/`}
-                                            class="stippled flex gap-3 h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
+                                            class="flex gap-3 h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
                                         >
-                                            <canvas class="stipple-canvas"
-                                            ></canvas>
                                             <div class="flex-1 min-w-0">
                                                 <h3 class="font-semibold mb-1">
                                                     {info.title}
@@ -63,7 +63,7 @@ import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
                                                     lazy={sectionIndex > 0}
                                                 />
                                             </div>
-                                        </a>
+                                        </Stippled>
                                     </li>
                                 );
                             })}

@@ -21,6 +21,7 @@ import { Shuffle } from "lucide-react";
 import { FORMATS, type WorksheetConfig } from "@/lib/api";
 import { levelsFor, defaultLevel, type Level } from "@/lib/levels";
 import type { Names } from "@/lib/useNames";
+import { StippleBg } from "@/components/StippleBg";
 
 export function WorksheetConfigPanel({
     cfg,
@@ -42,7 +43,7 @@ export function WorksheetConfigPanel({
 
     return (
         <Card className="stippled w-full">
-            <canvas className="stipple-canvas" />
+            <StippleBg />
             {/*<CardHeader>
         <CardTitle>Worksheet</CardTitle>
       </CardHeader>*/}

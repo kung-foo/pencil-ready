@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Stippled from "../components/Stippled.astro";
 ---
 
 <Layout
@@ -8,7 +9,8 @@ import Layout from "../layouts/Layout.astro";
     canonical="https://pencilready.com/about/"
 >
     <div class="p-4 md:p-8 max-w-2xl mx-auto">
-        <article
+        <Stippled
+            as="article"
             class="rounded-xl border bg-card text-card-foreground shadow p-6 md:p-10 space-y-8"
         >
             <header class="space-y-2">
@@ -218,6 +220,6 @@ import Layout from "../layouts/Layout.astro";
                     ← Back to worksheets
                 </a>
             </div>
-        </article>
+        </Stippled>
     </div>
 </Layout>
