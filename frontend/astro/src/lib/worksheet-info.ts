@@ -29,12 +29,15 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
         kinds: ["decimal-add", "decimal-subtract", "decimal-multiply"],
     },
     {
-        title: "Order of operations",
-        kinds: ["order-of-ops"],
-    },
-    {
         title: "Pre-algebra",
-        kinds: ["algebra-one-step", "algebra-two-step", "algebra-square-root"],
+        // order-of-ops first: precedence + parens are the conceptual
+        // prereqs for the one-step / two-step equation work.
+        kinds: [
+            "order-of-ops",
+            "algebra-one-step",
+            "algebra-two-step",
+            "algebra-square-root",
+        ],
     },
 ];
 
