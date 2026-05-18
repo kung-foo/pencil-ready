@@ -63,6 +63,14 @@ impl WorksheetType {
             WorksheetType::DecimalAdd { .. } => Some("Add each pair of decimal numbers."),
             WorksheetType::DecimalSubtract { .. } => Some("Subtract the bottom number from the top."),
             WorksheetType::DecimalMultiply { .. } => Some("Multiply each pair of decimal numbers."),
+            WorksheetType::OrderOfOperations {
+                use_parens: true, ..
+            } => Some(
+                "Solve each expression. Do the work inside parentheses first, then multiply and divide, then add and subtract.",
+            ),
+            WorksheetType::OrderOfOperations { .. } => {
+                Some("Solve each expression. Multiply and divide before adding or subtracting.")
+            }
             // Drills are visually self-explanatory — no instruction
             // sentence. The chrome drops the instructions section.
             WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => None,
@@ -138,6 +146,8 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::DecimalSubtract { .. }, Form::Slug) => "decimal-subtraction",
         (WorksheetType::DecimalMultiply { .. }, Form::Title) => "Decimal multiplication",
         (WorksheetType::DecimalMultiply { .. }, Form::Slug) => "decimal-multiplication",
+        (WorksheetType::OrderOfOperations { .. }, Form::Title) => "Order of operations",
+        (WorksheetType::OrderOfOperations { .. }, Form::Slug) => "order-of-operations",
     }
 }
 

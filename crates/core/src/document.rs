@@ -168,6 +168,17 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
             "variable: \"{v}\"",
             v = opts.variable.replace('\\', "\\\\").replace('"', "\\\""),
         ),
+        // Two locale-driven operator glyphs (times + divide). Plus
+        // and minus are universal and rendered as literal symbols by
+        // the component.
+        WorksheetType::OrderOfOperations { .. } => {
+            let div_arg = if opts.divide_operator.is_empty() {
+                "[]".to_string()
+            } else {
+                format!("[#{}]", opts.divide_operator)
+            };
+            format!("times-op: {operator_arg}, divide-op: {div_arg}")
+        }
     }
 }
 
@@ -376,6 +387,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/decimal/add.typ": decimal-add-problem
 #import "/lib/problems/decimal/subtract.typ": decimal-subtract-problem
 #import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
+#import "/lib/problems/expression/order-of-ops.typ": order-of-ops-problem
 
 #set document(
   title: "{doc_title}",

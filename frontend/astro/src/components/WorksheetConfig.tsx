@@ -579,7 +579,8 @@ function KindSpecific({
         case "algebra-one-step":
         case "decimal-add":
         case "decimal-subtract":
-        case "decimal-multiply": {
+        case "decimal-multiply":
+        case "order-of-ops": {
             const levels = levelsFor(cfg.kind) ?? [];
             const current = cfg.level ?? defaultLevel(cfg.kind);
             return (

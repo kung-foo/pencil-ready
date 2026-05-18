@@ -766,6 +766,31 @@ impl DecimalMultiplySpecific {
     }
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct OrderOfOpsSpecific {
+    /// Number of operators per problem (2 or 3).
+    #[serde(default)]
+    operations: Option<u32>,
+    /// Wrap the additive sub-expression in parentheses, forcing it
+    /// to evaluate first (e.g. `(a + b) × c`).
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    parens: Option<bool>,
+}
+
+impl OrderOfOpsSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::OrderOfOperations {
+                operations: self.operations.unwrap_or(2),
+                use_parens: self.parens.unwrap_or(false),
+            },
+            12,
+            2,
+        ))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
@@ -1191,6 +1216,22 @@ async fn handle_decimal_multiply(
     render(&s, "decimal-multiply", p.build(shared), &headers)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/order-of-ops",
+    params(SharedParams, OrderOfOpsSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_order_of_ops(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<OrderOfOpsSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "order-of-ops", p.build(shared), &headers)
+}
+
 // ---------------------------------------------------------------------------
 // Umami analytics proxy
 // ---------------------------------------------------------------------------
@@ -1466,6 +1507,7 @@ async fn main() {
         .routes(routes!(handle_decimal_add))
         .routes(routes!(handle_decimal_subtract))
         .routes(routes!(handle_decimal_multiply))
+        .routes(routes!(handle_order_of_ops))
         .with_state(state.clone())
         .split_for_parts();
 

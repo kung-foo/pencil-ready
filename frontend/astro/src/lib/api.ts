@@ -32,6 +32,7 @@ export const WORKSHEET_KINDS = [
     "decimal-add",
     "decimal-subtract",
     "decimal-multiply",
+    "order-of-ops",
 ] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
 
@@ -133,6 +134,11 @@ export type KindConfig =
           kind: "decimal-multiply";
           /** Concept-level preset id (see `lib/levels.ts`). Expanded to
            * raw multiplier/digit params at API-fetch time. */
+          level?: string;
+      }
+    | {
+          kind: "order-of-ops";
+          /** Concept-level preset id (see `lib/levels.ts`). */
           level?: string;
       };
 
@@ -256,6 +262,8 @@ export function parseConfig(
                 kind,
                 level: s("level"),
             };
+        case "order-of-ops":
+            return { ...shared, kind, level: s("level") };
     }
 }
 

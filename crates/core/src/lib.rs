@@ -18,6 +18,7 @@ mod fraction_simplify;
 mod meta;
 mod mult_drill;
 mod multiply;
+mod order_of_ops;
 mod subtract;
 
 mod document;
@@ -299,6 +300,17 @@ pub enum WorksheetType {
         /// Decimal places on the multiplier. 0 = whole number.
         bottom_decimal_places: u32,
     },
+    /// Order of operations — horizontal expressions that mix additive
+    /// and multiplicative operators. The level system maps a small
+    /// number of presets onto these two knobs.
+    OrderOfOperations {
+        /// Number of operators per problem. 2 or 3.
+        operations: u32,
+        /// Wrap the additive sub-expression in parentheses, forcing
+        /// it to evaluate first (e.g. `(a + b) × c`). Implies
+        /// `operations == 2` — the additional structure is enough.
+        use_parens: bool,
+    },
 }
 
 impl WorksheetType {
@@ -322,6 +334,7 @@ impl WorksheetType {
             WorksheetType::DecimalAdd { .. } => "decimal-add-problem",
             WorksheetType::DecimalSubtract { .. } => "decimal-subtract-problem",
             WorksheetType::DecimalMultiply { .. } => "decimal-multiply-problem",
+            WorksheetType::OrderOfOperations { .. } => "order-of-ops-problem",
         }
     }
 
@@ -441,6 +454,22 @@ impl WorksheetType {
             | WorksheetType::DecimalMultiply { .. } => {
                 (decimal_stack_width(max_digits + 1), 3.5)
             }
+
+            // Order of operations — horizontal single-line. Width
+            // scales with how many operators/operands fit on the row;
+            // three-op problems are widest. Cell height stays at the
+            // drill standard (1cm).
+            WorksheetType::OrderOfOperations {
+                operations,
+                use_parens,
+            } => {
+                let w = match (*operations, *use_parens) {
+                    (3, _) => 8.5,
+                    (_, true) => 8.0,
+                    _ => 7.5,
+                };
+                (w, 1.0)
+            }
         }
     }
 
@@ -550,6 +579,10 @@ impl WorksheetType {
                 let bot_int = document::digit_count((*multiplier_max).max(1));
                 digits.max + decimal_places + bot_int + bottom_decimal_places
             }
+            // Order of operations: operands are single-digit by
+            // design; answers cap at 100, so the widest printed
+            // literal is at most 3 digits.
+            WorksheetType::OrderOfOperations { .. } => 3,
         }
     }
 }
@@ -970,6 +1003,7 @@ impl Document {
             WorksheetType::DecimalAdd { .. } => decimal_add::generate(params)?,
             WorksheetType::DecimalSubtract { .. } => decimal_sub::generate(params)?,
             WorksheetType::DecimalMultiply { .. } => decimal_mult::generate(params)?,
+            WorksheetType::OrderOfOperations { .. } => order_of_ops::generate(params)?,
         };
         let chrome = Chrome::from_params(params);
         let max_digits = sheet.worksheet.max_digits_bound();
@@ -1448,6 +1482,14 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             }
             if !(*squares || *roots) {
                 bail!("at least one of squares/roots must be enabled");
+            }
+        }
+        WorksheetType::OrderOfOperations {
+            operations,
+            use_parens: _,
+        } => {
+            if !(*operations == 2 || *operations == 3) {
+                bail!("operations must be 2 or 3, got {operations}");
             }
         }
     };

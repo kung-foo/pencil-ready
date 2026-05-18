@@ -219,6 +219,23 @@ export const WORKSHEET_LEVELS: Partial<Record<WorksheetKind, readonly Level[]>> 
             },
         },
     ],
+    "order-of-ops": [
+        {
+            label: "Two operations",
+            example: "5 + 6 × 2",
+            params: { operations: 2, parens: false },
+        },
+        {
+            label: "Three operations",
+            example: "5 + 6 × 2 − 3",
+            params: { operations: 3, parens: false },
+        },
+        {
+            label: "Parentheses first",
+            example: "(5 + 6) × 2",
+            params: { operations: 2, parens: true },
+        },
+    ],
 };
 
 export function levelsFor(kind: WorksheetKind): readonly Level[] | undefined {

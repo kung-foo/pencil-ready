@@ -29,6 +29,10 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
         kinds: ["decimal-add", "decimal-subtract", "decimal-multiply"],
     },
     {
+        title: "Order of operations",
+        kinds: ["order-of-ops"],
+    },
+    {
         title: "Pre-algebra",
         kinds: ["algebra-one-step", "algebra-two-step", "algebra-square-root"],
     },
@@ -293,6 +297,20 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
             "Isolate the squared (or rooted) term first, then undo with √ or with x².",
             "Move fluently between x² and √x — both directions show up on the same sheet.",
             "Read six equation forms: x² + b = c, b + x² = c, x² − b = c, √x + b = c, b + √x = c, √x − b = c.",
+        ],
+    },
+    "order-of-ops": {
+        title: "Order of operations",
+        summary:
+            "Evaluate expressions that mix +, −, ×, and ÷ — multiply and divide before adding or subtracting, and let parentheses override that order.",
+        prerequisites: [
+            "Fluency with single-digit addition, subtraction, multiplication, and division.",
+            "Comfortable reading an expression left to right.",
+        ],
+        learning: [
+            "Apply the precedence rule: × and ÷ before + and −.",
+            "Evaluate left to right within the same precedence group.",
+            "Recognize that parentheses force whatever is inside to be computed first, regardless of operator.",
         ],
     },
 };

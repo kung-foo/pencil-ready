@@ -32,6 +32,7 @@ import FractionMultThumb from "@/assets/thumbs/fraction-mult.svg";
 import DecimalAddThumb from "@/assets/thumbs/decimal-add.svg";
 import DecimalSubtractThumb from "@/assets/thumbs/decimal-subtract.svg";
 import DecimalMultiplyThumb from "@/assets/thumbs/decimal-multiply.svg";
+import OrderOfOpsThumb from "@/assets/thumbs/order-of-ops.svg";
 
 import addUrl from "@/assets/thumbs/add.svg?url";
 import subtractUrl from "@/assets/thumbs/subtract.svg?url";
@@ -46,6 +47,7 @@ import fractionMultUrl from "@/assets/thumbs/fraction-mult.svg?url";
 import decimalAddUrl from "@/assets/thumbs/decimal-add.svg?url";
 import decimalSubtractUrl from "@/assets/thumbs/decimal-subtract.svg?url";
 import decimalMultiplyUrl from "@/assets/thumbs/decimal-multiply.svg?url";
+import orderOfOpsUrl from "@/assets/thumbs/order-of-ops.svg?url";
 
 interface Props {
     kind: WorksheetKind;
@@ -70,6 +72,7 @@ const Thumbs: Partial<Record<WorksheetKind, typeof AddThumb>> = {
     "decimal-add": DecimalAddThumb,
     "decimal-subtract": DecimalSubtractThumb,
     "decimal-multiply": DecimalMultiplyThumb,
+    "order-of-ops": OrderOfOpsThumb,
 };
 const ThumbUrls: Partial<Record<WorksheetKind, string>> = {
     add: addUrl,
@@ -85,6 +88,7 @@ const ThumbUrls: Partial<Record<WorksheetKind, string>> = {
     "decimal-add": decimalAddUrl,
     "decimal-subtract": decimalSubtractUrl,
     "decimal-multiply": decimalMultiplyUrl,
+    "order-of-ops": orderOfOpsUrl,
 };
 
 const Thumb = Thumbs[kind];

@@ -534,6 +534,27 @@ enum Command {
         bottom_decimal_places: u32,
     },
 
+    /// Order of operations — horizontal expressions that mix +/− with
+    /// ×/÷, optionally with parentheses (e.g. `5 + 6 × 2 = ___`).
+    OrderOfOps {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "12")]
+        problems: u32,
+
+        #[arg(long, default_value = "2")]
+        cols: u32,
+
+        /// Number of operators per problem (2 or 3).
+        #[arg(long, default_value = "2")]
+        operations: u32,
+
+        /// Wrap the additive sub-expression in parentheses.
+        #[arg(long)]
+        parens: bool,
+    },
+
     /// Generate a multi-page PDF with one of each worksheet type.
     ///
     /// All worksheets use their defaults plus --solve-first and --seed 42
@@ -816,6 +837,21 @@ fn resolve(command: Command) -> Resolved {
                 bottom_decimal_places,
             },
         },
+        Command::OrderOfOps {
+            global,
+            problems,
+            cols,
+            operations,
+            parens,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::OrderOfOperations {
+                operations,
+                use_parens: parens,
+            },
+        },
         Command::All { .. } => unreachable!("Command::All is handled before resolve()"),
     }
 }
@@ -1090,6 +1126,15 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             12,
             4,
         ),
+        (
+            "order-of-ops",
+            WorksheetType::OrderOfOperations {
+                operations: 2,
+                use_parens: false,
+            },
+            12,
+            2,
+        ),
     ];
 
     let mut bodies = Vec::with_capacity(sheets.len());
@@ -1124,6 +1169,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/decimal/add.typ": decimal-add-problem
 #import "/lib/problems/decimal/subtract.typ": decimal-subtract-problem
 #import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
+#import "/lib/problems/expression/order-of-ops.typ": order-of-ops-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)
