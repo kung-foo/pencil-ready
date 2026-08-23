@@ -71,6 +71,13 @@ impl WorksheetType {
             WorksheetType::OrderOfOperations { .. } => {
                 Some("Solve each expression. Multiply and divide before adding or subtracting.")
             }
+            // "Mean" is the curriculum word; "average" is the word a
+            // parent helping at the table will use, so the instruction
+            // carries both. The count is deliberately not named — the
+            // student has to see how many numbers each set holds.
+            WorksheetType::Mean { .. } => Some(
+                "Find the mean (average) of each set: add the numbers, then divide by how many there are.",
+            ),
             // Drills are visually self-explanatory — no instruction
             // sentence. The chrome drops the instructions section.
             WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => None,
@@ -148,6 +155,8 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::DecimalMultiply { .. }, Form::Slug) => "decimal-multiplication",
         (WorksheetType::OrderOfOperations { .. }, Form::Title) => "Order of operations",
         (WorksheetType::OrderOfOperations { .. }, Form::Slug) => "order-of-operations",
+        (WorksheetType::Mean { .. }, Form::Title) => "Mean",
+        (WorksheetType::Mean { .. }, Form::Slug) => "mean",
     }
 }
 

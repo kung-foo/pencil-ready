@@ -16,6 +16,7 @@ mod fraction_equiv;
 mod fraction_mult;
 mod fraction_simplify;
 mod meta;
+mod mean;
 mod mult_drill;
 mod multiply;
 mod order_of_ops;
@@ -311,6 +312,28 @@ pub enum WorksheetType {
         /// `operations == 2` — the additional structure is enough.
         use_parens: bool,
     },
+    /// Mean (average) of a small data set — sum, then divide by the
+    /// count. Problems encode `[v1..vn, sum, mean]`; see `mean.rs`.
+    Mean {
+        /// How many values per data set, as an inclusive range. A range
+        /// (e.g. 3-4) deliberately mixes counts across the page so the
+        /// student has to notice the divisor per problem.
+        count: DigitRange,
+        /// Digit count of each value, read as a value range: `1-2` means
+        /// values in [1, 99], `3` means [100, 999].
+        digits: DigitRange,
+        /// Paint the pre-filled column-addition stack in blank mode. The
+        /// long-division bracket is reserved either way (hidden until
+        /// solved), so this doesn't change the cell footprint — only how
+        /// much scaffolding the student is handed. Ignored in the
+        /// open-workspace layout, which prints no scaffold at all.
+        scaffold: bool,
+        /// Give every value one decimal place (tenths). Values flow
+        /// through `Sheet.problems` as scaled integers — `12.5` is
+        /// `125` — the same encoding the decimal worksheets use, and
+        /// the component re-inserts the point at render time.
+        decimals: bool,
+    },
 }
 
 impl WorksheetType {
@@ -335,6 +358,7 @@ impl WorksheetType {
             WorksheetType::DecimalSubtract { .. } => "decimal-subtract-problem",
             WorksheetType::DecimalMultiply { .. } => "decimal-multiply-problem",
             WorksheetType::OrderOfOperations { .. } => "order-of-ops-problem",
+            WorksheetType::Mean { .. } => "mean-problem",
         }
     }
 
@@ -381,11 +405,7 @@ impl WorksheetType {
             // which is wider than just the quotient — bump cell width so
             // the bracket overline + suffix fit inside the cell.
             WorksheetType::LongDivision { digits, remainder } => {
-                let (w, h) = match digits.max {
-                    1..=2 => (3.8, 6.0),
-                    3 => (3.8, 8.0),
-                    _ => (4.4, 10.0),
-                };
+                let (w, h) = long_division_cell(digits.max);
                 if *remainder { (w + 1.2, h) } else { (w, h) }
             }
 
@@ -470,6 +490,21 @@ impl WorksheetType {
                 };
                 (w, 1.0)
             }
+
+            // Mean: a data line stacked above two side-by-side halves —
+            // the column-addition stack and the long-division bracket.
+            // The tall half (long division, whose work space grows with
+            // the sum's digit count) sets the height; `max_digits` here
+            // is the sum's digit count, since the sum is both the
+            // widest printed number and the division's dividend.
+            // Mean composes two different cell layouts; all of that
+            // geometry lives with the generator in `mean.rs`.
+            WorksheetType::Mean {
+                count,
+                digits,
+                decimals,
+                ..
+            } => mean::cell_size_cm(*count, *digits, *decimals, max_digits),
         }
     }
 
@@ -583,13 +618,25 @@ impl WorksheetType {
             // design; answers cap at 100, so the widest printed
             // literal is at most 3 digits.
             WorksheetType::OrderOfOperations { .. } => 3,
+            // Mean: the widest printed number is the sum, which also
+            // serves as the long-division dividend. Worst case is
+            // `count.max` values all at the top of the value range.
+            WorksheetType::Mean {
+                count,
+                digits,
+                decimals,
+                ..
+            } => {
+                let (_, hi) = mean::value_range(digits.min, digits.max, count.max, *decimals);
+                document::digit_count(count.max * hi)
+            }
         }
     }
 }
 
 /// Shared with Add/Subtract/Multiply/SimpleDivision. Vertical-stack
 /// width is driven by the widest operand.
-fn vertical_stack_width(max_digits: u32) -> f32 {
+pub(crate) fn vertical_stack_width(max_digits: u32) -> f32 {
     match max_digits {
         0..=2 => 2.5,
         3 => 2.6,
@@ -597,6 +644,37 @@ fn vertical_stack_width(max_digits: u32) -> f32 {
         _ => 3.7, // 5+ digits
     }
 }
+
+/// Long-division cell rectangle (width, height) in cm for a dividend of
+/// `digits` digits. Shared by the long-division worksheet and the
+/// divide half of a mean cell; mirrors `cell-sizes.toml`.
+pub(crate) fn long_division_cell(digits: u32) -> (f32, f32) {
+    match digits {
+        1..=2 => (3.8, 6.0),
+        3 => (3.8, 8.0),
+        _ => (4.4, 10.0), // 4+ digits; conservative
+    }
+}
+
+/// Vertical-stack height in cm for `operands` operands. Measured: a
+/// 2-operand stack is 3.5cm and each further operand adds one typeset
+/// line (`cell-sizes.toml` puts the 2→3 operand step at 0.975cm).
+fn vertical_stack_height(operands: u32) -> f32 {
+    3.5 + operands.saturating_sub(2) as f32
+}
+
+/// Per-side cell inset applied by `worksheet-grid` when a kind turns on
+/// separator hairlines. Mirrors `separator-inset` in `lib/layout.typ`;
+/// kinds that opt in must add it to both axes in `cell_size_cm` or the
+/// grid fits one fewer row than the page can hold.
+pub(crate) const SEPARATOR_INSET_CM: f32 = 0.35;
+
+/// How much taller a vertical stack renders once its answer row is
+/// painted. `cell-sizes.toml` measures the same 3-digit 2-operand stack
+/// at 3.453cm blank and 4.428cm worked, and a cell has to reserve the
+/// taller of the two.
+pub(crate) const VERTICAL_STACK_WORKED_DELTA_CM: f32 = 1.0;
+
 
 /// Width for decimal-stack cells. `total_glyphs` counts integer digits +
 /// decimal point + decimal places. Roughly 0.55cm per glyph plus a small
@@ -667,6 +745,12 @@ pub enum Paper {
 }
 
 impl Paper {
+    /// Every supported paper size. Geometry that has to hold on all of
+    /// them (see `mean::workspace_height_cm`) folds over this rather
+    /// than hard-coding one size's numbers — tuning a cell against A4
+    /// alone silently turns a one-page worksheet into two on Letter.
+    pub const ALL: &'static [Paper] = &[Paper::A4, Paper::Letter];
+
     /// (width, height) in centimeters.
     pub fn dimensions_cm(self) -> (f32, f32) {
         match self {
@@ -1004,6 +1088,7 @@ impl Document {
             WorksheetType::DecimalSubtract { .. } => decimal_sub::generate(params)?,
             WorksheetType::DecimalMultiply { .. } => decimal_mult::generate(params)?,
             WorksheetType::OrderOfOperations { .. } => order_of_ops::generate(params)?,
+            WorksheetType::Mean { .. } => mean::generate(params)?,
         };
         let chrome = Chrome::from_params(params);
         let max_digits = sheet.worksheet.max_digits_bound();
@@ -1490,6 +1575,28 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
         } => {
             if !(*operations == 2 || *operations == 3) {
                 bail!("operations must be 2 or 3, got {operations}");
+            }
+        }
+        WorksheetType::Mean { count, digits, .. } => {
+            // Two values is a midpoint, not really an average. Past
+            // MEAN_MAX_SCAFFOLD_COUNT the printed stack no longer fits,
+            // so the layout switches to open work space — see
+            // `mean_uses_scaffold_layout`.
+            if count.min < 3 || count.max > 8 || count.min > count.max {
+                bail!(
+                    "value count must be 3-8 with min <= max, got {}-{}",
+                    count.min,
+                    count.max
+                );
+            }
+            // 4-digit values push the sum to 5 digits, which no longer
+            // fits the long-division half of the cell.
+            if digits.min < 1 || digits.max > 3 || digits.min > digits.max {
+                bail!(
+                    "value digits must be 1-3 with min <= max, got {}-{}",
+                    digits.min,
+                    digits.max
+                );
             }
         }
     };

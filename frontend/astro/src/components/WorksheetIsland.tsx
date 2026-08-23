@@ -59,6 +59,7 @@ function applyFirstVisitDefaults(
         "algebra-two-step",
         "long-divide",
         "order-of-ops",
+        "mean",
     ];
     if (levelKinds.includes(cfg.kind) && !search.has("level")) {
         return { ...cfg, level: defaultLevel(cfg.kind) };

@@ -33,6 +33,7 @@ export const WORKSHEET_KINDS = [
     "decimal-subtract",
     "decimal-multiply",
     "order-of-ops",
+    "mean",
 ] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
 
@@ -140,6 +141,15 @@ export type KindConfig =
           kind: "order-of-ops";
           /** Concept-level preset id (see `lib/levels.ts`). */
           level?: string;
+      }
+    | {
+          kind: "mean";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+          /** Print the pre-filled column-addition stack under each data
+           * line. Independent of the level — it controls how much
+           * scaffolding is printed, not which numbers appear. */
+          scaffold?: boolean;
       };
 
 export type WorksheetConfig = SharedConfig & KindConfig;
@@ -264,6 +274,13 @@ export function parseConfig(
             };
         case "order-of-ops":
             return { ...shared, kind, level: s("level") };
+        case "mean":
+            return {
+                ...shared,
+                kind,
+                level: s("level"),
+                scaffold: b("scaffold"),
+            };
     }
 }
 

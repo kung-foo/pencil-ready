@@ -29,6 +29,10 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
         kinds: ["decimal-add", "decimal-subtract", "decimal-multiply"],
     },
     {
+        title: "Statistics",
+        kinds: ["mean"],
+    },
+    {
         title: "Pre-algebra",
         // order-of-ops first: precedence + parens are the conceptual
         // prereqs for the one-step / two-step equation work.
@@ -314,6 +318,20 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
             "Apply the precedence rule: × and ÷ before + and −.",
             "Evaluate left to right within the same precedence group.",
             "Recognize that parentheses force whatever is inside to be computed first, regardless of operator.",
+        ],
+    },
+    mean: {
+        title: "Mean",
+        summary:
+            "Find the mean (average) of a small set of numbers: add them up, then divide by how many there are. Every answer divides exactly \u2014 a whole number, or exact to one tenth on the longest sets.",
+        prerequisites: [
+            "Column addition with carrying, for three or four numbers at a time.",
+            "Long division by a single-digit divisor.",
+        ],
+        learning: [
+            "Work through the two steps in order: add every value to get the total before dividing anything.",
+            "Divide by the count of values — not by a number that appears in the set.",
+            "Check that the mean lands somewhere in the middle of the data, which catches most arithmetic slips.",
         ],
     },
 };

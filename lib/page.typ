@@ -23,6 +23,9 @@
   // emit a level-1 heading that the document-preamble show-rule
   // visually suppresses.
   outline: "",
+  // Hairlines between problems; see `worksheet-grid`. Set per worksheet
+  // kind by `document.rs`, not by the user.
+  separators: false,
 ) = {
   if outline == "problems" {
     heading(outlined: true, bookmarked: true, level: 1)[Problems]
@@ -36,5 +39,6 @@
     debug: debug,
     modes: modes,
     opts: opts,
+    separators: separators,
   )
 }

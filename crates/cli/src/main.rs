@@ -555,6 +555,40 @@ enum Command {
         parens: bool,
     },
 
+    /// Mean (average) of a small data set — add the values, then divide
+    /// by how many there are.
+    Mean {
+        #[command(flatten)]
+        global: GlobalArgs,
+
+        #[arg(long, default_value = "4")]
+        problems: u32,
+
+        #[arg(long, default_value = "2")]
+        cols: u32,
+
+        /// How many values per data set, e.g. `4` or `3-4`. A range
+        /// mixes counts across the page so the divisor changes per
+        /// problem.
+        #[arg(long, default_value = "3-4")]
+        count: DigitRange,
+
+        /// Digit count of each value, read as a value range: `1-2` gives
+        /// values in 1-99, `3` gives 100-999.
+        #[arg(long, default_value = "1-2")]
+        digits: DigitRange,
+
+        /// Print the pre-filled column-addition stack under the data
+        /// line. The division work space is reserved either way. Ignored
+        /// for wide or decimal sets, which use an open work area.
+        #[arg(long)]
+        scaffold: bool,
+
+        /// Give every value one decimal place (tenths), e.g. `12.5`.
+        #[arg(long)]
+        decimals: bool,
+    },
+
     /// Generate a multi-page PDF with one of each worksheet type.
     ///
     /// All worksheets use their defaults plus --solve-first and --seed 42
@@ -852,6 +886,25 @@ fn resolve(command: Command) -> Resolved {
                 use_parens: parens,
             },
         },
+        Command::Mean {
+            global,
+            problems,
+            cols,
+            count,
+            digits,
+            scaffold,
+            decimals,
+        } => Resolved {
+            global,
+            num_problems: problems,
+            cols,
+            worksheet: WorksheetType::Mean {
+                count,
+                digits,
+                scaffold,
+                decimals,
+            },
+        },
         Command::All { .. } => unreachable!("Command::All is handled before resolve()"),
     }
 }
@@ -1135,6 +1188,17 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             12,
             2,
         ),
+        (
+            "mean",
+            WorksheetType::Mean {
+                count: DigitRange::new(3, 4),
+                digits: DigitRange::new(1, 2),
+                scaffold: true,
+                decimals: false,
+            },
+            4,
+            2,
+        ),
     ];
 
     let mut bodies = Vec::with_capacity(sheets.len());
@@ -1170,6 +1234,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/decimal/subtract.typ": decimal-subtract-problem
 #import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
 #import "/lib/problems/expression/order-of-ops.typ": order-of-ops-problem
+#import "/lib/problems/statistics/mean.typ": mean-problem
 
 #set page(paper: "{paper}", margin: (top: 1.5cm, bottom: 1.0cm, left: 1.5cm, right: 1.5cm))
 #set text(font: body-font, size: 10pt)
