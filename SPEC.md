@@ -55,7 +55,7 @@ Cargo workspace at the repo root with four crates under `crates/`:
 [Astro](https://astro.build/) at `frontend/astro/` — static per-route
 HTML + a single React island per worksheet page.
 
-- 11 pre-rendered pages at build time: landing, `/about`,
+- 20 pre-rendered pages at build time: landing, `/about`, `/404`,
   `/worksheets/<kind>/` for each kind. Each page's full content
   (title, summary, prerequisites, learning goals) sits in the HTML
   source — no JS required for indexability.
@@ -84,12 +84,56 @@ readable error.
 
 ### Deployment
 
-- Dockerfile: `node:22-slim` frontend stage → `rust:1-slim-bookworm`
-  builder → `debian:bookworm-slim` runtime. Final image ~56 MB.
-- fly.io app `pencil-ready`, region `arn`, custom domain
-  `pencilready.com` + `www.pencilready.com` with auto-issued certs.
-- Single machine, `auto_stop_machines = "stop"` + `auto_start` so
-  idle traffic costs nothing.
+- Dockerfile: `node:22-slim` frontend stage → `rust:1.98-slim-bookworm`
+  builder → `debian:bookworm-slim` runtime.
+- The Rust version is pinned in **two** places that must move
+  together: `rust-toolchain.toml` (local builds) and the Dockerfile
+  builder tag (deploys). A floating `rust:1-slim-bookworm` would pick
+  up a new compiler the day it ships, which is at odds with the
+  14-day cooldown applied to every other dependency.
+- fly.io app `pencil-ready`, custom domain `pencilready.com` +
+  `www.pencilready.com` with auto-issued certs.
+- Two machines — `arn` (primary region) and `sjc` — with
+  `auto_stop_machines = "off"` and `min_machines_running = 1`, so at
+  least one machine is always warm and first-request latency doesn't
+  pay a cold start.
+
+### Analytics: Umami, proxied first-party
+
+Page views go to [Umami](https://umami.is/) Cloud, but never directly
+from the browser. The tracker is loaded from our own origin
+(`hostUrl: "/umami"` in `Layout.astro`) and the server proxies both
+halves:
+
+- `GET /umami/script.js` — fetches `cloud.umami.is/script.js` once and
+  caches it in memory for the process lifetime.
+- `POST /umami/api/send` — forwards event payloads upstream.
+
+First-party serving means ad blockers and tracker lists don't eat the
+script, and no third-party origin sees the visitor directly.
+
+**The `payload.ip` requirement.** Umami Cloud sits behind Cloudflare,
+which stamps every inbound request with geo headers (`cf-ipcity`,
+`cf-ipcountry`) and `cf-connecting-ip` derived from the *connecting*
+IP — our Fly machine, not the visitor. Umami's `getLocation()` checks
+those provider headers **before** any forwarded-IP header, so
+`X-Forwarded-For` alone is ignored: every session geolocates to the
+machine's egress IP. Symptom when this regresses: ~100% of sessions
+report one city (it was "Santa Clara", the `sjc` machine).
+
+The fix is `payload.ip` in the JSON body, which Umami treats as
+authoritative — it skips the provider headers entirely and runs its own
+MaxMind lookup. `handle_umami_send` parses the body and injects it.
+Two rules for anyone touching that handler:
+
+- **Overwrite** any client-supplied `ip`; visitors must not be able to
+  spoof their location through our proxy.
+- **Forward unparseable bodies untouched** rather than dropping them —
+  a mislocated event beats a lost one.
+
+The IP also feeds Umami's visitor-identity hash, so this isn't only
+cosmetic: with a constant IP, distinct visitors sharing a User-Agent
+collapse into a single session and unique-visitor counts undercount.
 
 ## Layout rules
 

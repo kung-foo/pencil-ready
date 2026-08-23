@@ -13,7 +13,8 @@ the same sheet.
 
 ## Running locally
 
-Prerequisites: Rust (stable), [pnpm](https://pnpm.io/), and a typst-capable
+Prerequisites: Rust (the version in `rust-toolchain.toml` — rustup
+installs it automatically), [pnpm](https://pnpm.io/), and a typst-capable
 font set (already under `fonts/`).
 
 ```
@@ -30,7 +31,7 @@ cargo run --bin pencil-ready-server        # API on :8080
 cd frontend/astro && pnpm dev              # Astro dev server with HMR
 ```
 
-The Astro dev server proxies `/api/*` to the Rust backend.
+The Astro dev server proxies `/api/*` and `/umami/*` to the Rust backend.
 
 ## CLI
 

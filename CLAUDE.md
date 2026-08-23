@@ -59,3 +59,19 @@ pencilready-logo-spec.md             — brand mark / pencil underline spec
   `frontend/astro/src/styles/index.css`. For new accents, add new
   `--color-*` entries to `@theme inline` rather than inlining hex
   values.
+- Rust version is pinned in two files that must be bumped together:
+  `rust-toolchain.toml` and the Dockerfile builder tag. Changing one
+  alone silently reintroduces dev/prod compiler drift.
+- Dependency bumps go through the cooldown policies — `make
+  deps-refresh` for cargo, `minimumReleaseAge` in
+  `frontend/astro/pnpm-workspace.yaml` for pnpm — so a compromised
+  release has two weeks to be caught before it reaches a lockfile.
+  Two known `cargo-cooldown` failure modes, both seen in practice:
+  it can hang indefinitely (kill it and walk versions back by hand
+  against crates.io publish dates), and on flaky metadata fetches it
+  silently resolves crates to their *minimum* satisfying version
+  instead of the newest compliant one. Always diff the regenerated
+  `Cargo.lock` for downgrades before committing.
+- The Umami proxy's `payload.ip` injection is load-bearing, not
+  redundant with `X-Forwarded-For` — see SPEC.md → Analytics before
+  simplifying `handle_umami_send`.
