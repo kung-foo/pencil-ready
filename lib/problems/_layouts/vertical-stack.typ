@@ -6,7 +6,7 @@
 //
 // Supports N operands. Only the last operand gets the operator symbol.
 
-#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking, problem-features, problem-line-height
+#import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking, problem-features, problem-line-height, problem-carry-space
 
 // `data` = [...operands, answer]. The last element is the final answer
 // (sum/difference/product/quotient); it's only rendered when mode != "blank".
@@ -54,7 +54,7 @@
   let first = fmt(operands.at(0))
   let rest = operands.slice(1)
 
-  let carry-space = 0.5em
+  let carry-space = problem-carry-space
   let answer-space = problem-line-height * answer-rows
 
   let content = box(

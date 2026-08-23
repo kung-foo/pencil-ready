@@ -36,7 +36,7 @@
 // not change the cell size and the answer-key page lines up cell-for-cell
 // with the problem page.
 
-#import "/lib/problems/shared.typ": problem-font, problem-text-size-horizontal, problem-features
+#import "/lib/problems/shared.typ": problem-font, problem-text-size-horizontal, problem-features, problem-carry-space
 #import "/lib/problems/_layouts/vertical-stack.typ": vertical-stack-problem
 #import "/lib/problems/division/long.typ": division-long-problem
 
@@ -178,6 +178,9 @@
       // Blank + scaffold: draw the bracket and the divisor, withhold the
       // dividend. `hide-dividend` is ignored once solved.
       hide-dividend: true,
+      // Reserve the same lead-in the addition stack keeps above its top
+      // operand, so the quotient and the top addend sit on one line.
+      top-space: problem-carry-space,
       // The composite owns its own spacing; rule 4 says a component
       // returns its tight rect with no internal padding.
       pad-left: 0pt,

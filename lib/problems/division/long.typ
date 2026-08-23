@@ -46,6 +46,8 @@
 //     line up across columns. Pass e.g. `center + horizon` for a
 //     single-cell rendering (thumbnails) where you want the problem
 //     anchored to the page center.
+//   top-space: extra space above the quotient, for lining this cell's
+//     first row up with a vertical stack placed beside it. Default 0pt.
 //   pad-left: left padding around the cell — breathing room from
 //     the worksheet-grid cell edge. Default 0.5cm. Pass 0pt for
 //     single-cell thumbnails so the content centers symmetrically.
@@ -75,6 +77,13 @@
   // space (via `hide`), so the overline length and bracket geometry are
   // identical to a normal problem.
   let hide-dividend = opts.at("hide-dividend", default: false)
+  // Extra lead-in above the quotient. Zero for a standalone long-division
+  // problem; a caller that places this beside a vertical stack passes
+  // `problem-carry-space` so both halves' first rows land on the same
+  // line (the stack reserves that much above its top operand for
+  // carries, and would otherwise start one carry-space lower). Resolved
+  // against `problem-text-size` below, so `em` is the right unit here.
+  let top-space = opts.at("top-space", default: 0pt)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -108,6 +117,7 @@
   let work-space = 1.3em * answer-rows
 
   let content = box(width: width, stroke: debug-box, align(left, {
+    v(top-space)
     // Suppress the default paragraph gap between sibling blocks inside
     // this problem. Otherwise the quotient block sits ~1em above where
     // it should visually (the block spacing stacks between quotient and
