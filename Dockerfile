@@ -13,7 +13,8 @@ RUN pnpm build
 # Result: /app/frontend/astro/dist
 
 # --- Rust builder stage ---
-FROM rust:1-slim-bookworm AS builder
+# Version pinned to match rust-toolchain.toml — bump both together.
+FROM rust:1.98-slim-bookworm AS builder
 WORKDIR /app
 
 # utoipa-swagger-ui's build script downloads the Swagger UI bundle via curl

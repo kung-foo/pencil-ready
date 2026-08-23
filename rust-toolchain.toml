@@ -1,0 +1,4 @@
+# Pinned toolchain — keep in sync with the builder image in Dockerfile
+# (rust:<version>-slim-bookworm) so local builds match deploys.
+[toolchain]
+channel = "1.98"
