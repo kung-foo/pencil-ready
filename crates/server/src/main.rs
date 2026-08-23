@@ -791,6 +791,57 @@ impl OrderOfOpsSpecific {
     }
 }
 
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct MeanSpecific {
+    /// How many values per data set, e.g. `4` or `3-4`. A range mixes
+    /// counts across the page so the divisor changes per problem.
+    #[serde(default)]
+    #[param(value_type = String, example = "3-4")]
+    count: Option<String>,
+    /// Digit count of each value, read as a value range: `1-2` gives
+    /// values in 1-99, `3` gives 100-999.
+    #[serde(default)]
+    #[param(value_type = String, example = "1-2")]
+    digits: Option<String>,
+    /// Print the pre-filled column-addition stack under the data line.
+    /// The division work space is reserved either way, so this changes
+    /// how much scaffolding the student gets, not the page layout.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    scaffold: Option<bool>,
+    /// Give every value one decimal place (tenths), e.g. `12.5`. Wide or
+    /// decimal sets print an open work area instead of the addition
+    /// stack, since column addition and single-digit long division can't
+    /// express that work.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    decimals: Option<bool>,
+}
+
+impl MeanSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let count = match self.count {
+            Some(s) => parse_digit_range(&s, "count")?,
+            None => DigitRange::new(3, 4),
+        };
+        let digits = match self.digits {
+            Some(s) => parse_digit_range(&s, "digits")?,
+            None => DigitRange::new(1, 2),
+        };
+        Ok(shared.fold(
+            WorksheetType::Mean {
+                count,
+                digits,
+                scaffold: self.scaffold.unwrap_or(false),
+                decimals: self.decimals.unwrap_or(false),
+            },
+            // Each problem is a full column addition plus a long
+            // division, so a page holds exactly four.
+            4,
+            2,
+        ))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
@@ -1232,6 +1283,22 @@ async fn handle_order_of_ops(
     render(&s, "order-of-ops", p.build(shared), &headers)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/mean",
+    params(SharedParams, MeanSpecific),
+    responses((status = 200, description = "Worksheet bytes")),
+    tag = "worksheets",
+)]
+async fn handle_mean(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<MeanSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "mean", p.build(shared), &headers)
+}
+
 // ---------------------------------------------------------------------------
 // Umami analytics proxy
 // ---------------------------------------------------------------------------
@@ -1541,6 +1608,7 @@ async fn main() {
         .routes(routes!(handle_decimal_subtract))
         .routes(routes!(handle_decimal_multiply))
         .routes(routes!(handle_order_of_ops))
+        .routes(routes!(handle_mean))
         .with_state(state.clone())
         .split_for_parts();
 

@@ -89,10 +89,51 @@ fn typst_string_literal(s: &str) -> String {
     format!("\"{escaped}\"")
 }
 
+/// Whether this worksheet kind draws hairlines between grid cells.
+/// Kinds whose cell holds several sub-figures need the rule to make it
+/// unambiguous which working belongs to which problem; a single-figure
+/// cell (one stack, one equation) reads fine without it. Not a user
+/// param — the kind decides. Kinds that opt in must also add
+/// `SEPARATOR_INSET_CM` to both axes in `cell_size_cm`.
+/// Height the data line reserves, for a `WorksheetType::Mean`.
+fn mean_data_height(worksheet: &WorksheetType) -> f32 {
+    match worksheet {
+        WorksheetType::Mean {
+            count,
+            digits,
+            decimals,
+            ..
+        } => crate::mean::data_height_cm(count.max, digits.max, *decimals),
+        _ => 0.0,
+    }
+}
+
+/// Height the working area should fill, for a `WorksheetType::Mean`.
+fn mean_fill(worksheet: &WorksheetType, row_height_cm: f32) -> f32 {
+    match worksheet {
+        WorksheetType::Mean {
+            count,
+            digits,
+            decimals,
+            ..
+        } => crate::mean::fill_height_cm(row_height_cm, count.max, digits.max, *decimals),
+        _ => 0.0,
+    }
+}
+
+fn uses_separators(worksheet: &WorksheetType) -> bool {
+    matches!(worksheet, WorksheetType::Mean { .. })
+}
+
 /// Format a ComponentOpts dict as a typst expression, emitting only
 /// the keys the current worksheet's component reads. Keeps the emitted
 /// source tight (and easier to eyeball during debugging).
-fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
+fn opts_body(
+    worksheet: &WorksheetType,
+    opts: &ComponentOpts,
+    max_digits_for_opts: u32,
+    row_height_cm: f32,
+) -> String {
     let operator_arg = if opts.operator.is_empty() {
         "[]".to_string()
     } else {
@@ -139,6 +180,53 @@ fn opts_body(worksheet: &WorksheetType, opts: &ComponentOpts) -> String {
         // and `=` are universal. `:` interpolates into `(:)` which is
         // typst's empty-dict literal (as opposed to `()`, an empty array).
         WorksheetType::FractionSimplify { .. } => ":".to_string(),
+        // Mean composes two primitives, so it needs geometry for both
+        // halves. The divide half is sized off the sum's digit count
+        // (`max_digits` here is already that bound) and gets 2 rows of
+        // work space per dividend digit, matching the long-division
+        // worksheet's own convention. `scaffold` reads straight off the
+        // worksheet variant rather than ComponentOpts — it's a render
+        // choice, not generated data.
+        WorksheetType::Mean {
+            scaffold,
+            count,
+            digits,
+            decimals,
+        } if !crate::mean::uses_scaffold_layout(count.max, *decimals) => {
+            // Open-workspace layout: no stack, no bracket, so the only
+            // geometry the component needs is where to wrap the data
+            // line and how much blank space to reserve under it.
+            let _ = (scaffold, digits);
+            format!(
+                "layout: \"workspace\", decimal-places: {dp}, data-size: {ds}pt, \
+                 data-width: {dw}cm, data-height: {dh}cm, work-height: {wh}cm",
+                dp = if *decimals { 1 } else { 0 },
+                ds = crate::mean::WORKSPACE_DATA_LINE_PT,
+                dw = crate::mean::data_line_wrap_width_cm(),
+                wh = crate::mean::fill_height_cm(row_height_cm, count.max, digits.max, *decimals),
+                dh = crate::mean::data_height_cm(count.max, digits.max, *decimals),
+            )
+        }
+        WorksheetType::Mean { scaffold, .. } => format!(
+            "operator: {operator_arg}, stack-width: {sw}cm, div-width: {dw}cm, \
+             div-rows: {dr}, scaffold: {s}, body-height: {bh}cm, \
+             layout: \"scaffold\", decimal-places: 0, data-size: {ds}pt, \
+             data-height: {dh}cm",
+            ds = crate::mean::SCAFFOLD_DATA_LINE_PT,
+            dh = mean_data_height(worksheet),
+            // Both halves take their width from the same measured tables
+            // `cell_size_cm` uses, so the composite's content is exactly
+            // as wide as the cell reserved for it. The generic
+            // `box_width_cm` formula is too narrow here: the stack's
+            // answer row holds the sum, and an under-wide stack overflows
+            // its box (pushing the operator out and spilling past the
+            // page margin).
+            sw = crate::vertical_stack_width(max_digits_for_opts),
+            dw = crate::long_division_cell(max_digits_for_opts).0,
+            dr = 2 * max_digits_for_opts,
+            s = scaffold,
+            bh = mean_fill(worksheet, row_height_cm),
+        ),
         WorksheetType::AlgebraTwoStep { .. } => format!(
             "operator: {operator_arg}, implicit: {i}, variable: \"{v}\"",
             i = opts.implicit,
@@ -227,6 +315,17 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     // pages — and any answer page where the problem page had
     // instructions — gain back vertical space for the answer grid).
     let problem_chrome_h = chrome_height_cm(true, true, has_problem_instructions);
+    // Height of one grid row as actually laid out, which is what a cell
+    // must fill to keep its padding symmetric. `cell_size_cm` is only the
+    // *minimum* a cell needs — the grid divides the content area into
+    // `1fr` rows, so the real row is that or taller, and the difference
+    // would otherwise pile up as dead space under the last thing drawn.
+    let rows_per_page = (doc.cells_per_page / cols.max(1)).max(1);
+    let row_height_cm = doc
+        .chrome
+        .content_area_cm(problem_chrome_h)
+        .1
+        / rows_per_page as f32;
     let answer_chrome_h = chrome_height_cm(false, true, false);
     let problem_margin_top = margin_top_for_chrome(problem_chrome_h);
     let answer_margin_top = margin_top_for_chrome(answer_chrome_h);
@@ -258,7 +357,12 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     let total_page_count = page_sequence.len();
     let first_answer_idx = pages.len();
     let component_name = sheet.worksheet.component_typst_name();
-    let opts_text = opts_body(&sheet.worksheet, &sheet.opts);
+    let opts_text = opts_body(
+        &sheet.worksheet,
+        &sheet.opts,
+        max_digits(&sheet.problems),
+        row_height_cm,
+    );
     let header_pad_top = HEADER_PAD_TOP_CM;
 
     for (i, (page, is_answer_page)) in page_sequence.iter().enumerate() {
@@ -326,6 +430,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
             ));
         }
 
+        let separators = uses_separators(&sheet.worksheet);
         page_blocks.push_str(&format!(
             r#"#worksheet-page(
   (
@@ -337,6 +442,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
   modes: {modes_arg},
   opts: ({opts_text}),
   outline: "{outline_key}",
+  separators: {separators},
 )
 "#
         ));
@@ -388,6 +494,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/decimal/subtract.typ": decimal-subtract-problem
 #import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
 #import "/lib/problems/expression/order-of-ops.typ": order-of-ops-problem
+#import "/lib/problems/statistics/mean.typ": mean-problem
 
 #set document(
   title: "{doc_title}",

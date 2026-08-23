@@ -592,6 +592,36 @@ function KindSpecific({
             );
         }
 
+        case "mean": {
+            const levels = levelsFor(cfg.kind) ?? [];
+            const current = cfg.level ?? defaultLevel(cfg.kind);
+            // The scaffold toggle only applies to levels that actually
+            // print one. `cfg.scaffold` is deliberately left alone when
+            // hidden, so switching to a workspace level and back keeps
+            // the earlier choice.
+            const showScaffold =
+                levels[Number(current) - 1]?.supportsScaffold !== false;
+            return (
+                <div className="space-y-4">
+                    <LevelPicker
+                        levels={levels}
+                        value={current}
+                        onChange={(v) => patch("level", v)}
+                    />
+                    {showScaffold && (
+                        <FieldGroup label="Working out">
+                            <OpToggle
+                                id="mean-scaffold"
+                                label="Print the addition stack"
+                                checked={cfg.scaffold ?? false}
+                                onChange={(v) => patch("scaffold", v)}
+                            />
+                        </FieldGroup>
+                    )}
+                </div>
+            );
+        }
+
         case "algebra-square-root": {
             const onSquares = cfg.squares ?? false;
             const onRoots = cfg.roots ?? false;

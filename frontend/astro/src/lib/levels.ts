@@ -24,6 +24,12 @@ export type Level = {
     example?: string;
     /** Raw API query params this level expands to. */
     params: Record<string, string | number | boolean>;
+    /** Whether this level prints a work scaffold the user can toggle.
+     * Omitted means yes. Set false for levels whose layout has no
+     * scaffold to print, so the configurator doesn't offer a control
+     * that does nothing — mean's open-workspace levels, for instance
+     * (see `mean::uses_scaffold_layout` in crates/core/src/mean.rs). */
+    supportsScaffold?: boolean;
 };
 
 /** Per-kind level definitions. The 1-based array position is the level
@@ -234,6 +240,43 @@ export const WORKSHEET_LEVELS: Partial<Record<WorksheetKind, readonly Level[]>> 
             label: "Parentheses first",
             example: "(5 + 6) × 2",
             params: { operations: 2, parens: true },
+        },
+    ],
+    mean: [
+        // Levels 1-2 mix 3- and 4-value sets on the same page: the
+        // divisor changes per problem, so the kid has to count the
+        // values instead of reusing one divisor down the column. Both
+        // print the two-step scaffold and fit 2 x 2 = 4 problems.
+        {
+            label: "Small numbers",
+            example: "23, 39, 35, 23",
+            params: { count: "3-4", digits: "1-2", problems: 4, cols: 2 },
+        },
+        {
+            label: "Three-digit numbers",
+            example: "163, 172, 145",
+            params: { count: "3-4", digits: "3", problems: 4, cols: 2 },
+        },
+        // Level 3 is a longer data set with tenths — the point shifts
+        // from "run the two-step procedure" to "handle a real data set".
+        // Eight values won't fit a printed addition stack, and long
+        // division has no decimal support, so this level uses the
+        // open-workspace layout: the data line wraps across a full-width
+        // cell and the student lays out the work herself. One column,
+        // two problems.
+        {
+            label: "Eight numbers, tenths",
+            example: "66.8, 63.0, 62.1, 35.6, …",
+            // Open-workspace layout: no printed stack or bracket, so the
+            // "Working out" toggle has nothing to act on.
+            supportsScaffold: false,
+            params: {
+                count: 8,
+                digits: 2,
+                decimals: true,
+                problems: 2,
+                cols: 1,
+            },
         },
     ],
 };

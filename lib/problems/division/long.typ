@@ -68,6 +68,13 @@
   // would size their overline to their own quotient, so the row
   // would have visually uneven brackets (some short, some long).
   let reserve-remainder = opts.at("reserve-remainder", default: false)
+  // Print the bracket, overline and divisor but not the dividend. Used
+  // by the mean worksheet, where the dividend is the sum the student has
+  // yet to compute: the scaffold should tell her *what to divide by*
+  // without giving away the total. The dividend still occupies its
+  // space (via `hide`), so the overline length and bracket geometry are
+  // identical to a normal problem.
+  let hide-dividend = opts.at("hide-dividend", default: false)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -191,7 +198,14 @@
           } else {
             v(answer-space)
           }
-          pad(left: bulge + 0.2em, top: 0.45em, dividend-content)
+          // `hide` keeps the dividend's footprint (so the bracket and
+          // overline are positioned identically) while leaving the
+          // digits unpainted.
+          pad(
+            left: bulge + 0.2em,
+            top: 0.45em,
+            if hide-dividend and not solved { hide(dividend-content) } else { dividend-content },
+          )
           v(overshoot)
           place(bottom + left, division-bracket(content-width, m.height))
         }),
