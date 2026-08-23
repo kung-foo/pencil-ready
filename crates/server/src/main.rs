@@ -1286,6 +1286,15 @@ async fn handle_umami_script(State(s): State<Arc<AppState>>) -> Response {
 
 /// Forward Umami tracking payloads to cloud.umami.is, preserving the
 /// client's User-Agent and IP so Umami can geo-locate and detect browsers.
+///
+/// The visitor IP travels as `payload.ip` in the JSON body, not just
+/// `X-Forwarded-For`: Umami Cloud sits behind Cloudflare, which stamps
+/// every request with geo headers (`cf-ipcity`, `cf-ipcountry`) derived
+/// from the *connecting* IP — this machine, not the visitor — and Umami
+/// consults those headers before any forwarded-IP header. `payload.ip`
+/// is the only field that makes Umami skip them and geo-locate the
+/// visitor. It also feeds Umami's visitor-identity hash, so distinct
+/// visitors sharing a User-Agent don't collapse into one session.
 async fn handle_umami_send(State(s): State<Arc<AppState>>, req: Request) -> Response {
     let (parts, body) = req.into_parts();
     let body_bytes = match axum::body::to_bytes(body, 64 * 1024).await {
@@ -1293,10 +1302,16 @@ async fn handle_umami_send(State(s): State<Arc<AppState>>, req: Request) -> Resp
         Err(_) => return (StatusCode::BAD_REQUEST, "request body too large").into_response(),
     };
 
+    let ip = client_ip(&parts.headers);
+    let body_bytes = match inject_payload_ip(&body_bytes, &ip) {
+        Some(b) => b,
+        None => body_bytes.to_vec(),
+    };
+
     let mut proxy = s
         .umami_client
         .post("https://cloud.umami.is/api/send")
-        .body(body_bytes.to_vec());
+        .body(body_bytes);
 
     if let Some(ct) = parts.headers.get(header::CONTENT_TYPE) {
         proxy = proxy.header("Content-Type", ct);
@@ -1304,7 +1319,9 @@ async fn handle_umami_send(State(s): State<Arc<AppState>>, req: Request) -> Resp
     if let Some(ua) = parts.headers.get(header::USER_AGENT) {
         proxy = proxy.header("User-Agent", ua);
     }
-    let ip = client_ip(&parts.headers);
+    // Fallback for bodies `inject_payload_ip` couldn't rewrite; ignored
+    // by Umami Cloud (Cloudflare's headers outrank it) but honored by
+    // self-hosted instances.
     if ip != "-" {
         proxy = proxy.header("X-Forwarded-For", ip);
     }
@@ -1320,6 +1337,22 @@ async fn handle_umami_send(State(s): State<Arc<AppState>>, req: Request) -> Resp
             (StatusCode::BAD_GATEWAY, "proxy error").into_response()
         }
     }
+}
+
+/// Set `payload.ip` in an Umami event body to the visitor's IP,
+/// overwriting any client-supplied value (a visitor must not be able to
+/// spoof their location through our proxy). Returns `None` — forward
+/// the body untouched — when the IP is unknown or the body isn't the
+/// expected `{"payload": {...}}` shape; a mislocated event beats a
+/// dropped one.
+fn inject_payload_ip(body: &[u8], ip: &str) -> Option<Vec<u8>> {
+    if ip == "-" {
+        return None;
+    }
+    let mut value: serde_json::Value = serde_json::from_slice(body).ok()?;
+    let payload = value.get_mut("payload")?.as_object_mut()?;
+    payload.insert("ip".into(), serde_json::Value::String(ip.to_string()));
+    serde_json::to_vec(&value).ok()
 }
 
 /// Text substitution middleware: replaces `SERVER_REGION_PLACEHOLDER`
@@ -1637,5 +1670,36 @@ fn init_tracing() {
             .with(env_filter)
             .with(fmt::layer().with_target(false).compact())
             .init();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::inject_payload_ip;
+
+    #[test]
+    fn inject_payload_ip_sets_ip() {
+        let body = br#"{"type":"event","payload":{"website":"abc","url":"/"}}"#;
+        let out = inject_payload_ip(body, "203.0.113.7").unwrap();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["payload"]["ip"], "203.0.113.7");
+        assert_eq!(v["payload"]["url"], "/");
+        assert_eq!(v["type"], "event");
+    }
+
+    #[test]
+    fn inject_payload_ip_overwrites_spoofed_ip() {
+        let body = br#"{"type":"event","payload":{"website":"abc","ip":"1.2.3.4"}}"#;
+        let out = inject_payload_ip(body, "203.0.113.7").unwrap();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["payload"]["ip"], "203.0.113.7");
+    }
+
+    #[test]
+    fn inject_payload_ip_passes_through_unexpected_shapes() {
+        assert!(inject_payload_ip(b"not json", "203.0.113.7").is_none());
+        assert!(inject_payload_ip(br#"{"no_payload":1}"#, "203.0.113.7").is_none());
+        assert!(inject_payload_ip(br#"{"payload":"string"}"#, "203.0.113.7").is_none());
+        assert!(inject_payload_ip(br#"{"payload":{}}"#, "-").is_none());
     }
 }
