@@ -2,7 +2,8 @@
 import Layout from "../../layouts/Layout.astro";
 import Stippled from "../../components/Stippled.astro";
 import { WORKSHEET_KINDS, type WorksheetKind } from "../../lib/api";
-import { WORKSHEET_INFO } from "../../lib/worksheet-info";
+import { getWorksheetInfo } from "../../lib/worksheet-content";
+import { linkWorksheetList } from "../../lib/worksheet-links";
 import { WorksheetIsland } from "../../components/WorksheetIsland";
 import {
     Breadcrumb,
@@ -18,7 +19,7 @@ export function getStaticPaths() {
 }
 
 const { kind } = Astro.params as { kind: WorksheetKind };
-const info = WORKSHEET_INFO[kind];
+const info = (await getWorksheetInfo())[kind];
 ---
 
 <Layout
@@ -116,7 +117,22 @@ const info = WORKSHEET_INFO[kind];
                         <ul
                             class="text-sm space-y-1.5 pl-6 list-disc marker:text-muted-foreground"
                         >
-                            {info.prerequisites.map((p) => <li>{p}</li>)}
+                            {
+                                linkWorksheetList(info.prerequisites, kind).map(
+                                    (segs) => (
+                                        <li>
+                                            {segs.map((seg) =>
+                                                seg.href ? (
+                                                    /* prettier-ignore */
+                                                    <a href={seg.href} class="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors">{seg.text}</a>
+                                                ) : (
+                                                    seg.text
+                                                ),
+                                            )}
+                                        </li>
+                                    ),
+                                )
+                            }
                         </ul>
                     </div>
 
@@ -143,7 +159,7 @@ const info = WORKSHEET_INFO[kind];
                                     ></path>
                                 </svg>
                             </span>
-                            <span>With mastery, the student learns</span>
+                            <span>With mastery, the student can</span>
                         </div>
                         <ul
                             class="text-sm space-y-1.5 pl-6 list-disc marker:text-muted-foreground"

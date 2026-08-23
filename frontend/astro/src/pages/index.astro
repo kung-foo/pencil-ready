@@ -2,7 +2,10 @@
 import Layout from "../layouts/Layout.astro";
 import Stippled from "../components/Stippled.astro";
 import WorksheetThumb from "../components/WorksheetThumb.astro";
-import { WORKSHEET_INFO, WORKSHEET_SECTIONS } from "../lib/worksheet-info";
+import { WORKSHEET_SECTIONS } from "../lib/worksheet-info";
+import { getWorksheetInfo } from "../lib/worksheet-content";
+
+const WORKSHEET_INFO = await getWorksheetInfo();
 ---
 
 <Layout
