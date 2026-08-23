@@ -55,7 +55,9 @@
 //     division can't express the work. Default "scaffold".
 //   decimal-places: dp of the incoming scaled integers. 0 = plain ints.
 //   data-width / work-height: workspace-layout geometry — where the data
-//     line wraps, and how much blank space sits under it.
+//     line wraps, and how much blank space sits under it. Required in
+//     that layout.
+//   data-height: height reserved for the data line. Always required.
 //   scaffold: paint the working-out scaffold in blank mode — the
 //     pre-filled addition stack, plus the division bracket with its
 //     divisor (but not the dividend, which is the sum she has yet to
@@ -71,21 +73,34 @@
   let dp = opts.at("decimal-places", default: 0)
   let operator = opts.at("operator", default: [+])
   let scaffold = opts.at("scaffold", default: true)
-  // Scaffold-layout geometry. Unused (and not required) in the
-  // open-workspace layout, which prints neither half.
-  let stack-width = opts.at("stack-width", default: 0cm)
-  let div-width = opts.at("div-width", default: 0cm)
-  let div-rows = opts.at("div-rows", default: 1)
-  let body-height = opts.at("body-height", default: 0cm)
+  let is-workspace = layout == "workspace"
+  // Geometry is required per layout rather than defaulted. Cell sizing
+  // lives in `mean::cell_size_cm`, so a default here is a second copy of
+  // a number that has to match it — and these drifted once already (the
+  // wrap width moved 16.6 -> 17.6cm when it started deriving from the
+  // narrowest paper, leaving a stale default behind). Reading them
+  // unconditionally would force every caller to supply the *other*
+  // layout's keys too, so each branch requires only its own; a missing
+  // one fails loudly, the way `division-long-problem` treats `width`.
+  //
+  // These are cm, not em, deliberately: they are cell geometry measured
+  // against the paper, not text-relative spacing inside a figure. Making
+  // them em would tie the page grid to the font size. The em rule in
+  // SPEC.md governs spacing *within* a problem figure — which is what
+  // `gap` and the answer slot below use.
+  let stack-width = if is-workspace { 0cm } else { opts.at("stack-width") }
+  let div-width = if is-workspace { 0cm } else { opts.at("div-width") }
+  let div-rows = if is-workspace { 1 } else { opts.at("div-rows") }
+  let body-height = if is-workspace { 0cm } else { opts.at("body-height") }
   // Open-workspace geometry.
-  let data-width = opts.at("data-width", default: 16.6cm)
+  let data-width = if is-workspace { opts.at("data-width") } else { 0cm }
   let data-size = opts.at("data-size", default: problem-text-size-horizontal)
   // Height reserved for the data line (one or two wrapped rows). Fixed
   // rather than natural so the working area below always starts at the
   // same offset — and so a wrap the Rust side didn't predict can't push
   // the bottom-anchored answer slot out of the cell.
-  let data-height = opts.at("data-height", default: 1.4cm)
-  let work-height = opts.at("work-height", default: 7.8cm)
+  let data-height = opts.at("data-height")
+  let work-height = if is-workspace { opts.at("work-height") } else { 0cm }
   let gap = opts.at("gap", default: 0.6cm)
   let answer-font = opts.at("answer-font", default: none)
   let answer-color = opts.at("answer-color", default: none)

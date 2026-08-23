@@ -23,6 +23,7 @@
       div-width: 2.6cm,
       div-rows: 4,
       body-height: 5.6cm,
+      data-height: 1.4cm,
       gap: 0.25cm,
       scaffold: true,
       align: center + horizon,

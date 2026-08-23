@@ -323,7 +323,7 @@ export const WORKSHEET_INFO: Record<WorksheetKind, WorksheetInfo> = {
     mean: {
         title: "Mean",
         summary:
-            "Find the mean (average) of a small set of numbers: add them up, then divide by how many there are. Every answer comes out a whole number.",
+            "Find the mean (average) of a small set of numbers: add them up, then divide by how many there are. Every answer divides exactly \u2014 a whole number, or exact to one tenth on the longest sets.",
         prerequisites: [
             "Column addition with carrying, for three or four numbers at a time.",
             "Long division by a single-digit divisor.",

@@ -1,7 +1,8 @@
-// Blank, scaffold on: data line + pre-filled addition stack. The
-// division half is hidden but still reserves its full rect — the empty
-// area to the right of the stack is the student's work space, and it is
-// exactly the size the worked solution occupies.
+// Blank, scaffold on: data line, pre-filled addition stack, the division
+// bracket with its divisor but no dividend (the count is the hint worth
+// giving; the total is the work), and the final answer slot. The
+// dividend and quotient keep their footprint via `hide`, so the space
+// left for the student is exactly what the worked solution occupies.
 #set page(width: auto, height: auto, margin: 0.5em)
 #import "/lib/problems/statistics/mean.typ": mean-problem
 

@@ -1,6 +1,7 @@
-// Blank, scaffold off: only the data line paints. Both halves are
-// hidden, so the cell is the same size as the scaffolded version — the
-// student decides to sum and divide, and does all the writing herself.
+// Blank, scaffold off: the data line and the answer slot paint; both
+// work primitives are hidden. They still reserve their rects, so the
+// cell is the same size as the scaffolded version — the student decides
+// to sum and divide, and does all the writing herself.
 #set page(width: auto, height: auto, margin: 0.5em)
 #import "/lib/problems/statistics/mean.typ": mean-problem
 

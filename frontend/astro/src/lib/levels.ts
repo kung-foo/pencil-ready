@@ -246,7 +246,10 @@ export const WORKSHEET_LEVELS: Partial<Record<WorksheetKind, readonly Level[]>> 
         // Levels 1-2 mix 3- and 4-value sets on the same page: the
         // divisor changes per problem, so the kid has to count the
         // values instead of reusing one divisor down the column. Both
-        // print the two-step scaffold and fit 2 x 2 = 4 problems.
+        // fit 2 x 2 = 4 problems and reserve room for the two-step
+        // scaffold, but printing it is opt-in via the "Working out"
+        // toggle — the cell footprint is the same either way, so the
+        // toggle changes how much help she gets, not the layout.
         {
             label: "Small numbers",
             example: "23, 39, 35, 23",
