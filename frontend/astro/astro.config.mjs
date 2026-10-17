@@ -128,7 +128,10 @@ export default defineConfig({
       provider: fontProviders.google(),
       name: "Roboto Slab",
       cssVariable: "--font-roboto-slab",
-      weights: [400, 500, 600],
+      // A range, not a list: Roboto Slab is one variable file with a
+      // 100–900 weight axis, so declare it as a single face. One
+      // @font-face per weight made Firefox fetch the file twice.
+      weights: ["100 900"],
       styles: ["normal"],
       subsets: ["latin"],
       fallbacks: ["Georgia", "serif"],
