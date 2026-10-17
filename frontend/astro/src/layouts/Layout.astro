@@ -97,11 +97,10 @@ const umami = {
              metric overrides (size-adjust + ascent/descent/line-gap)
              calibrated against each fallback stack, so the swap-in
              from fallback to webfont doesn't shift layout. `preload`
-             primes the body weight (Roboto Slab 400) and Crimson Text
-             SemiBold used in headings — both above the fold on every
-             page. The other Roboto Slab weights (500/600) load
-             without preload since they appear only below the fold or
-             in lazy-rendered islands. -->
+             primes Roboto Slab and Crimson Text SemiBold used in
+             headings — both above the fold on every page. Roboto Slab
+             is one variable file covering 100–900, declared as a
+             single `font-weight: 100 900` face (see astro.config.mjs). -->
         <Font
             cssVariable="--font-roboto-slab"
             preload={[{ weight: 400, style: "normal" }]}
