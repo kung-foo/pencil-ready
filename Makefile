@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs site-size
 
 build:
 	cargo build
@@ -74,6 +74,12 @@ frontend-build:
 
 server-release:
 	cargo build --release --bin pencil-ready-server
+
+# Per-page transfer size of the built site: request count + brotli
+# bytes for html/js/css/fonts/images, as a cold load fetches them.
+# `make site-size SITE_SIZE_JSON=out.json` also writes the numbers.
+site-size: frontend-build
+	node frontend/astro/scripts/site-size.mjs frontend/astro/dist $(if $(SITE_SIZE_JSON),--json $(SITE_SIZE_JSON))
 
 # Build the Astro bundle, build the server in release mode, and run it
 # serving the bundle + API on :8080 — same shape the Docker image uses.
