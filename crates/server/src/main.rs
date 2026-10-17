@@ -1466,6 +1466,27 @@ async fn region_rewrite(
     Response::from_parts(parts, Body::from(rewritten))
 }
 
+/// 301 `www.<host>` to the bare host so search engines see one
+/// canonical origin instead of two duplicate sites. Hostnames without
+/// the `www.` prefix (apex, `*.fly.dev`, localhost) pass through.
+async fn www_redirect(req: Request, next: Next) -> Response {
+    let host = req.headers().get(header::HOST).and_then(|v| v.to_str().ok());
+    let path_and_query = req.uri().path_and_query().map_or("/", |pq| pq.as_str());
+    match host.and_then(|h| www_redirect_target(h, path_and_query)) {
+        Some(location) => (
+            StatusCode::MOVED_PERMANENTLY,
+            [(header::LOCATION, location)],
+        )
+            .into_response(),
+        None => next.run(req).await,
+    }
+}
+
+fn www_redirect_target(host: &str, path_and_query: &str) -> Option<String> {
+    let apex = host.strip_prefix("www.")?;
+    Some(format!("https://{apex}{path_and_query}"))
+}
+
 /// Cache-Control by URI prefix. Astro hashes its bundle filenames
 /// (`/_astro/*.js`, `/_astro/*.css`) so they're safe to mark immutable;
 /// fonts ship with stable filenames but never change in practice
@@ -1668,7 +1689,9 @@ async fn main() {
     //      sees them. Must be innermost so we operate on plaintext.
     //   2. compression — gzips/brs the (possibly rewritten) body.
     //   3. cors — adds headers.
-    //   4. TraceLayer — request spans wrap everything above. 2xx/3xx/5xx
+    //   4. www_redirect — short-circuits `www.` hosts before any of the
+    //      above run.
+    //   5. TraceLayer — request spans wrap everything above. 2xx/3xx/5xx
     //      log at INFO; 4xx (mostly scan traffic hitting our 404 page)
     //      drops to DEBUG so it doesn't flood the access log.
     let trace_layer = TraceLayer::new_for_http()
@@ -1705,6 +1728,7 @@ async fn main() {
         .layer(middleware::from_fn(cache_control))
         .layer(compression)
         .layer(cors)
+        .layer(middleware::from_fn(www_redirect))
         .layer(trace_layer);
 
     let addr = format!("0.0.0.0:{}", cli.port);
@@ -1743,7 +1767,17 @@ fn init_tracing() {
 
 #[cfg(test)]
 mod tests {
-    use super::inject_payload_ip;
+    use super::{inject_payload_ip, www_redirect_target};
+
+    #[test]
+    fn www_redirect_target_strips_www() {
+        assert_eq!(
+            www_redirect_target("www.pencilready.com", "/worksheets/add/?seed=1").as_deref(),
+            Some("https://pencilready.com/worksheets/add/?seed=1")
+        );
+        assert_eq!(www_redirect_target("pencilready.com", "/"), None);
+        assert_eq!(www_redirect_target("localhost:8080", "/"), None);
+    }
 
     #[test]
     fn inject_payload_ip_sets_ip() {

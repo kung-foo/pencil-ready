@@ -20,12 +20,45 @@ export function getStaticPaths() {
 
 const { kind } = Astro.params as { kind: WorksheetKind };
 const info = (await getWorksheetInfo())[kind];
+const url = `https://pencilready.com/worksheets/${kind}/`;
+
+const jsonLd = [
+    {
+        "@type": "LearningResource",
+        "@id": `${url}#worksheet`,
+        name: `${info.title} worksheet`,
+        description: info.summary,
+        url,
+        learningResourceType: "Worksheet",
+        educationalUse: "practice",
+        inLanguage: "en",
+        isAccessibleForFree: true,
+        license: "https://creativecommons.org/licenses/by/4.0/",
+        competencyRequired: info.prerequisites,
+        teaches: info.learning,
+        isPartOf: { "@id": "https://pencilready.com/#website" },
+        publisher: { "@id": "https://pencilready.com/#organization" },
+    },
+    {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {
+                "@type": "ListItem",
+                position: 1,
+                name: "All worksheets",
+                item: "https://pencilready.com/",
+            },
+            { "@type": "ListItem", position: 2, name: info.title, item: url },
+        ],
+    },
+];
 ---
 
 <Layout
     title={`${info.title} — Pencil Ready`}
     description={info.summary}
-    canonical={`https://pencilready.com/worksheets/${kind}/`}
+    canonical={url}
+    jsonLd={jsonLd}
 >
     <!--
     Page layout mirrors the React WorksheetPage 1:1: the island covers the
