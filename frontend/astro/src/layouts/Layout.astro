@@ -14,10 +14,38 @@ interface Props {
     title: string;
     description?: string;
     canonical?: string;
+    /** Extra schema.org nodes for this page, merged into the site graph. */
+    jsonLd?: Record<string, unknown>[];
 }
 
-const { title, description, canonical } = Astro.props;
+const { title, description, canonical, jsonLd = [] } = Astro.props;
 const ogImage = "https://pencilready.com/og-image-1200x630.png";
+
+// schema.org structured data. Every page carries the WebSite +
+// Organization entities so search engines tie all URLs to one site;
+// pages append their own nodes (worksheet pages add a LearningResource
+// and BreadcrumbList). `<` is escaped so no string can close the tag.
+const structuredData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": "WebSite",
+            "@id": "https://pencilready.com/#website",
+            name: "Pencil Ready",
+            url: "https://pencilready.com/",
+            inLanguage: "en",
+            publisher: { "@id": "https://pencilready.com/#organization" },
+        },
+        {
+            "@type": "Organization",
+            "@id": "https://pencilready.com/#organization",
+            name: "Pencil Ready",
+            url: "https://pencilready.com/",
+            sameAs: ["https://github.com/kung-foo/pencil-ready"],
+        },
+        ...jsonLd,
+    ],
+}).replace(/</g, "\\u003c");
 
 // Build-time values for the Umami inline script below. `define:vars`
 // turns these into top-of-script `const` declarations the JS body can
@@ -57,6 +85,7 @@ const umami = {
             )
         }
         <meta name="twitter:image" content={ogImage} />
+        <script is:inline type="application/ld+json" set:html={structuredData} />
         <link rel="icon" type="image/svg+xml" href="/rainbow-heart.svg" />
         <link
             rel="sitemap"
