@@ -1483,6 +1483,7 @@ async fn www_redirect(req: Request, next: Next) -> Response {
 }
 
 fn www_redirect_target(host: &str, path_and_query: &str) -> Option<String> {
+    let host = host.to_ascii_lowercase();
     let apex = host.strip_prefix("www.")?;
     Some(format!("https://{apex}{path_and_query}"))
 }
@@ -1688,9 +1689,10 @@ async fn main() {
     //   1. region_rewrite — mutates text/html bodies before compression
     //      sees them. Must be innermost so we operate on plaintext.
     //   2. compression — gzips/brs the (possibly rewritten) body.
-    //   3. cors — adds headers.
-    //   4. www_redirect — short-circuits `www.` hosts before any of the
+    //   3. www_redirect — short-circuits `www.` hosts before any of the
     //      above run.
+    //   4. cors — adds headers, including to www redirects so
+    //      cross-origin fetches can follow them.
     //   5. TraceLayer — request spans wrap everything above. 2xx/3xx/5xx
     //      log at INFO; 4xx (mostly scan traffic hitting our 404 page)
     //      drops to DEBUG so it doesn't flood the access log.
@@ -1727,8 +1729,8 @@ async fn main() {
         .layer(middleware::from_fn_with_state(state, region_rewrite))
         .layer(middleware::from_fn(cache_control))
         .layer(compression)
-        .layer(cors)
         .layer(middleware::from_fn(www_redirect))
+        .layer(cors)
         .layer(trace_layer);
 
     let addr = format!("0.0.0.0:{}", cli.port);
@@ -1774,6 +1776,10 @@ mod tests {
         assert_eq!(
             www_redirect_target("www.pencilready.com", "/worksheets/add/?seed=1").as_deref(),
             Some("https://pencilready.com/worksheets/add/?seed=1")
+        );
+        assert_eq!(
+            www_redirect_target("WWW.PencilReady.com", "/").as_deref(),
+            Some("https://pencilready.com/")
         );
         assert_eq!(www_redirect_target("pencilready.com", "/"), None);
         assert_eq!(www_redirect_target("localhost:8080", "/"), None);
