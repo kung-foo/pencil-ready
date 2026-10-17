@@ -84,7 +84,7 @@ readable error.
 
 ### Deployment
 
-- Dockerfile: `node:22-slim` frontend stage → `rust:1.98-slim-bookworm`
+- Dockerfile: `node:22-slim` frontend stage → `rust:1.99.0-slim-bookworm`
   builder → `debian:bookworm-slim` runtime.
 - The Rust version is pinned in **two** places that must move
   together: `rust-toolchain.toml` (local builds) and the Dockerfile

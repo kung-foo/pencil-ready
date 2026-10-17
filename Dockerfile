@@ -14,7 +14,7 @@ RUN pnpm build
 
 # --- Rust builder stage ---
 # Version pinned to match rust-toolchain.toml — bump both together.
-FROM rust:1.98-slim-bookworm AS builder
+FROM rust:1.99.0-slim-bookworm AS builder
 WORKDIR /app
 
 # utoipa-swagger-ui's build script downloads the Swagger UI bundle via curl
