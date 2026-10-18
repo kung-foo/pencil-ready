@@ -8,5 +8,5 @@ prerequisites:
 learning:
   - "Gange som om begge tallene var hele, og så sette kommaet."
   - "Telle desimaler — svaret har like mange som begge faktorene til sammen."
-  - "Sjekke om svaret er rimelig — 2,5 · 3 blir omtrent 7, ikke 75 eller 0,75."
+  - "Sjekke om svaret er rimelig — $2,5 · 3$ blir omtrent 7, ikke 75 eller 0,75."
 ---

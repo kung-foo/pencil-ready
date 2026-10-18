@@ -18,6 +18,7 @@
 
 import type { WorksheetKind } from "./api";
 import { localizePath, type Locale } from "@/i18n/locales";
+import { parseMathText, type Piece } from "./math-text";
 
 type Alias = { phrase: string; kind: WorksheetKind };
 
@@ -93,9 +94,6 @@ const ALIASES: Record<Locale, ReadonlyArray<Alias>> = {
     no: ALIASES_NB,
 };
 
-/** One run of prose, optionally a link. */
-export type Segment = { text: string; href?: string };
-
 /** Escape a phrase for use in a regex. Aliases are hand-written, but a
  * hyphen or dot slipping in shouldn't silently change the pattern. */
 function escapeRe(s: string): string {
@@ -125,8 +123,12 @@ const MATCHERS = Object.fromEntries(
 ) as Record<Locale, ReturnType<typeof matcherFor>>;
 
 /**
- * Split a list of prose strings into segments, linking the first mention
+ * Split a list of prose strings into pieces, linking the first mention
  * of each worksheet.
+ *
+ * The math markup is parsed first and only plain-text pieces are
+ * searched, so a link never splits a key and a key never lands inside a
+ * link.
  *
  * `self` is the page being rendered; mentions of it stay plain text — a
  * link to the page you're already on is noise. Each worksheet is linked
@@ -138,32 +140,41 @@ export function linkWorksheetList(
     texts: readonly string[],
     self: WorksheetKind,
     locale: Locale,
-): Segment[][] {
+): Piece[][] {
     const { byLengthDesc, re } = MATCHERS[locale];
     const linked = new Set<WorksheetKind>();
-    return texts.map((text) => {
-        const segments: Segment[] = [];
-        let last = 0;
-
-        for (const m of text.matchAll(re)) {
-            const alias = byLengthDesc.find(
-                (a) => a.phrase === m[0].toLowerCase(),
-            );
-            if (!alias || alias.kind === self || linked.has(alias.kind)) {
-                continue;
+    return texts.map((source) =>
+        parseMathText(source).flatMap((token): Piece[] => {
+            if (token.type !== "text") return [token];
+            const text = token.text;
+            const pieces: Piece[] = [];
+            let last = 0;
+            for (const m of text.matchAll(re)) {
+                const alias = byLengthDesc.find(
+                    (a) => a.phrase === m[0].toLowerCase(),
+                );
+                if (!alias || alias.kind === self || linked.has(alias.kind)) {
+                    continue;
+                }
+                const start = m.index ?? 0;
+                if (start > last) {
+                    pieces.push({
+                        type: "text",
+                        text: text.slice(last, start),
+                    });
+                }
+                pieces.push({
+                    type: "text",
+                    text: m[0],
+                    href: localizePath(`/worksheets/${alias.kind}/`, locale),
+                });
+                linked.add(alias.kind);
+                last = start + m[0].length;
             }
-
-            const start = m.index ?? 0;
-            if (start > last) segments.push({ text: text.slice(last, start) });
-            segments.push({
-                text: m[0],
-                href: localizePath(`/worksheets/${alias.kind}/`, locale),
-            });
-            linked.add(alias.kind);
-            last = start + m[0].length;
-        }
-
-        if (last < text.length) segments.push({ text: text.slice(last) });
-        return segments;
-    });
+            if (last < text.length) {
+                pieces.push({ type: "text", text: text.slice(last) });
+            }
+            return pieces;
+        }),
+    );
 }

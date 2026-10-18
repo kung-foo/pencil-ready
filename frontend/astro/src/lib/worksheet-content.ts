@@ -10,6 +10,7 @@
 import { getCollection } from "astro:content";
 import { WORKSHEET_KINDS, type WorksheetKind } from "./api";
 import { LOCALES, localeDef, type Locale } from "@/i18n/locales";
+import { mathTextProblems } from "./math-text";
 
 export type WorksheetInfo = {
     /** Title in the page's language, matches the server's `title()` output. */
@@ -37,6 +38,7 @@ type AllInfo = Record<Locale, Record<WorksheetKind, WorksheetInfo>>;
 async function loadAll(): Promise<AllInfo> {
     const entries = await getCollection("worksheets");
     const folders = new Map<string, Map<string, WorksheetInfo>>();
+    const mathProblems: string[] = [];
     for (const e of entries) {
         const [folder, kind, ...rest] = e.id.split("/");
         if (!kind || rest.length > 0) {
@@ -46,10 +48,26 @@ async function loadAll(): Promise<AllInfo> {
         }
         if (!folders.has(folder)) folders.set(folder, new Map());
         folders.get(folder)!.set(kind, e.data);
+        // Math markup (lib/math-text.ts): well-formed, every operator
+        // marked up, equations short enough for a phone-width card.
+        const strings = [
+            e.data.summary,
+            ...e.data.prerequisites,
+            ...e.data.learning,
+        ];
+        for (const problem of strings.flatMap(mathTextProblems)) {
+            mathProblems.push(`${e.id}: ${problem}`);
+        }
     }
 
     // Astro lowercases collection ids, so a region-tagged folder like
     // `nb-NO/` arrives as `nb-no`; compare tags case-insensitively.
+    if (mathProblems.length > 0) {
+        throw new Error(
+            `src/content/worksheets math markup:\n  ${mathProblems.join("\n  ")}`,
+        );
+    }
+
     const known = new Set<string>(LOCALES.map((l) => l.bcp47.toLowerCase()));
     const strayFolders = [...folders.keys()].filter((f) => !known.has(f));
     if (strayFolders.length > 0) {

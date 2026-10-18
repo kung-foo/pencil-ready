@@ -102,6 +102,20 @@
 
     /* Brand accents — literal colors, not theme-dependent. */
     --color-pencil-no-2: #fdb600;
+    /* Inline math keys in worksheet help copy (MathText.astro). */
+    --color-math-key: #fff6d1;
+    --color-math-key-border: #efc84a;
+}
+
+/* `√` only: the Google build of Roboto Slab the site loads drops U+221A,
+   so a 600-byte subset of the repo's fonts/RobotoSlab-Regular.ttf covers
+   it. Listed first in the math stack; `unicode-range` keeps the browser
+   from using it (or even fetching it) for anything else. */
+@font-face {
+    font-family: "Roboto Slab Radical";
+    src: url("../assets/fonts/roboto-slab-radical.woff2") format("woff2");
+    unicode-range: U+221A;
+    font-display: swap;
 }
 
 @layer base {
@@ -344,4 +358,81 @@
         border: 0;
         box-shadow: none;
     }
+}
+
+/* ---------------------------------------------------------------------
+   Math keys — operators and equations in worksheet help copy, rendered
+   by MathText.astro from `…` / $…$ markup (lib/math-text.ts).
+
+   No line-height change: keys are 1.3em tall, shorter than any line box
+   they sit in, with a fixed inner line-height and vertical-align:
+   baseline. That alone is marginal in tight lines (Tailwind's text-sm is
+   20px on 14px, and a 1.3em key positioned for an operator clears the
+   strut by ~0.15px; the lower `:` key doesn't), so keys also carry a
+   negative block margin: an inline-block adds its *margin* box to the
+   line, and -0.25em top and bottom means it can never make a line
+   taller. The visible box is unchanged. Nothing here is enlarged — a
+   larger inline span with an inherited unitless line-height *would*
+   grow lines.
+
+   Centring, measured for Roboto Slab with fontTools (OS/2 typo metrics,
+   USE_TYPO_METRICS set: ascent 1.048, descent 0.271). A box whose text
+   sits on the paragraph baseline is centred (ascent − descent) / 2 =
+   0.388em above the baseline whatever its line-height; padding-bottom p
+   (with the line-height reduced by p) lowers it by p/2.
+   - Operator keys: + − × ÷ = · ± have their ink centred at 0.327–0.350em
+     (semibold), so p = 0.106em puts the box centre at 0.335em.
+   - `:` (Norwegian division) sits on the x-height, centred at 0.264em:
+     p = 0.248em.
+   - Equation keys: a typical equation's ink runs from the baseline to
+     the top of the digits / ascenders (~0.72–0.75em), centre ~0.36em:
+     p = 0.05em. Right padding is a little wider than left because the
+     variables are slanted (synthesised italic — Roboto Slab has none).
+   If the math moves to another font, re-measure all of these.
+   --------------------------------------------------------------------- */
+.math-key,
+.math-eq {
+    display: inline-block;
+    box-sizing: border-box;
+    height: 1.3em;
+    vertical-align: baseline;
+    font-family: "Roboto Slab Radical", var(--font-roboto-slab);
+    font-size: 1em;
+    font-style: normal;
+    color: var(--color-foreground);
+    background: var(--color-math-key);
+    border: 1px solid var(--color-math-key-border);
+    border-radius: 3px;
+    margin-block: -0.25em;
+}
+.math-key {
+    width: 1.3em;
+    margin-inline: 0.04em;
+    padding: 0 0 0.106em;
+    line-height: calc(1.3em - 2px - 0.106em);
+    text-align: center;
+    font-weight: 600;
+}
+.math-key[data-op=":"] {
+    padding-bottom: 0.248em;
+    line-height: calc(1.3em - 2px - 0.248em);
+}
+.math-eq {
+    padding: 0 0.38em 0.05em 0.32em;
+    line-height: calc(1.3em - 2px - 0.05em);
+    white-space: nowrap;
+}
+/* " + " including its authored spaces. */
+.math-eq .math-op {
+    font-weight: 600;
+    white-space: pre;
+}
+.math-var {
+    font-family: "Roboto Slab Radical", var(--font-roboto-slab);
+    font-style: italic;
+    font-size: 1em;
+    line-height: 1;
+}
+.math-glue {
+    white-space: nowrap;
 }
