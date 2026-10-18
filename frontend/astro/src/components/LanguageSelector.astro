@@ -278,6 +278,69 @@ const menuId = "language-menu";
                 }
             </ul>
         </div>
+        <!-- Paper size. A device preference read by the worksheet
+             configurator (lib/paper.ts), so it only means anything with
+             JS — the section stays hidden until the script reveals it. -->
+        <div hidden data-paper-section class="border-t pb-2">
+            <p
+                class="px-4 pt-3 pb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground"
+                id={`${menuId}-paper-heading`}
+            >
+                {ui.selector.paper}
+            </p>
+            <ul role="menu" aria-labelledby={`${menuId}-paper-heading`}>
+                {
+                    [
+                        {
+                            id: "a4",
+                            name: ui.selector.paperA4,
+                            detail: ui.selector.paperA4Detail,
+                        },
+                        {
+                            id: "us-letter",
+                            name: ui.selector.paperLetter,
+                            detail: ui.selector.paperLetterDetail,
+                        },
+                    ].map((p) => (
+                        <li role="none">
+                            <button
+                                type="button"
+                                role="menuitemradio"
+                                aria-checked="false"
+                                data-paper-option={p.id}
+                                class="group language-option flex w-full items-center gap-3 px-4 min-h-14 md:min-h-11 text-left text-sm text-foreground hover:bg-muted focus-visible:bg-muted aria-checked:bg-muted outline-none cursor-pointer"
+                            >
+                                <span
+                                    class="md:hidden size-4 shrink-0 rounded-full border-2 border-muted-foreground/50 group-aria-checked:border-primary group-aria-checked:bg-primary group-aria-checked:shadow-[inset_0_0_0_2px_var(--color-card)]"
+                                    aria-hidden="true"
+                                />
+                                <span class="flex-1 min-w-0">
+                                    <span class="block font-medium">
+                                        {p.name}
+                                    </span>
+                                    <span class="block text-xs text-muted-foreground">
+                                        {p.detail}
+                                    </span>
+                                </span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="hidden md:block size-4 shrink-0 text-primary invisible group-aria-checked:visible"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M20 6 9 17l-5-5" />
+                                </svg>
+                            </button>
+                        </li>
+                    ))
+                }
+            </ul>
+        </div>
         <p class="md:hidden px-4 pb-4 pt-1 text-xs text-muted-foreground">
             {ui.selector.remember}
         </p>
@@ -345,6 +408,7 @@ const menuId = "language-menu";
         localeFromPath,
         localizePath,
     } from "@/i18n/locales";
+    import { getPaper, isPaper, setPaper } from "@/lib/paper";
 
     // Set the preference cookie on an explicit choice, before the
     // navigation starts. Registered on `window` in the capture phase so
@@ -397,10 +461,45 @@ const menuId = "language-menu";
 
         const items = () =>
             [
-                ...menu.querySelectorAll<HTMLAnchorElement>(
-                    "a[data-lang-option]",
+                ...menu.querySelectorAll<HTMLElement>(
+                    "a[data-lang-option], [data-paper-option]",
                 ),
             ].filter((a) => a.offsetParent !== null);
+
+        // Paper: reveal the section (it needs JS), mark the stored choice,
+        // and apply a pick straight away — the configurator listens for
+        // the change, so an open worksheet re-renders on the new paper.
+        const paperSection = menu.querySelector<HTMLElement>(
+            "[data-paper-section]",
+        );
+        const paperOptions = [
+            ...menu.querySelectorAll<HTMLButtonElement>("[data-paper-option]"),
+        ];
+        const markPaper = () => {
+            const current = getPaper();
+            for (const b of paperOptions) {
+                b.setAttribute(
+                    "aria-checked",
+                    String(b.dataset.paperOption === current),
+                );
+            }
+        };
+        if (paperSection) paperSection.hidden = false;
+        markPaper();
+        for (const b of paperOptions) {
+            b.addEventListener("click", () => {
+                const next = b.dataset.paperOption;
+                if (!isPaper(next)) return;
+                const from = getPaper();
+                setPaper(next);
+                if (from !== next) {
+                    window.umami?.track("paper-switch", { from, to: next });
+                }
+                markPaper();
+                menu.hidePopover();
+                button.focus();
+            });
+        }
 
         // The worksheet configurator keeps its state in the query
         // string and rewrites it with replaceState, so build hrefs from
@@ -489,7 +588,7 @@ const menuId = "language-menu";
         // this makes the focus return explicit); Tab out closes.
         menu.addEventListener("keydown", (e) => {
             const list = items();
-            const i = list.indexOf(document.activeElement as HTMLAnchorElement);
+            const i = list.indexOf(document.activeElement as HTMLElement);
             if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
                 const step = e.key === "ArrowDown" ? 1 : -1;

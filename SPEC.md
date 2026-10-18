@@ -300,6 +300,11 @@ breaks, same text sizes. Only the whitespace differs.
   grid's `1fr` tracks.
 - So a seed, a share link or a QR code reproduces the same worksheet
   whatever the printer takes.
+- Paper is therefore a per-device preference, not worksheet state: the
+  "Paper" section of the header's language menu stores it in
+  `localStorage` (`pr.paper`, `lib/paper.ts`; default A4), the
+  configurator sends it as `paper=` and shapes the preview to it, and it
+  stays out of share URLs — whoever opens a link prints on their own.
 - Presets must fit that area on one page. `levels.json` (read by the
   frontend and by the server) holds the level presets, and the server
   tests `levels_fit_one_page_on_every_paper` /

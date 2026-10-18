@@ -13,6 +13,7 @@ import {
 } from "@/lib/api";
 import { defaultLevel } from "@/lib/levels";
 import { useNames } from "@/lib/useNames";
+import { usePaper } from "@/lib/usePaper";
 import { useWorksheet } from "@/lib/useWorksheet";
 import type { IslandStrings, LevelStrings } from "@/i18n";
 import { localizePath, type Locale } from "@/i18n/locales";
@@ -121,9 +122,10 @@ export function WorksheetIsland({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     const [names, patchNames] = useNames();
+    const paper = usePaper();
     const url = useMemo(
-        () => worksheetUrl(cfg, names, locale),
-        [cfg, names, locale],
+        () => worksheetUrl(cfg, names, locale, paper),
+        [cfg, names, locale, paper],
     );
     const state = useWorksheet(url, ui);
 
@@ -172,7 +174,7 @@ export function WorksheetIsland({
                 />
             </div>
             <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
-                <Preview cfg={cfg} state={state} ui={ui} />
+                <Preview cfg={cfg} state={state} ui={ui} paper={paper} />
             </div>
         </div>
     );

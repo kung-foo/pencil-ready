@@ -12,6 +12,7 @@
 
 import { levelParams } from "./levels";
 import { localeDef, localizePath, type Locale } from "@/i18n/locales";
+import { DEFAULT_PAPER, type Paper } from "./paper";
 
 export const FORMATS = ["pdf", "png", "svg"] as const;
 export type Format = (typeof FORMATS)[number];
@@ -339,11 +340,16 @@ export function effectiveDivisionStyle(
  *
  * `locale` is the page's locale: it picks the worksheet's printed
  * language and notation (`locale=` on the API, omitted for the default)
- * and the share URL's path prefix. */
+ * and the share URL's path prefix.
+ *
+ * `paper` is the device's paper preference (`lib/paper.ts`). Like names,
+ * it goes to the API but not into the share URL: the worksheet is the
+ * same on every paper, so whoever opens the link prints on their own. */
 export function worksheetUrl(
     cfg: WorksheetConfig,
     names: { student?: string } | undefined,
     locale: Locale,
+    paper: Paper = DEFAULT_PAPER,
 ): string {
     const qs = configToSearchParams(cfg);
     // Snapshot the frontend-form qs (with `level=…`) before the API
@@ -368,6 +374,7 @@ export function worksheetUrl(
     if (names?.student) qs.set("student_name", names.student);
     const { worksheetLocale } = localeDef(locale);
     if (worksheetLocale !== "us") qs.set("locale", worksheetLocale);
+    if (paper !== DEFAULT_PAPER) qs.set("paper", paper);
     // QR rendering is opt-in via `cfg.qr` (set by adding `?qr=1` or
     // `?qr=true` to the route URL — see `parseConfig`). Server gates
     // on a validated `share_url`, so we also need a stable seed (so
