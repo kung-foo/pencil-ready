@@ -13,8 +13,9 @@
 export const en = {
     meta: {
         homeTitle: "Pencil Ready — printable math worksheets",
+        /** Meta description: 25–160 characters (checked in Layout). */
         homeDescription:
-            "Free, printable math worksheets for 1st–6th grade — print → solve → sharpen → repeat. Addition, subtraction, multiplication, long division, fractions, and two-step equations — configure the difficulty and download as PDF.",
+            "Free printable math worksheets for 1st–6th grade: addition, subtraction, multiplication, long division, fractions and equations. Pick a level, print the PDF.",
         aboutTitle: "About — Pencil Ready",
         aboutDescription:
             "Pencil Ready is a free, ad-free math worksheet generator for primary-school students. Configure a worksheet, download as PDF, print.",

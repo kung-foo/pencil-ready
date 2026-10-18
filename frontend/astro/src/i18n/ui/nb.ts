@@ -12,7 +12,7 @@ export const nb: UiStrings = {
     meta: {
         homeTitle: "Pencil Ready — matteark til utskrift",
         homeDescription:
-            "Gratis matteark til utskrift for 1.–7. trinn — print → solve → sharpen → repeat. Addisjon, subtraksjon, multiplikasjon, lang divisjon, brøk og likninger — velg vanskelighetsgrad og last ned som PDF.",
+            "Gratis matteark til utskrift for 1.–7. trinn: addisjon, subtraksjon, multiplikasjon, lang divisjon, brøk og likninger. Velg nivå og skriv ut PDF-en.",
         aboutTitle: "Om — Pencil Ready",
         aboutDescription:
             "Pencil Ready lager gratis matteark uten reklame for elever på barnetrinnet. Sett opp et ark, last det ned som PDF og skriv det ut.",

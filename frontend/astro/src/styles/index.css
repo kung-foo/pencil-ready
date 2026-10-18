@@ -265,6 +265,7 @@
     h4,
     h5,
     h6,
+    .site-wordmark,
     [data-slot="card-title"] {
         font-family: var(--font-crimson-text);
         font-weight: 600;

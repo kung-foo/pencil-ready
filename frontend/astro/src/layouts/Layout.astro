@@ -44,6 +44,14 @@ const {
     jsonLd = [],
 } = Astro.props;
 const ogImage = "https://pencilready.com/og-image-1200x630.png";
+
+// Search engines want 25–160 characters (Bing flags anything outside);
+// fail the build rather than ship one that gets cut off or ignored.
+if (description && (description.length < 25 || description.length > 160)) {
+    throw new Error(
+        `meta description is ${description.length} characters (want 25–160) on ${Astro.url.pathname}: ${description}`,
+    );
+}
 const def = localeDef(locale);
 const ui = t(locale);
 
@@ -291,9 +299,15 @@ const umami = {
                     href={homePath}
                     class="inline-flex flex-col items-stretch leading-none isolate"
                 >
-                    <h1 class="text-[2.5em] leading-none relative z-10">
+                    {
+                        /* Not a heading: it's on every page, and each page's
+                           own title is its h1 (one per page; Bing flags more). */
+                    }
+                    <span
+                        class="site-wordmark block text-[2.5em] leading-none relative z-10"
+                    >
                         Pencil Ready
-                    </h1>
+                    </span>
                     <PencilRule class="h-2 -mt-2" />
                 </a>
                 <p
