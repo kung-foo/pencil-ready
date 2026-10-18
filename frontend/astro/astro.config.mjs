@@ -6,6 +6,7 @@ import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import { optimize as svgoOptimize } from "svgo";
+import { DEFAULT_LOCALE, LOCALES } from "./src/i18n/locales.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -89,13 +90,18 @@ export default defineConfig({
   output: "static",
   compressHTML: false,
   // English at the root, Norwegian Bokmål under /no/ (language tag
-  // `nb`). Mirrors `LOCALES` in src/i18n/locales.ts — keep in step.
-  // Pages generate every locale themselves via an optional
-  // `[...locale]` rest param; this block is what `astro:i18n` and the
-  // routing conventions key off.
+  // `nb`). Derived from `LOCALES` in src/i18n/locales.ts, the single
+  // list of languages. Pages generate every locale themselves via an
+  // optional `[...locale]` rest param; this block is what `astro:i18n`
+  // and the routing conventions key off. The root locale is listed by
+  // id; prefixed ones map their URL path to their language codes.
   i18n: {
-    locales: ["en", { path: "no", codes: ["nb", "no"] }],
-    defaultLocale: "en",
+    locales: LOCALES.map((l) =>
+      l.path
+        ? { path: l.path, codes: [...new Set([l.bcp47, l.id])] }
+        : l.id,
+    ),
+    defaultLocale: DEFAULT_LOCALE,
     routing: { prefixDefaultLocale: false },
   },
   integrations: [
@@ -107,11 +113,13 @@ export default defineConfig({
     // a deploy means "any page may have changed since you last crawled."
     sitemap({
       // Emits xhtml:link hreflang alternates between each page's
-      // locale variants. Keys are URL path prefixes, values language
-      // tags — same mapping as `LOCALES`.
+      // locale variants. Keys are URL path prefixes (the root locale by
+      // its id), values language tags — straight from `LOCALES`.
       i18n: {
-        defaultLocale: "en",
-        locales: { en: "en", no: "nb" },
+        defaultLocale: DEFAULT_LOCALE,
+        locales: Object.fromEntries(
+          LOCALES.map((l) => [l.path || l.id, l.bcp47]),
+        ),
       },
       serialize(item) {
         return { ...item, lastmod: new Date().toISOString() };

@@ -48,7 +48,9 @@ async function loadAll(): Promise<AllInfo> {
         folders.get(folder)!.set(kind, e.data);
     }
 
-    const known = new Set<string>(LOCALES.map((l) => l.bcp47));
+    // Astro lowercases collection ids, so a region-tagged folder like
+    // `nb-NO/` arrives as `nb-no`; compare tags case-insensitively.
+    const known = new Set<string>(LOCALES.map((l) => l.bcp47.toLowerCase()));
     const strayFolders = [...folders.keys()].filter((f) => !known.has(f));
     if (strayFolders.length > 0) {
         throw new Error(
@@ -59,7 +61,7 @@ async function loadAll(): Promise<AllInfo> {
     const all = {} as AllInfo;
     const problems: string[] = [];
     for (const { id, bcp47 } of LOCALES) {
-        const byKind = folders.get(bcp47) ?? new Map();
+        const byKind = folders.get(bcp47.toLowerCase()) ?? new Map();
         const unknown = [...byKind.keys()].filter(
             (k) => !(WORKSHEET_KINDS as readonly string[]).includes(k),
         );

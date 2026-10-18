@@ -9,8 +9,9 @@
 // is the language tag for `<html lang>`, hreflang and JSON-LD. Norwegian
 // is `no` in URLs but `nb` (Bokmål) as a language tag.
 //
-// `astro.config.mjs` mirrors `id`/`path`/`bcp47` in its `i18n` and
-// sitemap blocks — keep the two in step.
+// `astro.config.mjs` derives its `i18n` and sitemap blocks from this
+// list. The Rust server's `LOCALE_PREFIXES` (root redirect) is the one
+// copy kept by hand.
 
 export const LOCALES = [
     {
