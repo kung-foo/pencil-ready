@@ -15,8 +15,9 @@ use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, OutputFormat, Paper, WorksheetParams,
-    WorksheetType, compile_typst, generate, generate_typst_source,
+    BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, OutputFormat, Paper,
+    WorksheetParams,
+    WorksheetType, compile_typst, generate, generate_typst_source, long_division_default_cols,
 };
 
 fn parse_paper(s: &str) -> Result<Paper, String> {
@@ -74,6 +75,24 @@ enum CliLocale {
     No,
 }
 
+/// Division layout; see `DivisionStyle`.
+#[derive(Clone, Copy, ValueEnum)]
+enum CliDivision {
+    /// `4)852` bracket long division; vertical simple division
+    Bracket,
+    /// `852 : 4 = 213`, working under the dividend; one-line simple division
+    Equation,
+}
+
+impl From<CliDivision> for DivisionStyle {
+    fn from(d: CliDivision) -> Self {
+        match d {
+            CliDivision::Bracket => DivisionStyle::Bracket,
+            CliDivision::Equation => DivisionStyle::Equation,
+        }
+    }
+}
+
 impl From<CliLocale> for Locale {
     fn from(l: CliLocale) -> Self {
         match l {
@@ -109,6 +128,12 @@ struct GlobalArgs {
     /// Worksheet locale (printed language, decimal separator, × / ÷ symbols): us, no
     #[arg(long, value_enum, default_value = "us")]
     locale: CliLocale,
+
+    /// Division layout for long-divide, simple-divide and mean:
+    /// bracket, equation. Defaults to the locale's style (us: bracket,
+    /// no: equation).
+    #[arg(long, value_enum)]
+    division: Option<CliDivision>,
 
     #[arg(long)]
     debug: bool,
@@ -206,18 +231,20 @@ enum Command {
         #[command(flatten)]
         global: GlobalArgs,
 
-        #[arg(long, default_value = "12")]
-        problems: u32,
+        /// Default 12 (bracket) or 30 (equation)
+        #[arg(long)]
+        problems: Option<u32>,
 
-        #[arg(long, default_value = "4")]
-        cols: u32,
+        /// Default 4 (bracket) or 3 (equation)
+        #[arg(long)]
+        cols: Option<u32>,
 
         /// Max quotient (answer) for generated problems (2-12)
         #[arg(long, default_value = "10")]
         max_quotient: u32,
     },
 
-    /// Long division (bracket notation)
+    /// Long division (bracket, or equation with --division equation)
     LongDivide {
         #[command(flatten)]
         global: GlobalArgs,
@@ -225,8 +252,9 @@ enum Command {
         #[arg(long, default_value = "12")]
         problems: u32,
 
-        #[arg(long, default_value = "4")]
-        cols: u32,
+        /// Default 4 (bracket) or 3 (equation)
+        #[arg(long)]
+        cols: Option<u32>,
 
         /// Dividend digits: N for fixed or N-M for range. e.g. "3" or "2-4"
         #[arg(long, default_value = "3")]
@@ -668,24 +696,35 @@ fn resolve(command: Command) -> Resolved {
             problems,
             cols,
             max_quotient,
-        } => Resolved {
-            global,
-            num_problems: problems,
-            cols,
-            worksheet: WorksheetType::SimpleDivision { max_quotient },
-        },
+        } => {
+            let style = global.division_style();
+            let (default_problems, default_cols) = simple_divide_defaults(style);
+            Resolved {
+                num_problems: problems.unwrap_or(default_problems),
+                cols: cols.unwrap_or(default_cols),
+                worksheet: WorksheetType::SimpleDivision { max_quotient, style },
+                global,
+            }
+        }
         Command::LongDivide {
             global,
             problems,
             cols,
             digits,
             remainder,
-        } => Resolved {
-            global,
-            num_problems: problems,
-            cols,
-            worksheet: WorksheetType::LongDivision { digits, remainder },
-        },
+        } => {
+            let style = global.division_style();
+            Resolved {
+                num_problems: problems,
+                cols: cols.unwrap_or(long_division_default_cols(style, digits, remainder)),
+                worksheet: WorksheetType::LongDivision {
+                    digits,
+                    remainder,
+                    style,
+                },
+                global,
+            }
+        }
         Command::MultDrill {
             global,
             cols,
@@ -895,7 +934,6 @@ fn resolve(command: Command) -> Resolved {
             scaffold,
             decimals,
         } => Resolved {
-            global,
             num_problems: problems,
             cols,
             worksheet: WorksheetType::Mean {
@@ -903,7 +941,9 @@ fn resolve(command: Command) -> Resolved {
                 digits,
                 scaffold,
                 decimals,
+                style: global.division_style(),
             },
+            global,
         },
         Command::All { .. } => unreachable!("Command::All is handled before resolve()"),
     }
@@ -1023,7 +1063,26 @@ fn typst_body(source: &str) -> &str {
         .unwrap_or(source)
 }
 
+/// (problems, cols) defaults for simple division — mirrors the server.
+fn simple_divide_defaults(style: DivisionStyle) -> (u32, u32) {
+    match style {
+        DivisionStyle::Bracket => (12, 4),
+        DivisionStyle::Equation => (30, 3),
+    }
+}
+
+impl GlobalArgs {
+    /// `--division` if given, else the locale's default.
+    fn division_style(&self) -> DivisionStyle {
+        self.division
+            .map(DivisionStyle::from)
+            .unwrap_or_else(|| Locale::from(self.locale).division_style())
+    }
+}
+
 fn run_all(global: GlobalArgs) -> Result<()> {
+    let style = global.division_style();
+    let (simple_problems, simple_cols) = simple_divide_defaults(style);
     // One entry per worksheet type. Column and problem counts mirror each
     // subcommand's dispatch. Keep in sync with `resolve()`.
     let sheets: Vec<(&str, WorksheetType, u32, u32)> = vec![
@@ -1056,18 +1115,22 @@ fn run_all(global: GlobalArgs) -> Result<()> {
         ),
         (
             "simple-divide",
-            WorksheetType::SimpleDivision { max_quotient: 10 },
-            12,
-            4,
+            WorksheetType::SimpleDivision {
+                max_quotient: 10,
+                style,
+            },
+            simple_problems,
+            simple_cols,
         ),
         (
             "long-divide",
             WorksheetType::LongDivision {
                 digits: DigitRange::fixed(3),
                 remainder: false,
+                style,
             },
             12,
-            4,
+            long_division_default_cols(style, DigitRange::fixed(3), false),
         ),
         (
             "mult-drill",
@@ -1195,6 +1258,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
                 digits: DigitRange::new(1, 2),
                 scaffold: true,
                 decimals: false,
+                style,
             },
             4,
             2,
@@ -1224,6 +1288,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
 #import "/lib/problems/multiplication/drill.typ": multiplication-drill-problem
 #import "/lib/problems/division/simple.typ": division-simple-problem
 #import "/lib/problems/division/long.typ": division-long-problem
+#import "/lib/problems/division/equation.typ": division-equation-problem
 #import "/lib/problems/division/drill.typ": division-drill-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem

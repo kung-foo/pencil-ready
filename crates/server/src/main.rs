@@ -24,8 +24,9 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, MissingSlot, OutputFormat, Paper,
-    WorksheetParams, WorksheetType, generate,
+    BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot, OutputFormat,
+    Paper,
+    WorksheetParams, WorksheetType, generate, long_division_default_cols,
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
@@ -94,6 +95,11 @@ struct SharedParams {
     /// decimal comma, · and : symbols).
     #[serde(default)]
     locale: Option<Locale>,
+    /// Division layout: "bracket" (`4)852`, vertical simple division) or
+    /// "equation" (`852 : 4 = 213`, working below). Defaults to the
+    /// locale's style. Applies to long-divide, simple-divide and mean.
+    #[serde(default)]
+    division: Option<DivisionStyle>,
     /// Override the operator symbol (typst expression, e.g. "sym.colon").
     #[serde(default)]
     symbol: Option<String>,
@@ -190,6 +196,12 @@ where
 }
 
 impl SharedParams {
+    /// Explicit `division=` wins; otherwise the locale's default.
+    fn division_style(&self) -> DivisionStyle {
+        self.division
+            .unwrap_or_else(|| self.locale.unwrap_or_default().division_style())
+    }
+
     fn fold(
         self,
         worksheet: WorksheetType,
@@ -335,12 +347,20 @@ struct SimpleDivideSpecific {
 
 impl SimpleDivideSpecific {
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let style = shared.division_style();
+        // One-line equation problems are short and wider than a stack:
+        // more of them, three to a row.
+        let (problems, cols) = match style {
+            DivisionStyle::Bracket => (12, 4),
+            DivisionStyle::Equation => (30, 3),
+        };
         Ok(shared.fold(
             WorksheetType::SimpleDivision {
                 max_quotient: self.max_quotient.unwrap_or(10),
+                style,
             },
-            12,
-            4,
+            problems,
+            cols,
         ))
     }
 }
@@ -362,13 +382,16 @@ impl LongDivideSpecific {
             Some(s) => parse_digit_range(&s, "digits")?,
             None => DigitRange::fixed(3),
         };
+        let style = shared.division_style();
+        let remainder = self.remainder.unwrap_or(false);
         Ok(shared.fold(
             WorksheetType::LongDivision {
                 digits,
-                remainder: self.remainder.unwrap_or(false),
+                remainder,
+                style,
             },
             12,
-            4,
+            long_division_default_cols(style, digits, remainder),
         ))
     }
 }
@@ -828,12 +851,14 @@ impl MeanSpecific {
             Some(s) => parse_digit_range(&s, "digits")?,
             None => DigitRange::new(1, 2),
         };
+        let style = shared.division_style();
         Ok(shared.fold(
             WorksheetType::Mean {
                 count,
                 digits,
                 scaffold: self.scaffold.unwrap_or(false),
                 decimals: self.decimals.unwrap_or(false),
+                style,
             },
             // Each problem is a full column addition plus a long
             // division, so a page holds exactly four.
@@ -1628,7 +1653,7 @@ async fn cache_control(req: Request, next: Next) -> Response {
         description = "Generate printable math worksheets.",
     ),
     tags((name = "worksheets", description = "Worksheet generation endpoints")),
-    components(schemas(CarryMode, BorrowMode, Locale, OutputFormat)),
+    components(schemas(CarryMode, BorrowMode, Locale, DivisionStyle, OutputFormat)),
 )]
 struct ApiDoc;
 
