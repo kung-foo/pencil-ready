@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { IslandStrings } from "@/i18n";
 
 export type WorksheetState =
     | { status: "loading" }
@@ -7,10 +8,10 @@ export type WorksheetState =
 
 const FILENAME_RE = /filename="([^"]+)"/;
 
-function messageForStatus(status: number): string {
-    if (status === 404) return "This worksheet isn't available right now.";
-    if (status >= 500) return "The worksheet generator hit an error.";
-    return "Couldn't generate this worksheet.";
+function messageForStatus(status: number, ui: IslandStrings): string {
+    if (status === 404) return ui.errorNotFound;
+    if (status >= 500) return ui.errorServer;
+    return ui.errorGeneric;
 }
 
 /**
@@ -20,7 +21,7 @@ function messageForStatus(status: number): string {
  * both the iframe/img src and the `<a href>` of the download button,
  * guaranteeing preview === download bytes.
  */
-export function useWorksheet(url: string): WorksheetState {
+export function useWorksheet(url: string, ui: IslandStrings): WorksheetState {
     const [state, setState] = useState<WorksheetState>({ status: "loading" });
     const currentBlobUrl = useRef<string | null>(null);
 
@@ -41,7 +42,7 @@ export function useWorksheet(url: string): WorksheetState {
                         `Worksheet fetch failed (${res.status}) for ${url}`,
                         body,
                     );
-                    throw new Error(messageForStatus(res.status));
+                    throw new Error(messageForStatus(res.status, ui));
                 }
                 const cd = res.headers.get("Content-Disposition") ?? "";
                 const filename = FILENAME_RE.exec(cd)?.[1] ?? "worksheet";
@@ -61,7 +62,7 @@ export function useWorksheet(url: string): WorksheetState {
                     message:
                         e instanceof Error && e.message
                             ? e.message
-                            : "Couldn't reach the worksheet generator.",
+                            : ui.errorUnreachable,
                 });
             }
         })();
@@ -69,6 +70,8 @@ export function useWorksheet(url: string): WorksheetState {
         return () => {
             cancelled = true;
         };
+        // `ui` is fixed for the page's lifetime; only `url` drives refetch.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [url]);
 
     // Revoke the last object URL on unmount.

@@ -19,84 +19,50 @@
  * fall through to no render.
  */
 import type { WorksheetKind } from "@/lib/api";
-import AddThumb from "@/assets/thumbs/add.svg";
-import SubtractThumb from "@/assets/thumbs/subtract.svg";
-import MultiplyThumb from "@/assets/thumbs/multiply.svg";
-import SimpleDivideThumb from "@/assets/thumbs/simple-divide.svg";
-import MultDrillThumb from "@/assets/thumbs/mult-drill.svg";
-import DivDrillThumb from "@/assets/thumbs/div-drill.svg";
-import LongDivideThumb from "@/assets/thumbs/long-divide.svg";
-import FractionEquivThumb from "@/assets/thumbs/fraction-equiv.svg";
-import FractionSimplifyThumb from "@/assets/thumbs/fraction-simplify.svg";
-import FractionMultThumb from "@/assets/thumbs/fraction-mult.svg";
-import DecimalAddThumb from "@/assets/thumbs/decimal-add.svg";
-import DecimalSubtractThumb from "@/assets/thumbs/decimal-subtract.svg";
-import DecimalMultiplyThumb from "@/assets/thumbs/decimal-multiply.svg";
-import OrderOfOpsThumb from "@/assets/thumbs/order-of-ops.svg";
-import MeanThumb from "@/assets/thumbs/mean.svg";
+import { localeDef, type Locale } from "@/i18n/locales";
 
-import addUrl from "@/assets/thumbs/add.svg?url";
-import subtractUrl from "@/assets/thumbs/subtract.svg?url";
-import multiplyUrl from "@/assets/thumbs/multiply.svg?url";
-import simpleDivideUrl from "@/assets/thumbs/simple-divide.svg?url";
-import multDrillUrl from "@/assets/thumbs/mult-drill.svg?url";
-import divDrillUrl from "@/assets/thumbs/div-drill.svg?url";
-import longDivideUrl from "@/assets/thumbs/long-divide.svg?url";
-import fractionEquivUrl from "@/assets/thumbs/fraction-equiv.svg?url";
-import fractionSimplifyUrl from "@/assets/thumbs/fraction-simplify.svg?url";
-import fractionMultUrl from "@/assets/thumbs/fraction-mult.svg?url";
-import decimalAddUrl from "@/assets/thumbs/decimal-add.svg?url";
-import decimalSubtractUrl from "@/assets/thumbs/decimal-subtract.svg?url";
-import decimalMultiplyUrl from "@/assets/thumbs/decimal-multiply.svg?url";
-import orderOfOpsUrl from "@/assets/thumbs/order-of-ops.svg?url";
-import meanUrl from "@/assets/thumbs/mean.svg?url";
+// Every thumb, as an inlinable SVG component and as a hashed asset URL,
+// keyed by file stem (`add`, `multiply-nb`, …). Locale variants are
+// `<kind>-<bcp47>.svg`, for kinds whose sample problem shows notation
+// that differs by locale (× / ÷ glyphs, decimal separator); other kinds
+// fall back to the shared file.
+type SvgComponent = typeof import("@/assets/thumbs/add.svg").default;
+const components = import.meta.glob<SvgComponent>("@/assets/thumbs/*.svg", {
+    eager: true,
+    import: "default",
+});
+const urls = import.meta.glob<string>("@/assets/thumbs/*.svg", {
+    eager: true,
+    query: "?url",
+    import: "default",
+});
+const byStem = <T,>(files: Record<string, T>) =>
+    Object.fromEntries(
+        Object.entries(files).map(([path, v]) => [
+            path
+                .split("/")
+                .pop()!
+                .replace(/\.svg$/, ""),
+            v,
+        ]),
+    ) as Record<string, T | undefined>;
+const Thumbs = byStem(components);
+const ThumbUrls = byStem(urls);
 
 interface Props {
     kind: WorksheetKind;
+    locale?: Locale;
     /** Render as `<img loading="lazy">` for below-fold cards. */
     lazy?: boolean;
     class?: string;
 }
-const { kind, lazy = false, class: className } = Astro.props;
+const { kind, locale = "en", lazy = false, class: className } = Astro.props;
 
+const variant = `${kind}-${localeDef(locale).bcp47}`;
+const stem = Thumbs[variant] ? variant : kind;
 // Capitalized binding required for Astro's dynamic-tag rendering.
-const Thumbs: Partial<Record<WorksheetKind, typeof AddThumb>> = {
-    add: AddThumb,
-    subtract: SubtractThumb,
-    multiply: MultiplyThumb,
-    "simple-divide": SimpleDivideThumb,
-    "mult-drill": MultDrillThumb,
-    "div-drill": DivDrillThumb,
-    "long-divide": LongDivideThumb,
-    "fraction-equiv": FractionEquivThumb,
-    "fraction-simplify": FractionSimplifyThumb,
-    "fraction-mult": FractionMultThumb,
-    "decimal-add": DecimalAddThumb,
-    "decimal-subtract": DecimalSubtractThumb,
-    "decimal-multiply": DecimalMultiplyThumb,
-    "order-of-ops": OrderOfOpsThumb,
-    mean: MeanThumb,
-};
-const ThumbUrls: Partial<Record<WorksheetKind, string>> = {
-    add: addUrl,
-    subtract: subtractUrl,
-    multiply: multiplyUrl,
-    "simple-divide": simpleDivideUrl,
-    "mult-drill": multDrillUrl,
-    "div-drill": divDrillUrl,
-    "long-divide": longDivideUrl,
-    "fraction-equiv": fractionEquivUrl,
-    "fraction-simplify": fractionSimplifyUrl,
-    "fraction-mult": fractionMultUrl,
-    "decimal-add": decimalAddUrl,
-    "decimal-subtract": decimalSubtractUrl,
-    "decimal-multiply": decimalMultiplyUrl,
-    "order-of-ops": orderOfOpsUrl,
-    mean: meanUrl,
-};
-
-const Thumb = Thumbs[kind];
-const url = ThumbUrls[kind];
+const Thumb = Thumbs[stem];
+const url = ThumbUrls[stem];
 ---
 
 {
@@ -118,11 +84,7 @@ const url = ThumbUrls[kind];
         />
     )
 }
-{
-    !lazy && Thumb && (
-        <Thumb class:list={["worksheet-thumb-svg", className]} />
-    )
-}
+{!lazy && Thumb && <Thumb class:list={["worksheet-thumb-svg", className]} />}
 
 <style>
     /* Same rule applies to both inline <svg> and <img>. Width is

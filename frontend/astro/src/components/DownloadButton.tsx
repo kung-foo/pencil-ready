@@ -2,13 +2,16 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorksheetKind } from "@/lib/api";
 import type { WorksheetState } from "@/lib/useWorksheet";
+import type { IslandStrings } from "@/i18n";
 
 export function DownloadButton({
     state,
     kind,
+    ui,
 }: {
     state: WorksheetState;
     kind: WorksheetKind;
+    ui: IslandStrings;
 }) {
     if (state.status === "ready") {
         const format = state.filename.split(".").pop() ?? "pdf";
@@ -21,7 +24,7 @@ export function DownloadButton({
                         window.umami?.track("download", { kind, format })
                     }
                 >
-                    <Download className="size-4" /> Download
+                    <Download className="size-4" /> {ui.download}
                 </a>
             </Button>
         );
@@ -29,7 +32,7 @@ export function DownloadButton({
     return (
         <Button disabled className="w-full">
             <Download className="size-4" />{" "}
-            {state.status === "error" ? "Download" : "Preparing…"}
+            {state.status === "error" ? ui.download : ui.preparing}
         </Button>
     );
 }

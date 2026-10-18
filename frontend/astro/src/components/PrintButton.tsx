@@ -2,6 +2,7 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorksheetKind } from "@/lib/api";
 import type { WorksheetState } from "@/lib/useWorksheet";
+import type { IslandStrings } from "@/i18n";
 
 // iOS/iPadOS (all browsers, since every browser on iOS uses WebKit) does
 // not honor iframe.contentWindow.print() — it either no-ops or falls
@@ -27,9 +28,11 @@ function isIOS() {
 export function PrintButton({
     state,
     kind,
+    ui,
 }: {
     state: WorksheetState;
     kind: WorksheetKind;
+    ui: IslandStrings;
 }) {
     const ready = state.status === "ready";
 
@@ -74,7 +77,7 @@ export function PrintButton({
             onClick={onPrint}
             disabled={!ready}
         >
-            <Printer className="size-4" /> Print
+            <Printer className="size-4" /> {ui.print}
         </Button>
     );
 }

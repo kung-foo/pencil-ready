@@ -88,6 +88,16 @@ export default defineConfig({
   trailingSlash: "ignore",
   output: "static",
   compressHTML: false,
+  // English at the root, Norwegian Bokmål under /no/ (language tag
+  // `nb`). Mirrors `LOCALES` in src/i18n/locales.ts — keep in step.
+  // Pages generate every locale themselves via an optional
+  // `[...locale]` rest param; this block is what `astro:i18n` and the
+  // routing conventions key off.
+  i18n: {
+    locales: ["en", { path: "no", codes: ["nb", "no"] }],
+    defaultLocale: "en",
+    routing: { prefixDefaultLocale: false },
+  },
   integrations: [
     react(),
     // Emits sitemap-index.xml + sitemap-0.xml at build time listing
@@ -96,6 +106,13 @@ export default defineConfig({
     // the build's wall-clock as `lastmod` — coarse but honest enough:
     // a deploy means "any page may have changed since you last crawled."
     sitemap({
+      // Emits xhtml:link hreflang alternates between each page's
+      // locale variants. Keys are URL path prefixes, values language
+      // tags — same mapping as `LOCALES`.
+      i18n: {
+        defaultLocale: "en",
+        locales: { en: "en", no: "nb" },
+      },
       serialize(item) {
         return { ...item, lastmod: new Date().toISOString() };
       },

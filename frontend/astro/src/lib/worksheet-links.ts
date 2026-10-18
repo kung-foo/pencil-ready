@@ -12,13 +12,19 @@
 // worksheet are listed. "fraction" is absent because it could mean any of
 // three fraction sheets, and a link to an arbitrary one is worse than no
 // link at all.
+//
+// One alias table per locale, matched against that locale's help text;
+// links point at the same locale's pages.
 
 import type { WorksheetKind } from "./api";
+import { localizePath, type Locale } from "@/i18n/locales";
+
+type Alias = { phrase: string; kind: WorksheetKind };
 
 /** A phrase and the worksheet it names. Order is irrelevant — matching
  * always prefers the longest phrase at a given position, so "Column
  * addition" beats "addition" and "Long division" beats "division". */
-const ALIASES: ReadonlyArray<{ phrase: string; kind: WorksheetKind }> = [
+const ALIASES_EN: ReadonlyArray<Alias> = [
     // Multi-word names first for readability; length ordering is applied
     // at match time regardless.
     { phrase: "multiplication drill", kind: "mult-drill" },
@@ -54,12 +60,41 @@ const ALIASES: ReadonlyArray<{ phrase: string; kind: WorksheetKind }> = [
     { phrase: "mean", kind: "mean" },
 ];
 
+/** Norwegian aliases — phrases as they appear in `content/worksheets/nb/`.
+ * Same conservatism: "brøk" alone is absent for the same reason as
+ * "fraction". */
+const ALIASES_NB: ReadonlyArray<Alias> = [
+    { phrase: "gangetrening", kind: "mult-drill" },
+    { phrase: "divisjonstrening", kind: "div-drill" },
+    { phrase: "addisjon med mente", kind: "add" },
+    { phrase: "subtraksjon med låning", kind: "subtract" },
+    { phrase: "oppstilt multiplikasjon", kind: "multiply" },
+    { phrase: "addisjon med desimaltall", kind: "decimal-add" },
+    { phrase: "subtraksjon med desimaltall", kind: "decimal-subtract" },
+    { phrase: "multiplikasjon med desimaltall", kind: "decimal-multiply" },
+    { phrase: "lang divisjon", kind: "long-divide" },
+    { phrase: "divisjon med rest", kind: "long-divide" },
+    { phrase: "regnerekkefølge", kind: "order-of-ops" },
+    { phrase: "likeverdige brøker", kind: "fraction-equiv" },
+    { phrase: "gangetabellen", kind: "mult-drill" },
+    { phrase: "likninger i ett steg", kind: "algebra-one-step" },
+    { phrase: "likninger i to steg", kind: "algebra-two-step" },
+    { phrase: "kvadratrøtter", kind: "algebra-square-root" },
+    { phrase: "kvadratrot", kind: "algebra-square-root" },
+    { phrase: "addisjon", kind: "add" },
+    { phrase: "subtraksjon", kind: "subtract" },
+    { phrase: "multiplikasjon", kind: "multiply" },
+    { phrase: "divisjon", kind: "simple-divide" },
+    { phrase: "gjennomsnitt", kind: "mean" },
+];
+
+const ALIASES: Record<Locale, ReadonlyArray<Alias>> = {
+    en: ALIASES_EN,
+    no: ALIASES_NB,
+};
+
 /** One run of prose, optionally a link. */
 export type Segment = { text: string; href?: string };
-
-const byLengthDesc = [...ALIASES].sort(
-    (a, b) => b.phrase.length - a.phrase.length,
-);
 
 /** Escape a phrase for use in a regex. Aliases are hand-written, but a
  * hyphen or dot slipping in shouldn't silently change the pattern. */
@@ -67,14 +102,27 @@ function escapeRe(s: string): string {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// One alternation of every alias, longest first, with word boundaries so
-// "addition" doesn't match inside "additional". `\b` sits outside the
-// group because some aliases end in "-step" and `\b` after a hyphenated
-// word still behaves.
-const MATCHER = new RegExp(
-    `\\b(${byLengthDesc.map((a) => escapeRe(a.phrase)).join("|")})\\b`,
-    "gi",
-);
+// One alternation of every alias, longest first, bounded so "addition"
+// doesn't match inside "additional". The boundaries are Unicode-aware
+// lookarounds rather than `\b`, which only knows ASCII letters and would
+// treat the "ø" in "regnerekkefølge" as a word break.
+function matcherFor(aliases: ReadonlyArray<Alias>) {
+    const byLengthDesc = [...aliases].sort(
+        (a, b) => b.phrase.length - a.phrase.length,
+    );
+    const re = new RegExp(
+        `(?<![\\p{L}\\p{N}])(${byLengthDesc.map((a) => escapeRe(a.phrase)).join("|")})(?![\\p{L}\\p{N}])`,
+        "giu",
+    );
+    return { byLengthDesc, re };
+}
+
+const MATCHERS = Object.fromEntries(
+    Object.entries(ALIASES).map(([locale, aliases]) => [
+        locale,
+        matcherFor(aliases),
+    ]),
+) as Record<Locale, ReturnType<typeof matcherFor>>;
 
 /**
  * Split a list of prose strings into segments, linking the first mention
@@ -89,13 +137,15 @@ const MATCHER = new RegExp(
 export function linkWorksheetList(
     texts: readonly string[],
     self: WorksheetKind,
+    locale: Locale,
 ): Segment[][] {
+    const { byLengthDesc, re } = MATCHERS[locale];
     const linked = new Set<WorksheetKind>();
     return texts.map((text) => {
         const segments: Segment[] = [];
         let last = 0;
 
-        for (const m of text.matchAll(MATCHER)) {
+        for (const m of text.matchAll(re)) {
             const alias = byLengthDesc.find(
                 (a) => a.phrase === m[0].toLowerCase(),
             );
@@ -105,7 +155,10 @@ export function linkWorksheetList(
 
             const start = m.index ?? 0;
             if (start > last) segments.push({ text: text.slice(last, start) });
-            segments.push({ text: m[0], href: `/worksheets/${alias.kind}/` });
+            segments.push({
+                text: m[0],
+                href: localizePath(`/worksheets/${alias.kind}/`, locale),
+            });
             linked.add(alias.kind);
             last = start + m[0].length;
         }

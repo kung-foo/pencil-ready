@@ -1,10 +1,10 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import Stippled from "../../components/Stippled.astro";
-import { WORKSHEET_KINDS, type WorksheetKind } from "../../lib/api";
-import { getWorksheetInfo } from "../../lib/worksheet-content";
-import { linkWorksheetList } from "../../lib/worksheet-links";
-import { WorksheetIsland } from "../../components/WorksheetIsland";
+import Layout from "@/layouts/Layout.astro";
+import Stippled from "@/components/Stippled.astro";
+import { WORKSHEET_KINDS, type WorksheetKind } from "@/lib/api";
+import { getWorksheetInfo } from "@/lib/worksheet-content";
+import { linkWorksheetList } from "@/lib/worksheet-links";
+import { WorksheetIsland } from "@/components/WorksheetIsland";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -12,26 +12,39 @@ import {
     BreadcrumbList,
     BreadcrumbPage,
     BreadcrumbSeparator,
-} from "../../components/ui/breadcrumb";
+} from "@/components/ui/breadcrumb";
+import { fmt, t } from "@/i18n";
+import {
+    absoluteUrl,
+    localeDef,
+    localeFromParam,
+    localeStaticParams,
+    localizePath,
+} from "@/i18n/locales";
 
 export function getStaticPaths() {
-    return WORKSHEET_KINDS.map((kind) => ({ params: { kind } }));
+    return localeStaticParams().flatMap(({ locale }) =>
+        WORKSHEET_KINDS.map((kind) => ({ params: { locale, kind } })),
+    );
 }
 
 const { kind } = Astro.params as { kind: WorksheetKind };
-const info = (await getWorksheetInfo())[kind];
-const url = `https://pencilready.com/worksheets/${kind}/`;
+const locale = localeFromParam(Astro.params.locale);
+const ui = t(locale);
+const info = (await getWorksheetInfo(locale))[kind];
+const homePath = localizePath("/", locale);
+const url = absoluteUrl(localizePath(`/worksheets/${kind}/`, locale));
 
 const jsonLd = [
     {
         "@type": "LearningResource",
         "@id": `${url}#worksheet`,
-        name: `${info.title} worksheet`,
+        name: fmt(ui.worksheet.resourceName, { title: info.title }),
         description: info.summary,
         url,
         learningResourceType: "Worksheet",
         educationalUse: "practice",
-        inLanguage: "en",
+        inLanguage: localeDef(locale).bcp47,
         isAccessibleForFree: true,
         license: "https://creativecommons.org/licenses/by/4.0/",
         competencyRequired: info.prerequisites,
@@ -45,8 +58,8 @@ const jsonLd = [
             {
                 "@type": "ListItem",
                 position: 1,
-                name: "All worksheets",
-                item: "https://pencilready.com/",
+                name: ui.worksheet.allWorksheets,
+                item: absoluteUrl(homePath),
             },
             { "@type": "ListItem", position: 2, name: info.title, item: url },
         ],
@@ -55,9 +68,9 @@ const jsonLd = [
 ---
 
 <Layout
-    title={`${info.title} — Pencil Ready`}
+    title={fmt(ui.meta.worksheetTitle, { title: info.title })}
     description={info.summary}
-    canonical={url}
+    locale={locale}
     jsonLd={jsonLd}
 >
     <!--
@@ -69,10 +82,12 @@ const jsonLd = [
     its own URL so a breadcrumb makes sense here.
   -->
     <div class="px-4 pt-4">
-        <Breadcrumb>
+        <Breadcrumb aria-label={ui.worksheet.breadcrumbLabel}>
             <BreadcrumbList>
                 <BreadcrumbItem>
-                    <BreadcrumbLink href="/">All worksheets</BreadcrumbLink>
+                    <BreadcrumbLink href={homePath}
+                        >{ui.worksheet.allWorksheets}</BreadcrumbLink
+                    >
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
@@ -85,7 +100,13 @@ const jsonLd = [
     <div
         class="flex flex-col gap-4 p-4 md:grid md:grid-cols-[minmax(0,1fr)_320px]"
     >
-        <WorksheetIsland client:only="react" kind={kind}>
+        <WorksheetIsland
+            client:only="react"
+            kind={kind}
+            locale={locale}
+            ui={ui.island}
+            levelStrings={ui.levels}
+        >
             <div
                 slot="fallback"
                 class="grid gap-4 md:grid-cols-[320px_1fr]"
@@ -116,7 +137,7 @@ const jsonLd = [
             >
                 <div class="px-6 pt-4 pb-0">
                     <h2 class="text-lg pb-0 border-b border-pencil-no-2">
-                        About this worksheet
+                        {ui.worksheet.aboutThis}
                     </h2>
                 </div>
                 <div class="px-6 pb-6 pt-3 space-y-4">
@@ -145,26 +166,28 @@ const jsonLd = [
                                     ></path>
                                 </svg>
                             </span>
-                            <span>Know before you start</span>
+                            <span>{ui.worksheet.knowBefore}</span>
                         </div>
                         <ul
                             class="text-sm space-y-1.5 pl-6 list-disc marker:text-muted-foreground"
                         >
                             {
-                                linkWorksheetList(info.prerequisites, kind).map(
-                                    (segs) => (
-                                        <li>
-                                            {segs.map((seg) =>
-                                                seg.href ? (
-                                                    /* prettier-ignore */
-                                                    <a href={seg.href} class="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors">{seg.text}</a>
-                                                ) : (
-                                                    seg.text
-                                                ),
-                                            )}
-                                        </li>
-                                    ),
-                                )
+                                linkWorksheetList(
+                                    info.prerequisites,
+                                    kind,
+                                    locale,
+                                ).map((segs) => (
+                                    <li>
+                                        {segs.map((seg) =>
+                                            seg.href ? (
+                                                /* prettier-ignore */
+                                                <a href={seg.href} class="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors">{seg.text}</a>
+                                            ) : (
+                                                seg.text
+                                            ),
+                                        )}
+                                    </li>
+                                ))
                             }
                         </ul>
                     </div>
@@ -192,7 +215,7 @@ const jsonLd = [
                                     ></path>
                                 </svg>
                             </span>
-                            <span>With mastery, the student can</span>
+                            <span>{ui.worksheet.withMastery}</span>
                         </div>
                         <ul
                             class="text-sm space-y-1.5 pl-6 list-disc marker:text-muted-foreground"
