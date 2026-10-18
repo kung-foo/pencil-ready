@@ -88,6 +88,12 @@ export function WorksheetIsland({
 }) {
     const pagePath = (k: WorksheetKind, qs: string) =>
         `${localizePath(`/worksheets/${k}/`, locale)}${qs ? `?${qs}` : ""}`;
+    // Rewrite the address bar in place. Keeps `history.state`: Astro's
+    // ClientRouter stores its entry bookkeeping there and ignores
+    // back/forward to entries without it — passing `null` made Forward
+    // to a worksheet change the URL but not the page.
+    const syncUrl = (path: string) =>
+        window.history.replaceState(window.history.state, "", path);
     const [cfg, setCfg] = useState<WorksheetConfig>(() => {
         // Seed from URL query so deep-links like /worksheets/add/?seed=42&format=svg
         // and type-change redirects that carry params land with the right state.
@@ -116,7 +122,7 @@ export function WorksheetIsland({
     useEffect(() => {
         if (typeof window === "undefined") return;
         const qs = configToSearchParams(cfg).toString();
-        window.history.replaceState(null, "", pagePath(kind, qs));
+        syncUrl(pagePath(kind, qs));
         // Intentionally empty deps — only run once after mount. Subsequent
         // updates flow through `onChange` below.
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,7 +148,7 @@ export function WorksheetIsland({
         setCfg(next);
         // Sync URL so the state is shareable and survives reload.
         const qs = configToSearchParams(next).toString();
-        window.history.replaceState(null, "", pagePath(kind, qs));
+        syncUrl(pagePath(kind, qs));
     };
 
     return (
