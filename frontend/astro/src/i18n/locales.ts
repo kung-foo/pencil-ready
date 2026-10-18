@@ -24,6 +24,11 @@ export const LOCALES = [
         // Worksheet API locale (`?locale=`): printed language, decimal
         // separator and × / ÷ glyphs. See `Locale` in crates/core.
         worksheetLocale: "us",
+        // Default division layout and sign — mirrors the server's
+        // `Locale::division_style` / `divide_symbol`. The configurator
+        // shows these until the user picks a layout (`?division=`).
+        divisionStyle: "bracket",
+        divideSign: "÷",
         dir: "ltr",
     },
     {
@@ -34,6 +39,8 @@ export const LOCALES = [
         endonym: "Norsk",
         ogLocale: "nb_NO",
         worksheetLocale: "no",
+        divisionStyle: "equation",
+        divideSign: ":",
         dir: "ltr",
     },
 ] as const;

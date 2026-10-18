@@ -156,6 +156,7 @@ export function WorksheetIsland({
                     onNamesChange={patchNames}
                     ui={ui}
                     levelStrings={levelStrings}
+                    locale={locale}
                 />
                 <DownloadButton
                     state={state}

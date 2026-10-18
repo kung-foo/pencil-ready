@@ -17,11 +17,16 @@
 // `WORKSHEET_LEVELS`, its labels under `levels` in every dictionary, and
 // use the `<LevelPicker>` UI in WorksheetConfig.
 
-import type { WorksheetKind } from "./api";
+import type { DivisionStyle, WorksheetKind } from "./api";
 
 export type Level = {
     /** Raw API query params this level expands to. */
     params: Record<string, string | number | boolean>;
+    /** Overrides merged over `params` for a division layout — the
+     * equation form's cells are wider, so it fits fewer columns. */
+    styleParams?: Partial<
+        Record<DivisionStyle, Record<string, string | number | boolean>>
+    >;
     /** Whether this level prints a work scaffold the user can toggle.
      * Omitted means yes. Set false for levels whose layout has no
      * scaffold to print, so the configurator doesn't offer a control
@@ -88,15 +93,21 @@ export const WORKSHEET_LEVELS: Partial<
         {
             // Cell ~3.8 × 6cm: 4 cols × 3 rows = 12 cells.
             params: { digits: "2", remainder: false, problems: 12, cols: 4 },
+            // Equation cell 5.0 × 3.8cm: 3 cols × 4 rows.
+            styleParams: { equation: { cols: 3 } },
         },
         {
             // Cell ~3.8 × 8cm: 4 cols × 3 rows = 12 cells.
             params: { digits: "3", remainder: false, problems: 12, cols: 4 },
+            // Equation cell 5.9 × 5.4cm: 3 cols × 4 rows.
+            styleParams: { equation: { cols: 3 } },
         },
         {
             // Remainder mode widens the cell to ~5.6 × 10cm to fit the
             // `Q r N` answer; 3 cols × 2 rows = 6 cells per page.
             params: { digits: "4", remainder: true, problems: 6, cols: 3 },
+            // Equation cell 8.9 × 6.9cm: 2 cols × 3 rows.
+            styleParams: { equation: { cols: 2 } },
         },
     ],
     "algebra-two-step": [
@@ -238,13 +249,17 @@ export function defaultLevel(kind: WorksheetKind): string | undefined {
     return WORKSHEET_LEVELS[kind] ? "1" : undefined;
 }
 
-/** Look up a level's expanded raw params by 1-based id (e.g. "2"). */
+/** Look up a level's expanded raw params by 1-based id (e.g. "2"),
+ * with any overrides for the division layout it renders in. */
 export function levelParams(
     kind: WorksheetKind,
     value: string | undefined,
+    style?: DivisionStyle,
 ): Record<string, string | number | boolean> | undefined {
     if (!value) return undefined;
     const idx = Number(value);
     if (!Number.isInteger(idx) || idx < 1) return undefined;
-    return WORKSHEET_LEVELS[kind]?.[idx - 1]?.params;
+    const level = WORKSHEET_LEVELS[kind]?.[idx - 1];
+    if (!level) return undefined;
+    return { ...level.params, ...(style && level.styleParams?.[style]) };
 }
