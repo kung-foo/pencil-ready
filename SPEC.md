@@ -287,6 +287,26 @@ and uses `align: center + top` — horizontal centering for `=`-column
 alignment, top alignment so each problem hugs the top of its cell and the
 writing space stays below the printed problem.
 
+### Paper independence
+
+A worksheet is the same sheet on every paper: same problems, same page
+breaks, same text sizes. Only the whitespace differs.
+
+- Text sizes are fixed (`pt` in `shared.typ`), never scaled to the page.
+- Pagination (rows per page) and the column check use
+  `common_content_area_cm` — A4's width and US Letter's height, the
+  area every paper in `Paper::ALL` holds — not the configured paper.
+  The larger paper gets the spare height spread between rows by the
+  grid's `1fr` tracks.
+- So a seed, a share link or a QR code reproduces the same worksheet
+  whatever the printer takes.
+- Presets must fit that area on one page. `levels.json` (read by the
+  frontend and by the server) holds the level presets, and the server
+  tests `levels_fit_one_page_on_every_paper` /
+  `defaults_fit_one_page_on_every_paper` render every preset and every
+  kind's defaults on each paper, locale and division layout and assert
+  one page with identical pagination.
+
 ### Fonts
 
 Constants live in `lib/problems/shared.typ`.

@@ -693,12 +693,28 @@ pub(crate) fn equation_division_cell(digits: u32, remainder: bool) -> (f32, f32)
 }
 
 /// Default grid columns for a long-division worksheet: as many as fit
-/// A4, capped at the bracket's traditional four. Shared by the server
-/// and CLI so an omitted `cols` never fails the paper-fit check.
+/// every paper, capped at the bracket's traditional four. Shared by the
+/// server and CLI so an omitted `cols` never fails the paper-fit check.
 pub fn long_division_default_cols(style: DivisionStyle, digits: DigitRange, remainder: bool) -> u32 {
     let (w, _) = division_cell(style, digits.max, remainder);
-    let (area_w, _) = content_area_cm(Paper::A4, HEADER_HEIGHT_CM);
+    let (area_w, _) = common_content_area_cm(HEADER_HEIGHT_CM);
     ((area_w / w).floor() as u32).clamp(1, 4)
+}
+
+/// Default problem count for long division: up to `max`, but never more
+/// than one page holds at `cols` columns on every paper — so an omitted
+/// `problems` never spills onto a second page.
+pub fn long_division_default_problems(
+    style: DivisionStyle,
+    digits: DigitRange,
+    remainder: bool,
+    cols: u32,
+    max: u32,
+) -> u32 {
+    let (_, h) = division_cell(style, digits.max, remainder);
+    let (_, area_h) = common_content_area_cm(HEADER_HEIGHT_CM);
+    let rows = ((area_h / h).floor() as u32).max(1);
+    (cols * rows).min(max)
 }
 
 /// Long-division cell for either layout. The bracket's remainder
@@ -1000,6 +1016,24 @@ pub fn content_area_cm(paper: Paper, chrome_h_cm: f32) -> (f32, f32) {
     )
 }
 
+/// Content area every supported paper can hold: the narrowest width and
+/// the shortest height across [`Paper::ALL`] (A4's width, US Letter's
+/// height).
+///
+/// Pagination and the column check use this rather than the configured
+/// paper, so a worksheet has the same problems, the same page breaks and
+/// the same text sizes on every paper — a shared link or QR reproduces
+/// the same sheet whatever the printer takes. The larger paper just gets
+/// more air: the grid's `1fr` rows spread the spare height.
+pub fn common_content_area_cm(chrome_h_cm: f32) -> (f32, f32) {
+    Paper::ALL
+        .iter()
+        .map(|p| content_area_cm(*p, chrome_h_cm))
+        .fold((f32::INFINITY, f32::INFINITY), |(w, h), (pw, ph)| {
+            (w.min(pw), h.min(ph))
+        })
+}
+
 /// Per-problem rendering choice. Emitted to typst as a string tag
 /// ("blank" | "worked" | "answer-only"); `lib/layout.typ` derives
 /// the per-problem `solved` and `answer-only` flags from the tag.
@@ -1191,18 +1225,20 @@ impl Document {
                 .map(|s| !s.is_empty())
                 .unwrap_or_else(|| sheet.worksheet.instructions(params.locale).is_some()),
         );
-        let (area_w, area_h) = chrome.content_area_cm(chrome_h);
+        // Sized against the area every paper shares, not the configured
+        // paper, so pagination is identical on all of them (see
+        // `common_content_area_cm`).
+        let (area_w, area_h) = common_content_area_cm(chrome_h);
 
         // Paper-fit check: cols must fit in the content-area width.
         let max_cols = (area_w / cell_w).floor() as u32;
         if params.cols > max_cols {
             bail!(
-                "{} cols is too wide for {} on {}: at {max_digits} digits \
-                 each cell is {cell_w:.2}cm but content area is only \
-                 {area_w:.2}cm wide (max {max_cols} cols)",
+                "{} cols is too wide for {}: at {max_digits} digits \
+                 each cell is {cell_w:.2}cm but the printable width is only \
+                 {area_w:.2}cm (max {max_cols} cols)",
                 params.cols,
                 sheet.worksheet.component_typst_name(),
-                chrome.paper,
             );
         }
         let rows_per_page = (area_h / cell_h).floor() as u32;
@@ -1239,16 +1275,15 @@ impl Document {
         let max_digits = self.sheet.worksheet.max_digits_bound();
         let (cell_w, _) = self.sheet.worksheet.cell_size_cm(max_digits);
         // Width is independent of chrome height; use any value here.
-        let (area_w, _) = self.chrome.content_area_cm(0.0);
+        let (area_w, _) = common_content_area_cm(0.0);
         let max_cols = (area_w / cell_w).floor() as u32;
         if self.cols > max_cols {
             bail!(
-                "{} cols is too wide for {} on {}: at {max_digits} digits \
-                 each cell is {cell_w:.2}cm but content area is only \
-                 {area_w:.2}cm wide (max {max_cols} cols)",
+                "{} cols is too wide for {}: at {max_digits} digits \
+                 each cell is {cell_w:.2}cm but the printable width is only \
+                 {area_w:.2}cm (max {max_cols} cols)",
                 self.cols,
                 self.sheet.worksheet.component_typst_name(),
-                self.chrome.paper,
             );
         }
         Ok(())

@@ -231,8 +231,9 @@ fn sample_one(
 // `long_division_cell`) live in `lib.rs` because several kinds read them.
 
 use crate::{
-    DigitRange, Paper, SEPARATOR_INSET_CM, VERTICAL_STACK_WORKED_DELTA_CM, chrome_height_cm,
-    DivisionStyle, content_area_cm, division_cell, vertical_stack_height, vertical_stack_width,
+    DigitRange, DivisionStyle, SEPARATOR_INSET_CM, VERTICAL_STACK_WORKED_DELTA_CM,
+    chrome_height_cm, common_content_area_cm, division_cell, vertical_stack_height,
+    vertical_stack_width,
 };
 
 /// Above this many values the addition stack outgrows a two-per-page
@@ -285,25 +286,17 @@ pub(crate) fn uses_scaffold_layout(count_max: u32, decimals: bool) -> bool {
 }
 
 /// Body content height available to one worksheet cell on the *shortest*
-/// supported paper. Folding over [`Paper::ALL`] is what keeps pagination
-/// paper-independent: sizing a cell against A4's taller page turns a
-/// one-page worksheet into a two-page one on US Letter, which is 1.8cm
-/// shorter.
+/// supported paper (see `common_content_area_cm`): sizing a cell against
+/// A4's taller page would turn a one-page worksheet into a two-page one
+/// on US Letter, which is 1.8cm shorter.
 fn shortest_content_height_cm() -> f32 {
-    Paper::ALL
-        .iter()
-        .map(|p| content_area_cm(*p, chrome_height_cm(true, true, true)).1)
-        .fold(f32::INFINITY, f32::min)
+    common_content_area_cm(chrome_height_cm(true, true, true)).1
 }
 
 /// Narrowest content width across supported papers — where the
 /// open-workspace data line has to wrap.
 pub(crate) fn data_line_wrap_width_cm() -> f32 {
-    let narrowest = Paper::ALL
-        .iter()
-        .map(|p| content_area_cm(*p, chrome_height_cm(true, true, true)).0)
-        .fold(f32::INFINITY, f32::min);
-    narrowest - 2.0 * SEPARATOR_INSET_CM
+    common_content_area_cm(chrome_height_cm(true, true, true)).0 - 2.0 * SEPARATOR_INSET_CM
 }
 
 /// Writing space reserved by the open-workspace layout: whatever is left

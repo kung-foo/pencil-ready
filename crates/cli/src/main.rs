@@ -18,6 +18,7 @@ use pencil_ready_core::{
     BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, OutputFormat, Paper,
     WorksheetParams,
     WorksheetType, compile_typst, generate, generate_typst_source, long_division_default_cols,
+    long_division_default_problems,
 };
 
 fn parse_paper(s: &str) -> Result<Paper, String> {
@@ -249,8 +250,9 @@ enum Command {
         #[command(flatten)]
         global: GlobalArgs,
 
-        #[arg(long, default_value = "12")]
-        problems: u32,
+        /// Default: up to 12, as many as fit one page
+        #[arg(long)]
+        problems: Option<u32>,
 
         /// Default 4 (bracket) or 3 (equation)
         #[arg(long)]
@@ -714,9 +716,12 @@ fn resolve(command: Command) -> Resolved {
             remainder,
         } => {
             let style = global.division_style();
+            let cols = cols.unwrap_or(long_division_default_cols(style, digits, remainder));
             Resolved {
-                num_problems: problems,
-                cols: cols.unwrap_or(long_division_default_cols(style, digits, remainder)),
+                num_problems: problems.unwrap_or(long_division_default_problems(
+                    style, digits, remainder, cols, 12,
+                )),
+                cols,
                 worksheet: WorksheetType::LongDivision {
                     digits,
                     remainder,
@@ -1129,7 +1134,13 @@ fn run_all(global: GlobalArgs) -> Result<()> {
                 remainder: false,
                 style,
             },
-            12,
+            long_division_default_problems(
+                style,
+                DigitRange::fixed(3),
+                false,
+                long_division_default_cols(style, DigitRange::fixed(3), false),
+                12,
+            ),
             long_division_default_cols(style, DigitRange::fixed(3), false),
         ),
         (

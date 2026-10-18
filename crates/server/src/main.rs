@@ -27,6 +27,7 @@ use pencil_ready_core::{
     BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot, OutputFormat,
     Paper,
     WorksheetParams, WorksheetType, generate, long_division_default_cols,
+    long_division_default_problems,
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
@@ -384,14 +385,17 @@ impl LongDivideSpecific {
         };
         let style = shared.division_style();
         let remainder = self.remainder.unwrap_or(false);
+        let cols = shared
+            .cols
+            .unwrap_or_else(|| long_division_default_cols(style, digits, remainder));
         Ok(shared.fold(
             WorksheetType::LongDivision {
                 digits,
                 remainder,
                 style,
             },
-            12,
-            long_division_default_cols(style, digits, remainder),
+            long_division_default_problems(style, digits, remainder, cols, 12),
+            cols,
         ))
     }
 }
@@ -1894,6 +1898,179 @@ fn init_tracing() {
 #[cfg(test)]
 mod tests {
     use super::{Method, inject_payload_ip, locale_root_redirect_target, www_redirect_target};
+
+    mod paper_fit {
+        use super::super::*;
+        use pencil_ready_core::Document;
+
+        const KINDS: &[&str] = &[
+            "add",
+            "subtract",
+            "multiply",
+            "simple-divide",
+            "long-divide",
+            "mult-drill",
+            "div-drill",
+            "fraction-mult",
+            "fraction-simplify",
+            "fraction-equiv",
+            "algebra-two-step",
+            "algebra-one-step",
+            "algebra-square-root",
+            "decimal-add",
+            "decimal-subtract",
+            "decimal-multiply",
+            "order-of-ops",
+            "mean",
+        ];
+        const DIVISION_KINDS: &[&str] = &["long-divide", "simple-divide", "mean"];
+
+        /// Parse `qs` the way the handler for `kind` does.
+        fn params_for(kind: &str, qs: &str) -> WorksheetParams {
+            let uri: axum::http::Uri = format!("/x?{qs}").parse().unwrap();
+            let shared = Query::<SharedParams>::try_from_uri(&uri).unwrap().0;
+            macro_rules! build {
+                ($t:ty) => {
+                    Query::<$t>::try_from_uri(&uri)
+                        .unwrap()
+                        .0
+                        .build(shared)
+                        .unwrap_or_else(|e| panic!("{kind}?{qs}: {e}"))
+                        .1
+                };
+            }
+            match kind {
+                "add" => build!(AddSpecific),
+                "subtract" => build!(SubtractSpecific),
+                "multiply" => build!(MultiplySpecific),
+                "simple-divide" => build!(SimpleDivideSpecific),
+                "long-divide" => build!(LongDivideSpecific),
+                "mult-drill" => build!(MultDrillSpecific),
+                "div-drill" => build!(DivDrillSpecific),
+                "fraction-mult" => build!(FractionMultSpecific),
+                "fraction-simplify" => build!(FractionSimplifySpecific),
+                "fraction-equiv" => build!(FractionEquivSpecific),
+                "algebra-two-step" => build!(AlgebraTwoStepSpecific),
+                "algebra-one-step" => build!(AlgebraOneStepSpecific),
+                "algebra-square-root" => build!(AlgebraSquareRootSpecific),
+                "decimal-add" => build!(DecimalAddSpecific),
+                "decimal-subtract" => build!(DecimalSubtractSpecific),
+                "decimal-multiply" => build!(DecimalMultiplySpecific),
+                "order-of-ops" => build!(OrderOfOpsSpecific),
+                "mean" => build!(MeanSpecific),
+                other => panic!("unknown kind {other}"),
+            }
+        }
+
+        /// The guarantee behind `common_content_area_cm`: on every paper
+        /// and in every locale and division layout, `qs` renders on one
+        /// page with the same problems per page — so the printed sheet
+        /// differs only in whitespace.
+        fn check_one_identical_page(kind: &str, qs: &str, failures: &mut Vec<String>) {
+            let styles: &[&str] = if DIVISION_KINDS.contains(&kind) {
+                &["bracket", "equation"]
+            } else {
+                &[""]
+            };
+            for style in styles {
+                for locale in ["us", "no"] {
+                    let mut per_page = Vec::new();
+                    for paper in ["a4", "us-letter"] {
+                        let mut q = format!("{qs}&paper={paper}&locale={locale}&seed=1");
+                        if !style.is_empty() && !qs.contains("division=") {
+                            q.push_str(&format!("&division={style}"));
+                        }
+                        let params = params_for(kind, q.trim_start_matches('&'));
+                        match Document::from_params(&params) {
+                            Err(e) => failures.push(format!("{kind}?{q}: {e}")),
+                            Ok(doc) => {
+                                if doc.pages != 1 {
+                                    failures.push(format!(
+                                        "{kind}?{q}: {} pages ({} problems, {} per page)",
+                                        doc.pages, params.num_problems, doc.cells_per_page
+                                    ));
+                                }
+                                per_page.push(doc.cells_per_page);
+                            }
+                        }
+                    }
+                    if per_page.len() == 2 && per_page[0] != per_page[1] {
+                        failures.push(format!(
+                            "{kind}?{qs} style={style} locale={locale}: A4 and Letter paginate differently"
+                        ));
+                    }
+                }
+            }
+        }
+
+        /// Every kind with no params — what the API serves by default.
+        /// Two kinds refuse an empty query (no operation enabled), so
+        /// they get the one switch they require.
+        #[test]
+        fn defaults_fit_one_page_on_every_paper() {
+            let mut failures = Vec::new();
+            for kind in KINDS {
+                let qs = match *kind {
+                    "algebra-one-step" => "add=true",
+                    "algebra-square-root" => "squares=true",
+                    _ => "",
+                };
+                check_one_identical_page(kind, qs, &mut failures);
+            }
+            failures.dedup();
+            assert!(failures.is_empty(), "\n{}", failures.join("\n"));
+        }
+
+        /// Every configurator preset in `levels.json`, expanded the way
+        /// `worksheetUrl` does (params, then the layout's overrides).
+        #[test]
+        fn levels_fit_one_page_on_every_paper() {
+            let levels: serde_json::Value = serde_json::from_str(include_str!(
+                "../../../frontend/astro/src/lib/levels.json"
+            ))
+            .unwrap();
+            let to_qs = |m: &serde_json::Map<String, serde_json::Value>| {
+                m.iter()
+                    .map(|(k, v)| match v {
+                        serde_json::Value::String(s) => format!("{k}={s}"),
+                        other => format!("{k}={other}"),
+                    })
+                    .collect::<Vec<_>>()
+                    .join("&")
+            };
+            let mut failures = Vec::new();
+            for (kind, list) in levels.as_object().unwrap() {
+                if kind.starts_with('_') {
+                    continue;
+                }
+                for (i, level) in list.as_array().unwrap().iter().enumerate() {
+                    let base = level["params"].as_object().unwrap();
+                    let styles: &[&str] = if DIVISION_KINDS.contains(&kind.as_str()) {
+                        &["bracket", "equation"]
+                    } else {
+                        &[""]
+                    };
+                    for style in styles {
+                        let mut merged = base.clone();
+                        if let Some(o) = level["styleParams"][*style].as_object() {
+                            merged.extend(o.clone());
+                        }
+                        let mut qs = to_qs(&merged);
+                        if !style.is_empty() {
+                            qs.push_str(&format!("&division={style}"));
+                        }
+                        let before = failures.len();
+                        check_one_identical_page(kind, &qs, &mut failures);
+                        for f in &mut failures[before..] {
+                            *f = format!("level {}: {f}", i + 1);
+                        }
+                    }
+                }
+            }
+            failures.dedup();
+            assert!(failures.is_empty(), "\n{}", failures.join("\n"));
+        }
+    }
 
     fn root_redirect(
         method: Method,

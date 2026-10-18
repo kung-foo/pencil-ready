@@ -235,7 +235,32 @@ function DivisionStylePicker({
                     <span className="border-b border-current">÷ 7</span>
                 </span>
             ) : (
-                "4⟌852"
+                // Bracket drawn as one SVG path (curve into overline)
+                // over the dividend's box, so the bar always meets the
+                // curve and spans the digits — a `⟌` glyph or a CSS
+                // border can't guarantee either across fonts/browsers.
+                // `preserveAspectRatio="none"` stretches the path to the
+                // box; `non-scaling-stroke` keeps the line weight even.
+                <span className="inline-flex items-end">
+                    <span>4</span>
+                    <span className="relative ml-[0.15em] pl-[0.5em] pr-[0.15em] pt-[0.2em]">
+                        <svg
+                            className="absolute inset-0 h-full w-full overflow-visible"
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M 2 100 Q 16 55 2 6 L 100 6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                vectorEffect="non-scaling-stroke"
+                            />
+                        </svg>
+                        852
+                    </span>
+                </span>
             ),
         },
     ];
