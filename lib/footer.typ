@@ -26,10 +26,11 @@
 }
 
 // Canonical footer content used by every generated worksheet. The baseline
-// nudges on the heart and the flag pull those glyphs up into the x-height
-// of the surrounding text — without them, both sit noticeably lower than
-// the letters (Noto Color Emoji's baseline is near the bottom of each
-// glyph, which clashes with the body text's metrics).
+// nudge on the heart pulls the image up into the x-height of the
+// surrounding text — without it, it sits noticeably lower than the letters.
+// The flag needs no nudge: since typst 0.15 the Noto Color Emoji glyph
+// already spans cap height to baseline (the old `baseline: -20%` box now
+// lifts it above the line).
 #let pencil-ready-content = [
-  *Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, #box(baseline: -20%)[🇳🇴] — #link("https://pencilready.com")[pencilready.com] — #link("https://creativecommons.org/licenses/by/4.0/")[CC BY 4.0]
+  *Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com] — #link("https://creativecommons.org/licenses/by/4.0/")[CC BY 4.0]
 ]
