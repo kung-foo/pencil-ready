@@ -339,7 +339,12 @@ const menuId = "language-menu";
 </style>
 
 <script>
-    import { LANG_COOKIE, localizePath, isLocale } from "@/i18n/locales";
+    import {
+        LANG_COOKIE,
+        isLocale,
+        localeFromPath,
+        localizePath,
+    } from "@/i18n/locales";
 
     // Set the preference cookie on an explicit choice, before the
     // navigation starts. Registered on `window` in the capture phase so
@@ -361,6 +366,12 @@ const menuId = "language-menu";
                 if (!id || !isLocale(id)) return;
                 const secure = location.protocol === "https:" ? "; Secure" : "";
                 document.cookie = `${LANG_COOKIE}=${id}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+                // Only actual switches; re-picking the current language
+                // just refreshes the cookie.
+                const from = localeFromPath(location.pathname);
+                if (from !== id) {
+                    window.umami?.track("language-switch", { from, to: id });
+                }
             },
             true,
         );

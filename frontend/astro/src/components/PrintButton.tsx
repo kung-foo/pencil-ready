@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import type { WorksheetKind } from "@/lib/api";
 import type { WorksheetState } from "@/lib/useWorksheet";
 import type { IslandStrings } from "@/i18n";
+import type { Locale } from "@/i18n/locales";
 
 // iOS/iPadOS (all browsers, since every browser on iOS uses WebKit) does
 // not honor iframe.contentWindow.print() — it either no-ops or falls
@@ -28,17 +29,19 @@ function isIOS() {
 export function PrintButton({
     state,
     kind,
+    locale,
     ui,
 }: {
     state: WorksheetState;
     kind: WorksheetKind;
+    locale: Locale;
     ui: IslandStrings;
 }) {
     const ready = state.status === "ready";
 
     const onPrint = () => {
         if (!ready) return;
-        window.umami?.track("print", { kind });
+        window.umami?.track("print", { kind, locale });
         if (isIOS()) {
             window.open(state.blobUrl, "_blank");
             return;

@@ -157,8 +157,18 @@ export function WorksheetIsland({
                     ui={ui}
                     levelStrings={levelStrings}
                 />
-                <DownloadButton state={state} kind={kind} ui={ui} />
-                <PrintButton state={state} kind={kind} ui={ui} />
+                <DownloadButton
+                    state={state}
+                    kind={kind}
+                    locale={locale}
+                    ui={ui}
+                />
+                <PrintButton
+                    state={state}
+                    kind={kind}
+                    locale={locale}
+                    ui={ui}
+                />
             </div>
             <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
                 <Preview cfg={cfg} state={state} ui={ui} />
