@@ -33,6 +33,9 @@ params are identical except `problems` replaces `--problems` and
 - `locale: us | no` — printed language (English / Norwegian Bokmål),
   decimal separator, and `×` / `÷` vs `·` / `:` operator defaults. See
   SPEC.md → Locale.
+- `division: bracket | equation` — division layout for long-divide,
+  simple-divide and mean. Defaults to the locale's style (us: bracket,
+  no: equation). See SPEC.md → Division style.
 - `symbol: string?` — explicit operator override (typst expression,
   e.g. `sym.colon`). Wins over `locale`.
 - `debug: bool` — draw red/blue debug borders on problem boxes and
@@ -83,8 +86,8 @@ Always 2 operands. No operation-specific parameters yet.
 Tests times-table recall. Divisor (2-9) × quotient (1 to max_quotient). Always divides evenly.
 
 ```
-  16
-÷  4
+  16          equation style:
+÷  4          16 : 4 = ___
 ────
 ```
 
@@ -103,9 +106,19 @@ Tests times-table recall. Divisor (2-9) × quotient (1 to max_quotient). Always 
 Practices the long division algorithm with larger numbers. Divisor is always 1 digit (2-9).
 
 ```
-      ____
-  4 │ 16
+      ____         equation style:
+  4 │ 852          852 : 4 = 213
+                  -8
+                   05
+                   -4
+                    12
+                   -12
+                     0
 ```
+
+In the equation style the working starts at the shortest leading chunk
+the divisor fits into, and a step where it doesn't fit still writes `-0`.
+A remainder is written `213 rest 3` (prefix from the locale).
 
 - `digits: u32` (2-4, default: 2) — dividend digit count
 - `remainder: bool` (default: false)

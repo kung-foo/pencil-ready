@@ -1,6 +1,7 @@
 import type { WorksheetConfig } from "@/lib/api";
 import type { WorksheetState } from "@/lib/useWorksheet";
 import type { IslandStrings } from "@/i18n";
+import { paperAspect, type Paper } from "@/lib/paper";
 
 /**
  * Pure renderer — state is owned by the parent (WorksheetPage) so the
@@ -12,11 +13,14 @@ export function Preview({
     cfg,
     state,
     ui,
+    paper,
 }: {
     cfg: WorksheetConfig;
     state: WorksheetState;
     ui: IslandStrings;
+    paper: Paper;
 }) {
+    const aspect = paperAspect(paper);
     return (
         <div
             className="w-full h-full flex items-start justify-center"
@@ -29,11 +33,11 @@ export function Preview({
                 data-print-area
                 className="bg-white rounded-sm ring-1 ring-black/5 shadow-[0_4px_16px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden"
                 style={{
-                    // Width is the smaller of (container width) and the width an A4
+                    // Width is the smaller of (container width) and the width the
                     // page would need to fill the container height — whichever binds
-                    // first. Height derives from aspect-ratio.
-                    width: "min(100cqw, calc(100cqh * 210 / 297))",
-                    aspectRatio: "210 / 297",
+                    // first. Height derives from aspect-ratio (A4 or US Letter).
+                    width: `min(100cqw, calc(100cqh * ${aspect}))`,
+                    aspectRatio: String(aspect),
                 }}
             >
                 <Body cfg={cfg} state={state} ui={ui} />

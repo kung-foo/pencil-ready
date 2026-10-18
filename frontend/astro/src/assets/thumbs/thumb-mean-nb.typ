@@ -31,6 +31,8 @@
       align: center + horizon,
       decimal-sep: ",",
       mean-label: "snitt",
+      division-style: "equation",
+      div-operator: [#sym.colon],
       ..thumb-answer-style,
     ),
 )

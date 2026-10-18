@@ -12,9 +12,22 @@
 
 import { levelParams } from "./levels";
 import { localeDef, localizePath, type Locale } from "@/i18n/locales";
+import { DEFAULT_PAPER, type Paper } from "./paper";
 
 export const FORMATS = ["pdf", "png", "svg"] as const;
 export type Format = (typeof FORMATS)[number];
+
+/** Division layout (`DivisionStyle` in crates/core): `4)852` bracket, or
+ * `852 : 4 = 213` on one line with the working below. */
+export const DIVISION_STYLES = ["bracket", "equation"] as const;
+export type DivisionStyle = (typeof DIVISION_STYLES)[number];
+
+/** Kinds whose layout the division style changes. */
+export const DIVISION_STYLE_KINDS: readonly WorksheetKind[] = [
+    "long-divide",
+    "simple-divide",
+    "mean",
+];
 
 export const WORKSHEET_KINDS = [
     "add",
@@ -52,6 +65,10 @@ export type SharedConfig = {
      * validated `share_url`, so the QR only appears when both this
      * toggle is on AND the page URL is on an allowed origin. */
     qr?: boolean;
+    /** Division layout picked in the configurator. Absent means the
+     * page locale's default (see `effectiveDivisionStyle`); only
+     * meaningful for `DIVISION_STYLE_KINDS`. */
+    division?: DivisionStyle;
 };
 
 // Per-kind config (only the distinguishing params; rest fall back to API defaults).
@@ -190,6 +207,9 @@ export function parseConfig(
         problems: n("problems"),
         cols: n("cols"),
         qr: b("qr"),
+        division: (DIVISION_STYLE_KINDS as readonly string[]).includes(kind)
+            ? asEnum(s("division"), DIVISION_STYLES)
+            : undefined,
     };
 
     switch (kind) {
@@ -294,6 +314,15 @@ function asEnum<T extends readonly string[]>(
         : undefined;
 }
 
+/** The division layout a config renders with: the user's pick, else the
+ * locale's default. */
+export function effectiveDivisionStyle(
+    cfg: WorksheetConfig,
+    locale: Locale,
+): DivisionStyle {
+    return cfg.division ?? localeDef(locale).divisionStyle;
+}
+
 /** Build the API URL the server serves for a given config. Names are
  * appended here (not in `configToSearchParams`) so they reach the server
  * without polluting the shareable browser URL.
@@ -311,11 +340,16 @@ function asEnum<T extends readonly string[]>(
  *
  * `locale` is the page's locale: it picks the worksheet's printed
  * language and notation (`locale=` on the API, omitted for the default)
- * and the share URL's path prefix. */
+ * and the share URL's path prefix.
+ *
+ * `paper` is the device's paper preference (`lib/paper.ts`). Like names,
+ * it goes to the API but not into the share URL: the worksheet is the
+ * same on every paper, so whoever opens the link prints on their own. */
 export function worksheetUrl(
     cfg: WorksheetConfig,
     names: { student?: string } | undefined,
     locale: Locale,
+    paper: Paper = DEFAULT_PAPER,
 ): string {
     const qs = configToSearchParams(cfg);
     // Snapshot the frontend-form qs (with `level=…`) before the API
@@ -325,7 +359,11 @@ export function worksheetUrl(
     const shareSearch = new URLSearchParams(qs);
     const levelValue = qs.get("level");
     if (levelValue) {
-        const expanded = levelParams(cfg.kind, levelValue);
+        const expanded = levelParams(
+            cfg.kind,
+            levelValue,
+            effectiveDivisionStyle(cfg, locale),
+        );
         if (expanded) {
             qs.delete("level");
             for (const [k, v] of Object.entries(expanded)) {
@@ -336,6 +374,7 @@ export function worksheetUrl(
     if (names?.student) qs.set("student_name", names.student);
     const { worksheetLocale } = localeDef(locale);
     if (worksheetLocale !== "us") qs.set("locale", worksheetLocale);
+    if (paper !== DEFAULT_PAPER) qs.set("paper", paper);
     // QR rendering is opt-in via `cfg.qr` (set by adding `?qr=1` or
     // `?qr=true` to the route URL — see `parseConfig`). Server gates
     // on a validated `share_url`, so we also need a stable seed (so

@@ -77,13 +77,18 @@ export const en = {
     selector: {
         heading: "Language",
         /** Button `aria-label`, naming this (the current) language. */
-        buttonLabel: "Language: English",
+        buttonLabel: "Language and paper: English",
         remember: "We'll remember your choice on this device.",
         close: "Close",
         suggested: "Suggested",
         all: "All languages",
         filter: "Search languages",
         noMatches: "No matching languages",
+        paper: "Paper",
+        paperA4: "A4",
+        paperA4Detail: "210 × 297 mm",
+        paperLetter: "US Letter",
+        paperLetterDetail: "8.5 × 11 in",
     },
     /** Each language's name in this UI language, keyed by locale id. */
     languageNames: {
@@ -127,6 +132,10 @@ export const en = {
         families: "Families",
         squares: "Squares (x²)",
         roots: "Square roots (√x)",
+        divisionLayout: "Layout",
+        divisionOneLine: "One line",
+        divisionBracket: "Bracket",
+        divisionStacked: "Stacked",
         level: "Level {n}",
         example: "e.g. {example}",
     },

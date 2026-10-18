@@ -1,0 +1,257 @@
+{
+    "_comment": "Concept-level presets per worksheet kind; the 1-based position is the level id (?level=N). Read by lib/levels.ts and by the server test levels_fit_one_page_on_every_paper, which checks every preset (in every division layout) fits one page on A4 and US Letter. Labels and examples live in the i18n dictionaries. problems/cols, when given, must fit the area common to every paper (common_content_area_cm).",
+    "add": [
+        {
+            "params": {
+                "digits": "2,2",
+                "carry": "none"
+            }
+        },
+        {
+            "note": "force so every problem actually exercises carrying — any would let plain no-carry sums slip in and dilute the practice.",
+            "params": {
+                "digits": "2,2",
+                "carry": "force"
+            }
+        },
+        {
+            "params": {
+                "digits": "3,3",
+                "carry": "any"
+            }
+        }
+    ],
+    "subtract": [
+        {
+            "params": {
+                "digits": "2,2",
+                "borrow": "none"
+            }
+        },
+        {
+            "note": "force so the kid actually practices borrowing every problem.",
+            "params": {
+                "digits": "2,2",
+                "borrow": "force"
+            }
+        },
+        {
+            "note": "any lets borrow-across-zero cases appear naturally — a soft intro before level 4 forces ripple every time.",
+            "params": {
+                "digits": "3,3",
+                "borrow": "any"
+            }
+        },
+        {
+            "note": "ripple guarantees every problem chains the borrow through 2+ columns (e.g. across a 0). This is the case that typically trips kids up the most.",
+            "params": {
+                "digits": "3,3",
+                "borrow": "ripple"
+            }
+        }
+    ],
+    "decimal-add": [
+        {
+            "params": {
+                "digits": "2,2",
+                "decimal_places": 1
+            }
+        },
+        {
+            "params": {
+                "digits": "2,2",
+                "decimal_places": 2
+            }
+        }
+    ],
+    "decimal-subtract": [
+        {
+            "params": {
+                "digits": "2,2",
+                "decimal_places": 1
+            }
+        },
+        {
+            "params": {
+                "digits": "2,2",
+                "decimal_places": 2
+            }
+        }
+    ],
+    "long-divide": [
+        {
+            "params": {
+                "digits": "2",
+                "remainder": false,
+                "problems": 12,
+                "cols": 4
+            },
+            "styleParams": {
+                "equation": {
+                    "cols": 3
+                }
+            }
+        },
+        {
+            "params": {
+                "digits": "3",
+                "remainder": false,
+                "problems": 8,
+                "cols": 4
+            },
+            "styleParams": {
+                "equation": {
+                    "cols": 3
+                }
+            },
+            "note": "8 problems in both layouts: bracket cells (3.8 x 8.0cm) fit 4 x 2, equation cells (5.9 x 5.4cm) 3 x 3, so 8 is the most that fits one page in both."
+        },
+        {
+            "note": "Remainder mode widens the cell to fit the answer suffix (Q r N / Q rest N). Bracket cells fit 3 x 2 = 6; the wider equation cells only 2 x 2 = 4.",
+            "params": {
+                "digits": "4",
+                "remainder": true,
+                "problems": 6,
+                "cols": 3
+            },
+            "styleParams": {
+                "equation": {
+                    "cols": 2,
+                    "problems": 4
+                }
+            }
+        }
+    ],
+    "algebra-two-step": [
+        {
+            "params": {
+                "a_range": "2-9",
+                "b_range": "1-20",
+                "x_range": "0-15",
+                "mix_forms": true
+            }
+        },
+        {
+            "params": {
+                "a_range": "2-12",
+                "b_range": "1-50",
+                "x_range": "0-30",
+                "mix_forms": true
+            }
+        }
+    ],
+    "algebra-one-step": [
+        {
+            "params": {
+                "add": true,
+                "subtract": true,
+                "multiply": false,
+                "divide": false,
+                "a_range": "2-10",
+                "b_range": "1-15",
+                "x_range": "1-15"
+            }
+        },
+        {
+            "params": {
+                "add": false,
+                "subtract": false,
+                "multiply": true,
+                "divide": true,
+                "a_range": "2-9",
+                "b_range": "1-30",
+                "x_range": "0-10"
+            }
+        },
+        {
+            "params": {
+                "add": true,
+                "subtract": true,
+                "multiply": true,
+                "divide": true,
+                "a_range": "2-12",
+                "b_range": "1-50",
+                "x_range": "0-30"
+            }
+        }
+    ],
+    "decimal-multiply": [
+        {
+            "params": {
+                "digits": "1-2",
+                "decimal_places": 1,
+                "multiplier_min": 2,
+                "multiplier_max": 9,
+                "bottom_decimal_places": 0
+            }
+        },
+        {
+            "params": {
+                "digits": "1-2",
+                "decimal_places": 2,
+                "multiplier_min": 2,
+                "multiplier_max": 9,
+                "bottom_decimal_places": 0
+            }
+        },
+        {
+            "params": {
+                "digits": "1",
+                "decimal_places": 1,
+                "multiplier_min": 1,
+                "multiplier_max": 9,
+                "bottom_decimal_places": 1
+            }
+        }
+    ],
+    "order-of-ops": [
+        {
+            "params": {
+                "operations": 2,
+                "parens": false
+            }
+        },
+        {
+            "params": {
+                "operations": 3,
+                "parens": false
+            }
+        },
+        {
+            "params": {
+                "operations": 2,
+                "parens": true
+            }
+        }
+    ],
+    "mean": [
+        {
+            "note": "Levels 1-2 mix 3- and 4-value sets on one page, so the divisor changes per problem and the kid has to count the values. Both reserve room for the two-step scaffold; printing it is opt-in via the Working out toggle (same footprint either way).",
+            "params": {
+                "count": "3-4",
+                "digits": "1-2",
+                "problems": 4,
+                "cols": 2
+            }
+        },
+        {
+            "params": {
+                "count": "3-4",
+                "digits": "3",
+                "problems": 4,
+                "cols": 2
+            }
+        },
+        {
+            "note": "A longer data set with tenths: the point shifts from running the two-step procedure to handling a real data set. Eight values will not fit a printed addition stack and long division has no decimal support, so this level uses the open-workspace layout (no scaffold to toggle).",
+            "supportsScaffold": false,
+            "params": {
+                "count": 8,
+                "digits": 2,
+                "decimals": true,
+                "problems": 2,
+                "cols": 1
+            }
+        }
+    ]
+}

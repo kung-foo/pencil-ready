@@ -24,8 +24,10 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, Fonts, Locale, MissingSlot, OutputFormat, Paper,
-    WorksheetParams, WorksheetType, generate,
+    BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot, OutputFormat,
+    Paper,
+    WorksheetParams, WorksheetType, generate, long_division_default_cols,
+    long_division_default_problems,
 };
 use serde::Deserialize;
 use tower_http::compression::CompressionLayer;
@@ -94,6 +96,11 @@ struct SharedParams {
     /// decimal comma, · and : symbols).
     #[serde(default)]
     locale: Option<Locale>,
+    /// Division layout: "bracket" (`4)852`, vertical simple division) or
+    /// "equation" (`852 : 4 = 213`, working below). Defaults to the
+    /// locale's style. Applies to long-divide, simple-divide and mean.
+    #[serde(default)]
+    division: Option<DivisionStyle>,
     /// Override the operator symbol (typst expression, e.g. "sym.colon").
     #[serde(default)]
     symbol: Option<String>,
@@ -190,6 +197,12 @@ where
 }
 
 impl SharedParams {
+    /// Explicit `division=` wins; otherwise the locale's default.
+    fn division_style(&self) -> DivisionStyle {
+        self.division
+            .unwrap_or_else(|| self.locale.unwrap_or_default().division_style())
+    }
+
     fn fold(
         self,
         worksheet: WorksheetType,
@@ -335,12 +348,20 @@ struct SimpleDivideSpecific {
 
 impl SimpleDivideSpecific {
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let style = shared.division_style();
+        // One-line equation problems are short and wider than a stack:
+        // more of them, three to a row.
+        let (problems, cols) = match style {
+            DivisionStyle::Bracket => (12, 4),
+            DivisionStyle::Equation => (30, 3),
+        };
         Ok(shared.fold(
             WorksheetType::SimpleDivision {
                 max_quotient: self.max_quotient.unwrap_or(10),
+                style,
             },
-            12,
-            4,
+            problems,
+            cols,
         ))
     }
 }
@@ -362,13 +383,19 @@ impl LongDivideSpecific {
             Some(s) => parse_digit_range(&s, "digits")?,
             None => DigitRange::fixed(3),
         };
+        let style = shared.division_style();
+        let remainder = self.remainder.unwrap_or(false);
+        let cols = shared
+            .cols
+            .unwrap_or_else(|| long_division_default_cols(style, digits, remainder));
         Ok(shared.fold(
             WorksheetType::LongDivision {
                 digits,
-                remainder: self.remainder.unwrap_or(false),
+                remainder,
+                style,
             },
-            12,
-            4,
+            long_division_default_problems(style, digits, remainder, cols, 12),
+            cols,
         ))
     }
 }
@@ -828,12 +855,14 @@ impl MeanSpecific {
             Some(s) => parse_digit_range(&s, "digits")?,
             None => DigitRange::new(1, 2),
         };
+        let style = shared.division_style();
         Ok(shared.fold(
             WorksheetType::Mean {
                 count,
                 digits,
                 scaffold: self.scaffold.unwrap_or(false),
                 decimals: self.decimals.unwrap_or(false),
+                style,
             },
             // Each problem is a full column addition plus a long
             // division, so a page holds exactly four.
@@ -1628,7 +1657,7 @@ async fn cache_control(req: Request, next: Next) -> Response {
         description = "Generate printable math worksheets.",
     ),
     tags((name = "worksheets", description = "Worksheet generation endpoints")),
-    components(schemas(CarryMode, BorrowMode, Locale, OutputFormat)),
+    components(schemas(CarryMode, BorrowMode, Locale, DivisionStyle, OutputFormat)),
 )]
 struct ApiDoc;
 
@@ -1869,6 +1898,179 @@ fn init_tracing() {
 #[cfg(test)]
 mod tests {
     use super::{Method, inject_payload_ip, locale_root_redirect_target, www_redirect_target};
+
+    mod paper_fit {
+        use super::super::*;
+        use pencil_ready_core::Document;
+
+        const KINDS: &[&str] = &[
+            "add",
+            "subtract",
+            "multiply",
+            "simple-divide",
+            "long-divide",
+            "mult-drill",
+            "div-drill",
+            "fraction-mult",
+            "fraction-simplify",
+            "fraction-equiv",
+            "algebra-two-step",
+            "algebra-one-step",
+            "algebra-square-root",
+            "decimal-add",
+            "decimal-subtract",
+            "decimal-multiply",
+            "order-of-ops",
+            "mean",
+        ];
+        const DIVISION_KINDS: &[&str] = &["long-divide", "simple-divide", "mean"];
+
+        /// Parse `qs` the way the handler for `kind` does.
+        fn params_for(kind: &str, qs: &str) -> WorksheetParams {
+            let uri: axum::http::Uri = format!("/x?{qs}").parse().unwrap();
+            let shared = Query::<SharedParams>::try_from_uri(&uri).unwrap().0;
+            macro_rules! build {
+                ($t:ty) => {
+                    Query::<$t>::try_from_uri(&uri)
+                        .unwrap()
+                        .0
+                        .build(shared)
+                        .unwrap_or_else(|e| panic!("{kind}?{qs}: {e}"))
+                        .1
+                };
+            }
+            match kind {
+                "add" => build!(AddSpecific),
+                "subtract" => build!(SubtractSpecific),
+                "multiply" => build!(MultiplySpecific),
+                "simple-divide" => build!(SimpleDivideSpecific),
+                "long-divide" => build!(LongDivideSpecific),
+                "mult-drill" => build!(MultDrillSpecific),
+                "div-drill" => build!(DivDrillSpecific),
+                "fraction-mult" => build!(FractionMultSpecific),
+                "fraction-simplify" => build!(FractionSimplifySpecific),
+                "fraction-equiv" => build!(FractionEquivSpecific),
+                "algebra-two-step" => build!(AlgebraTwoStepSpecific),
+                "algebra-one-step" => build!(AlgebraOneStepSpecific),
+                "algebra-square-root" => build!(AlgebraSquareRootSpecific),
+                "decimal-add" => build!(DecimalAddSpecific),
+                "decimal-subtract" => build!(DecimalSubtractSpecific),
+                "decimal-multiply" => build!(DecimalMultiplySpecific),
+                "order-of-ops" => build!(OrderOfOpsSpecific),
+                "mean" => build!(MeanSpecific),
+                other => panic!("unknown kind {other}"),
+            }
+        }
+
+        /// The guarantee behind `common_content_area_cm`: on every paper
+        /// and in every locale and division layout, `qs` renders on one
+        /// page with the same problems per page — so the printed sheet
+        /// differs only in whitespace.
+        fn check_one_identical_page(kind: &str, qs: &str, failures: &mut Vec<String>) {
+            let styles: &[&str] = if DIVISION_KINDS.contains(&kind) {
+                &["bracket", "equation"]
+            } else {
+                &[""]
+            };
+            for style in styles {
+                for locale in ["us", "no"] {
+                    let mut per_page = Vec::new();
+                    for paper in ["a4", "us-letter"] {
+                        let mut q = format!("{qs}&paper={paper}&locale={locale}&seed=1");
+                        if !style.is_empty() && !qs.contains("division=") {
+                            q.push_str(&format!("&division={style}"));
+                        }
+                        let params = params_for(kind, q.trim_start_matches('&'));
+                        match Document::from_params(&params) {
+                            Err(e) => failures.push(format!("{kind}?{q}: {e}")),
+                            Ok(doc) => {
+                                if doc.pages != 1 {
+                                    failures.push(format!(
+                                        "{kind}?{q}: {} pages ({} problems, {} per page)",
+                                        doc.pages, params.num_problems, doc.cells_per_page
+                                    ));
+                                }
+                                per_page.push(doc.cells_per_page);
+                            }
+                        }
+                    }
+                    if per_page.len() == 2 && per_page[0] != per_page[1] {
+                        failures.push(format!(
+                            "{kind}?{qs} style={style} locale={locale}: A4 and Letter paginate differently"
+                        ));
+                    }
+                }
+            }
+        }
+
+        /// Every kind with no params — what the API serves by default.
+        /// Two kinds refuse an empty query (no operation enabled), so
+        /// they get the one switch they require.
+        #[test]
+        fn defaults_fit_one_page_on_every_paper() {
+            let mut failures = Vec::new();
+            for kind in KINDS {
+                let qs = match *kind {
+                    "algebra-one-step" => "add=true",
+                    "algebra-square-root" => "squares=true",
+                    _ => "",
+                };
+                check_one_identical_page(kind, qs, &mut failures);
+            }
+            failures.dedup();
+            assert!(failures.is_empty(), "\n{}", failures.join("\n"));
+        }
+
+        /// Every configurator preset in `levels.json`, expanded the way
+        /// `worksheetUrl` does (params, then the layout's overrides).
+        #[test]
+        fn levels_fit_one_page_on_every_paper() {
+            let levels: serde_json::Value = serde_json::from_str(include_str!(
+                "../../../frontend/astro/src/lib/levels.json"
+            ))
+            .unwrap();
+            let to_qs = |m: &serde_json::Map<String, serde_json::Value>| {
+                m.iter()
+                    .map(|(k, v)| match v {
+                        serde_json::Value::String(s) => format!("{k}={s}"),
+                        other => format!("{k}={other}"),
+                    })
+                    .collect::<Vec<_>>()
+                    .join("&")
+            };
+            let mut failures = Vec::new();
+            for (kind, list) in levels.as_object().unwrap() {
+                if kind.starts_with('_') {
+                    continue;
+                }
+                for (i, level) in list.as_array().unwrap().iter().enumerate() {
+                    let base = level["params"].as_object().unwrap();
+                    let styles: &[&str] = if DIVISION_KINDS.contains(&kind.as_str()) {
+                        &["bracket", "equation"]
+                    } else {
+                        &[""]
+                    };
+                    for style in styles {
+                        let mut merged = base.clone();
+                        if let Some(o) = level["styleParams"][*style].as_object() {
+                            merged.extend(o.clone());
+                        }
+                        let mut qs = to_qs(&merged);
+                        if !style.is_empty() {
+                            qs.push_str(&format!("&division={style}"));
+                        }
+                        let before = failures.len();
+                        check_one_identical_page(kind, &qs, &mut failures);
+                        for f in &mut failures[before..] {
+                            *f = format!("level {}: {f}", i + 1);
+                        }
+                    }
+                }
+            }
+            failures.dedup();
+            assert!(failures.is_empty(), "\n{}", failures.join("\n"));
+        }
+    }
 
     fn root_redirect(
         method: Method,

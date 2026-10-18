@@ -287,6 +287,31 @@ and uses `align: center + top` — horizontal centering for `=`-column
 alignment, top alignment so each problem hugs the top of its cell and the
 writing space stays below the printed problem.
 
+### Paper independence
+
+A worksheet is the same sheet on every paper: same problems, same page
+breaks, same text sizes. Only the whitespace differs.
+
+- Text sizes are fixed (`pt` in `shared.typ`), never scaled to the page.
+- Pagination (rows per page) and the column check use
+  `common_content_area_cm` — A4's width and US Letter's height, the
+  area every paper in `Paper::ALL` holds — not the configured paper.
+  The larger paper gets the spare height spread between rows by the
+  grid's `1fr` tracks.
+- So a seed, a share link or a QR code reproduces the same worksheet
+  whatever the printer takes.
+- Paper is therefore a per-device preference, not worksheet state: the
+  "Paper" section of the header's language menu stores it in
+  `localStorage` (`pr.paper`, `lib/paper.ts`; default A4), the
+  configurator sends it as `paper=` and shapes the preview to it, and it
+  stays out of share URLs — whoever opens a link prints on their own.
+- Presets must fit that area on one page. `levels.json` (read by the
+  frontend and by the server) holds the level presets, and the server
+  tests `levels_fit_one_page_on_every_paper` /
+  `defaults_fit_one_page_on_every_paper` render every preset and every
+  kind's defaults on each paper, locale and division layout and assert
+  one page with identical pagination.
+
 ### Fonts
 
 Constants live in `lib/problems/shared.typ`.
@@ -318,9 +343,37 @@ differs between English and Norwegian worksheets:
 - Remainders: `r=3` vs `rest 3`; the mean answer slot reads `mean =` vs
   `snitt =`.
 
-Layouts are the same in both locales for now (Norwegian-style long
-division is a separate piece of work). The explicit `--symbol` flag
-overrides the operator for any worksheet.
+The explicit `--symbol` flag overrides the operator for any worksheet.
+
+### Division style
+
+How division is laid out is a notation family, `DivisionStyle`, not a
+locale: any locale can use either, and each locale picks a default
+(`Locale::division_style`).
+
+- `bracket` (US default): long division under a bracket, `4)852`, quotient
+  on top (`division/long.typ`); simple division as a vertical stack.
+- `equation` (Norwegian default; also Germany, Denmark, Poland, …): the
+  problem is one line, `852 : 4 = 213`. Long division writes its working
+  under the dividend — each subtraction with a minus sign and a rule,
+  then the next digit brought down — and appends `rest N`
+  (`division/equation.typ`). Simple division is the drill's one-line
+  layout. The mean scaffold puts `___ : n = ___` beside the addition
+  stack, with the answer slot under it.
+
+The style lives on the worksheet variant (`LongDivision`,
+`SimpleDivision`, `Mean`), so component choice, cell size and pagination
+follow it without consulting the locale. API: `division=bracket|equation`
+(omitted → locale default); CLI: `--division`. The configurator shows a
+"Layout" toggle on those three worksheets; it starts on the page locale's
+default and, once picked, the choice lives in the URL and drives the
+preview, download and QR link like any other setting.
+
+Equation cells are wider (5–9cm vs 3.8–5.6cm), so the default column
+count is computed from the cell width (`long_division_default_cols`), and
+levels carry per-style column overrides (`styleParams` in `levels.ts`).
+Multiplication keeps the vertical stack in both locales — Norwegian
+schoolbooks use it too, with `·`.
 
 ## Visual regression
 

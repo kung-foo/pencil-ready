@@ -13,6 +13,7 @@ import {
 } from "@/lib/api";
 import { defaultLevel } from "@/lib/levels";
 import { useNames } from "@/lib/useNames";
+import { usePaper } from "@/lib/usePaper";
 import { useWorksheet } from "@/lib/useWorksheet";
 import type { IslandStrings, LevelStrings } from "@/i18n";
 import { localizePath, type Locale } from "@/i18n/locales";
@@ -87,6 +88,12 @@ export function WorksheetIsland({
 }) {
     const pagePath = (k: WorksheetKind, qs: string) =>
         `${localizePath(`/worksheets/${k}/`, locale)}${qs ? `?${qs}` : ""}`;
+    // Rewrite the address bar in place. Keeps `history.state`: Astro's
+    // ClientRouter stores its entry bookkeeping there and ignores
+    // back/forward to entries without it — passing `null` made Forward
+    // to a worksheet change the URL but not the page.
+    const syncUrl = (path: string) =>
+        window.history.replaceState(window.history.state, "", path);
     const [cfg, setCfg] = useState<WorksheetConfig>(() => {
         // Seed from URL query so deep-links like /worksheets/add/?seed=42&format=svg
         // and type-change redirects that carry params land with the right state.
@@ -115,15 +122,16 @@ export function WorksheetIsland({
     useEffect(() => {
         if (typeof window === "undefined") return;
         const qs = configToSearchParams(cfg).toString();
-        window.history.replaceState(null, "", pagePath(kind, qs));
+        syncUrl(pagePath(kind, qs));
         // Intentionally empty deps — only run once after mount. Subsequent
         // updates flow through `onChange` below.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     const [names, patchNames] = useNames();
+    const paper = usePaper();
     const url = useMemo(
-        () => worksheetUrl(cfg, names, locale),
-        [cfg, names, locale],
+        () => worksheetUrl(cfg, names, locale, paper),
+        [cfg, names, locale, paper],
     );
     const state = useWorksheet(url, ui);
 
@@ -140,7 +148,7 @@ export function WorksheetIsland({
         setCfg(next);
         // Sync URL so the state is shareable and survives reload.
         const qs = configToSearchParams(next).toString();
-        window.history.replaceState(null, "", pagePath(kind, qs));
+        syncUrl(pagePath(kind, qs));
     };
 
     return (
@@ -156,6 +164,7 @@ export function WorksheetIsland({
                     onNamesChange={patchNames}
                     ui={ui}
                     levelStrings={levelStrings}
+                    locale={locale}
                 />
                 <DownloadButton
                     state={state}
@@ -171,7 +180,7 @@ export function WorksheetIsland({
                 />
             </div>
             <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
-                <Preview cfg={cfg} state={state} ui={ui} />
+                <Preview cfg={cfg} state={state} ui={ui} paper={paper} />
             </div>
         </div>
     );

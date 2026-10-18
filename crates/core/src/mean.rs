@@ -102,7 +102,12 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             // The stack renders as column addition; the divide step uses
             // the long-division bracket, which carries no operator glyph.
             operator: "sym.plus".to_string(),
-            divide_operator: String::new(),
+            // Printed by the equation-style division half only. An
+            // explicit `symbol` wins, as it does for long division.
+            divide_operator: params
+                .symbol
+                .clone()
+                .unwrap_or_else(|| params.locale.divide_symbol().to_string()),
             width_cm: 0.0,
             answer_rows: 1,
             pad_width: 0,
@@ -230,8 +235,9 @@ fn sample_one(
 // `long_division_cell`) live in `lib.rs` because several kinds read them.
 
 use crate::{
-    DigitRange, Paper, SEPARATOR_INSET_CM, VERTICAL_STACK_WORKED_DELTA_CM, chrome_height_cm,
-    content_area_cm, long_division_cell, vertical_stack_height, vertical_stack_width,
+    DigitRange, DivisionStyle, SEPARATOR_INSET_CM, VERTICAL_STACK_WORKED_DELTA_CM,
+    chrome_height_cm, common_content_area_cm, division_cell, vertical_stack_height,
+    vertical_stack_width,
 };
 
 /// Above this many values the addition stack outgrows a two-per-page
@@ -244,6 +250,11 @@ const HALF_GAP_CM: f32 = 0.6;
 /// width. Measured: "mean =" is 6 glyphs of Fira Code at 18pt plus a
 /// 2em answer box.
 const ANSWER_SLOT_CM: f32 = 3.6;
+/// Height of that slot's line (a 1em box at 18pt, plus breathing room).
+/// Only budgeted separately in the equation layout, where the slot sits
+/// under the division; with a bracket it fits in the space the taller
+/// division half leaves under the stack.
+const ANSWER_SLOT_HEIGHT_CM: f32 = 0.8;
 /// Height one data line contributes. Measured, not derived — a composite
 /// cell came out 1.34cm taller than its own division half. Rounded up so
 /// the reservation is never short.
@@ -279,25 +290,17 @@ pub(crate) fn uses_scaffold_layout(count_max: u32, decimals: bool) -> bool {
 }
 
 /// Body content height available to one worksheet cell on the *shortest*
-/// supported paper. Folding over [`Paper::ALL`] is what keeps pagination
-/// paper-independent: sizing a cell against A4's taller page turns a
-/// one-page worksheet into a two-page one on US Letter, which is 1.8cm
-/// shorter.
+/// supported paper (see `common_content_area_cm`): sizing a cell against
+/// A4's taller page would turn a one-page worksheet into a two-page one
+/// on US Letter, which is 1.8cm shorter.
 fn shortest_content_height_cm() -> f32 {
-    Paper::ALL
-        .iter()
-        .map(|p| content_area_cm(*p, chrome_height_cm(true, true, true)).1)
-        .fold(f32::INFINITY, f32::min)
+    common_content_area_cm(chrome_height_cm(true, true, true)).1
 }
 
 /// Narrowest content width across supported papers — where the
 /// open-workspace data line has to wrap.
 pub(crate) fn data_line_wrap_width_cm() -> f32 {
-    let narrowest = Paper::ALL
-        .iter()
-        .map(|p| content_area_cm(*p, chrome_height_cm(true, true, true)).0)
-        .fold(f32::INFINITY, f32::min);
-    narrowest - 2.0 * SEPARATOR_INSET_CM
+    common_content_area_cm(chrome_height_cm(true, true, true)).0 - 2.0 * SEPARATOR_INSET_CM
 }
 
 /// Writing space reserved by the open-workspace layout: whatever is left
@@ -340,10 +343,49 @@ pub(crate) fn data_height_cm(count_max: u32, digits_max: u32, decimals: bool) ->
 /// halves. Shared with `document.rs`, which passes it to the typst
 /// component so the "mean = ___" slot can be bottom-anchored inside the
 /// same box (costing no extra height).
-pub(crate) fn body_height_cm(count_max: u32, sum_digits: u32) -> f32 {
-    let (_, div_h) = long_division_cell(sum_digits);
+pub(crate) fn body_height_cm(
+    count_max: u32,
+    sum_digits: u32,
+    value_digits: u32,
+    style: DivisionStyle,
+) -> f32 {
+    let (_, div_h) = division_half_cm(style, sum_digits, value_digits);
     let stack_h = vertical_stack_height(count_max) + VERTICAL_STACK_WORKED_DELTA_CM;
-    stack_h.max(div_h)
+    match style {
+        // The answer slot sits under the stack, in the room the taller
+        // bracket leaves there.
+        DivisionStyle::Bracket => stack_h.max(div_h),
+        // The answer slot sits under the division.
+        DivisionStyle::Equation => stack_h.max(div_h + ANSWER_SLOT_HEIGHT_CM),
+    }
+}
+
+/// The division half of a scaffold cell, (width, height) in cm.
+///
+/// Bracket: the long-division worksheet's own cell. Equation: measured
+/// for this composite (dividend hidden, no padding), because the
+/// worksheet's equation cells assume a quotient as long as the dividend,
+/// while a mean has at most as many digits as the values — which is the
+/// difference between fitting two cells per row and one.
+fn division_half_cm(style: DivisionStyle, sum_digits: u32, value_digits: u32) -> (f32, f32) {
+    match style {
+        // The mean is exact (see `generate`), so no remainder slot.
+        DivisionStyle::Bracket => division_cell(style, sum_digits, false),
+        DivisionStyle::Equation => {
+            // 96:4=24 → 4.16, 396:4=99 → 4.62, 996:4=249 → 5.08,
+            // 3996:4=999 → 5.54 (cm, measured), ceiled to 1mm.
+            let w = match (sum_digits, value_digits) {
+                (0..=2, _) => 4.2,
+                (3, 0..=2) => 4.7,
+                (3, _) => 5.1,
+                _ => 5.6,
+            };
+            // One working step per quotient digit: 2 steps 3.50cm, 3
+            // steps 5.02cm.
+            let h = if value_digits <= 2 { 3.5 } else { 5.1 };
+            (w, h)
+        }
+    }
 }
 
 /// Natural (unwrapped) width of the data line: `count` values of
@@ -380,6 +422,7 @@ pub(crate) fn cell_size_cm(
     count: DigitRange,
     digits: DigitRange,
     decimals: bool,
+    style: DivisionStyle,
     max_digits: u32,
 ) -> (f32, f32) {
     // Separator hairlines are on for this kind, so the grid insets every
@@ -389,14 +432,18 @@ pub(crate) fn cell_size_cm(
     let data_w = data_line_width_cm(count.max, digits.max, decimals, data_line_size_pt(scaffold));
     let data_rows = data_line_rows(count.max, digits.max, decimals);
     if scaffold {
-        let (div_w, _) = long_division_cell(max_digits);
+        let (div_w, _) = division_half_cm(style, max_digits, digits.max);
         // The stack's answer row holds the sum, so it must be as wide as
-        // the sum, not just as the operands — and the answer slot below
-        // it is wider still, so that sets the left column's width.
-        let stack_w = vertical_stack_width(max_digits).max(ANSWER_SLOT_CM);
+        // the sum, not just as the operands. The answer slot is wider
+        // still, and sets the width of whichever column it sits in.
+        let stack_w = vertical_stack_width(max_digits);
+        let body_w = match style {
+            DivisionStyle::Bracket => stack_w.max(ANSWER_SLOT_CM) + HALF_GAP_CM + div_w,
+            DivisionStyle::Equation => stack_w + HALF_GAP_CM + div_w.max(ANSWER_SLOT_CM),
+        };
         (
-            f32::max(data_w, stack_w + HALF_GAP_CM + div_w) + pad,
-            DATA_LINE_HEIGHT_CM * data_rows + body_height_cm(count.max, max_digits) + pad,
+            f32::max(data_w, body_w) + pad,
+            DATA_LINE_HEIGHT_CM * data_rows + body_height_cm(count.max, max_digits, digits.max, style) + pad,
         )
     } else {
         (
@@ -422,6 +469,7 @@ mod tests {
                 digits,
                 scaffold: true,
                 decimals,
+                style: Default::default(),
             },
             num_problems: 12,
             cols: 2,

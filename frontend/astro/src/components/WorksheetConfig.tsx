@@ -18,7 +18,14 @@ import {
     InputGroupInput,
 } from "@/components/ui/input-group";
 import { Shuffle } from "lucide-react";
-import { FORMATS, type WorksheetConfig } from "@/lib/api";
+import {
+    DIVISION_STYLE_KINDS,
+    FORMATS,
+    effectiveDivisionStyle,
+    type DivisionStyle,
+    type WorksheetConfig,
+} from "@/lib/api";
+import { localeDef, type Locale } from "@/i18n/locales";
 import { levelsFor, defaultLevel, type Level } from "@/lib/levels";
 import type { Names } from "@/lib/useNames";
 import { fmt, type IslandStrings, type LevelStrings } from "@/i18n";
@@ -31,6 +38,7 @@ export function WorksheetConfigPanel({
     onNamesChange,
     ui,
     levelStrings,
+    locale,
 }: {
     cfg: WorksheetConfig;
     onChange: (cfg: WorksheetConfig) => void;
@@ -38,6 +46,7 @@ export function WorksheetConfigPanel({
     onNamesChange: (patch: Partial<Names>) => void;
     ui: IslandStrings;
     levelStrings: LevelStrings;
+    locale: Locale;
 }) {
     function patch<K extends keyof WorksheetConfig>(
         key: K,
@@ -59,6 +68,16 @@ export function WorksheetConfigPanel({
                     ui={ui}
                     levelStrings={levelStrings}
                 />
+
+                {showsDivisionStyle(cfg) && (
+                    <DivisionStylePicker
+                        kind={cfg.kind}
+                        value={effectiveDivisionStyle(cfg, locale)}
+                        sign={localeDef(locale).divideSign}
+                        ui={ui}
+                        onChange={(v) => patch("division", v)}
+                    />
+                )}
 
                 <div className="pt-2 border-t space-y-4">
                     <Field label={ui.seed}>
@@ -165,6 +184,117 @@ export function WorksheetConfigPanel({
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+/** The division-layout toggle applies to kinds that print a division —
+ * not mean's open-workspace level, which prints no division at all. */
+function showsDivisionStyle(cfg: WorksheetConfig): boolean {
+    if (!DIVISION_STYLE_KINDS.includes(cfg.kind)) return false;
+    if (cfg.kind === "mean") {
+        const level = Number(cfg.level ?? defaultLevel("mean"));
+        return levelsFor("mean")?.[level - 1]?.supportsScaffold !== false;
+    }
+    return true;
+}
+
+/** Bracket vs one-line division. Each option previews the notation in
+ * the locale's division sign, since the names alone ("bracket") don't
+ * say much to a parent. The value shown is the locale's default until
+ * the user picks one; picking writes `?division=` to the URL. */
+function DivisionStylePicker({
+    kind,
+    value,
+    sign,
+    ui,
+    onChange,
+}: {
+    kind: WorksheetConfig["kind"];
+    value: DivisionStyle;
+    sign: string;
+    ui: IslandStrings;
+    onChange: (v: DivisionStyle) => void;
+}) {
+    const simple = kind === "simple-divide";
+    const options: {
+        style: DivisionStyle;
+        label: string;
+        preview: React.ReactNode;
+    }[] = [
+        {
+            style: "equation",
+            label: ui.divisionOneLine,
+            preview: simple ? `56 ${sign} 7 =` : `852 ${sign} 4 =`,
+        },
+        {
+            style: "bracket",
+            label: simple ? ui.divisionStacked : ui.divisionBracket,
+            preview: simple ? (
+                <span className="inline-flex flex-col items-end leading-tight">
+                    <span>56</span>
+                    <span className="border-b border-current">÷ 7</span>
+                </span>
+            ) : (
+                // Bracket drawn as one SVG path (curve into overline)
+                // over the dividend's box, so the bar always meets the
+                // curve and spans the digits — a `⟌` glyph or a CSS
+                // border can't guarantee either across fonts/browsers.
+                // `preserveAspectRatio="none"` stretches the path to the
+                // box; `non-scaling-stroke` keeps the line weight even.
+                <span className="inline-flex items-end">
+                    <span>4</span>
+                    <span className="relative ml-[0.15em] pl-[0.5em] pr-[0.15em] pt-[0.2em]">
+                        <svg
+                            className="absolute inset-0 h-full w-full overflow-visible"
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M 2 100 Q 16 55 2 6 L 100 6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                vectorEffect="non-scaling-stroke"
+                            />
+                        </svg>
+                        852
+                    </span>
+                </span>
+            ),
+        },
+    ];
+    return (
+        <Field label={ui.divisionLayout}>
+            <div
+                className="flex gap-2"
+                role="group"
+                aria-label={ui.divisionLayout}
+            >
+                {options.map((o) => {
+                    const active = o.style === value;
+                    return (
+                        <button
+                            key={o.style}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => onChange(o.style)}
+                            className={
+                                "flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs transition-colors " +
+                                (active
+                                    ? "border-primary bg-[color-mix(in_srgb,var(--primary)_10%,var(--card))] text-primary"
+                                    : "border-input bg-background hover:bg-muted")
+                            }
+                        >
+                            <span className="font-mono text-sm text-foreground">
+                                {o.preview}
+                            </span>
+                            <span>{o.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        </Field>
     );
 }
 

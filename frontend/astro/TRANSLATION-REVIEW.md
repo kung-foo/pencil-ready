@@ -37,5 +37,8 @@ English on purpose, in every locale.
 - **Mastery heading:** "Når dette sitter, kan eleven …", with learning
   goals written as bare infinitives that complete it.
 - **Student name placeholder:** "f.eks. Mattehesten" (US: "Math Hippo").
+- **Division layout toggle:** "Oppstilling" with the options "På én
+  linje" (852 : 4 =), "Med bue" (the US bracket) and, for simple
+  division, "Under hverandre" (stacked).
 - **Fraction × whole title:** "Brøk ganger heltall" (US: "Fraction
   multiplication"), which describes what the sheet actually drills.
