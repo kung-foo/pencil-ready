@@ -19,7 +19,7 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let operator = params
         .symbol
         .clone()
-        .unwrap_or_else(|| "sym.times".to_string());
+        .unwrap_or_else(|| params.locale.multiply_symbol().to_string());
     Ok(Sheet {
         worksheet: params.worksheet.clone(),
         problems,

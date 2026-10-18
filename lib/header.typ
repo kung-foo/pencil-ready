@@ -46,6 +46,9 @@
 //                   in a handwriting font. Ignored when
 //                   `show-name-date` is false.
 //
+//   name-label /    field labels for the Name/Date row. Default to
+//   date-label:     English; `document.rs` passes the locale's words.
+//
 // Resulting chrome height = sum of present-section heights. Callers
 // must size `margin.top` to match — see
 // `pencil_ready_core::header::margin_top_for` (Rust) or the constants
@@ -60,6 +63,8 @@
   show-name-date: true,
   title: none,
   instructions: none,
+  name-label: "Name",
+  date-label: "Date",
   debug: false,
 ) = {
   let debug-box = if debug { 1pt + red } else { none }
@@ -76,7 +81,7 @@
       columns: (auto, 1fr, auto, auto),
       column-gutter: 0.3cm,
       align: bottom,
-      [*Name*:], name-field, [*Date*:], line(length: 4cm, stroke: 0.5pt),
+      [*#name-label*:], name-field, [*#date-label*:], line(length: 4cm, stroke: 0.5pt),
     )
   }
 

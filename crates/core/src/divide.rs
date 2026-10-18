@@ -15,7 +15,7 @@ pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let operator = params
         .symbol
         .clone()
-        .unwrap_or_else(|| "sym.div".to_string());
+        .unwrap_or_else(|| params.locale.divide_symbol().to_string());
     Ok(Sheet {
         worksheet: params.worksheet.clone(),
         problems,

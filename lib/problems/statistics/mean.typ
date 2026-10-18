@@ -54,6 +54,10 @@
 //     decimal sets, where column addition plus single-digit long
 //     division can't express the work. Default "scaffold".
 //   decimal-places: dp of the incoming scaled integers. 0 = plain ints.
+//   decimal-sep: decimal separator glyph. Default ".". A "," also
+//     switches the data line's value separator from ", " to "; " so the
+//     list stays unambiguous.
+//   mean-label: lead-in for the answer slot. Default "mean".
 //   data-width / work-height: workspace-layout geometry — where the data
 //     line wraps, and how much blank space sits under it. Required in
 //     that layout.
@@ -71,6 +75,9 @@
 #let mean-problem(data, mode: "blank", opts: (:), debug: false) = {
   let layout = opts.at("layout", default: "scaffold")
   let dp = opts.at("decimal-places", default: 0)
+  let decimal-sep = opts.at("decimal-sep", default: ".")
+  let list-sep = if decimal-sep == "," { "; " } else { ", " }
+  let mean-label = opts.at("mean-label", default: "mean")
   let operator = opts.at("operator", default: [+])
   let scaffold = opts.at("scaffold", default: true)
   let is-workspace = layout == "workspace"
@@ -138,7 +145,7 @@
         t = "0" + t
       }
       let pivot = t.clusters().len() - dp
-      t.slice(0, pivot) + "." + t.slice(pivot)
+      t.slice(0, pivot) + decimal-sep + t.slice(pivot)
     }
   }
 
@@ -148,7 +155,7 @@
       size: data-size,
       features: problem-features,
     )
-    values.map(v => fmt(v)).join(", ")
+    values.map(v => fmt(v)).join(list-sep)
   }
 
   // Sum half: operands plus the sum as the answer row, which is what
@@ -216,7 +223,7 @@
     } else {
       []
     }
-    [mean =]
+    [#mean-label =]
     h(0.35em)
     box(
       // Wider when decimals are on: "12.5" needs more room than "12".

@@ -23,14 +23,16 @@
   // emit a level-1 heading that the document-preamble show-rule
   // visually suppresses.
   outline: "",
+  // Bookmark text for the two outline keys, localized by `document.rs`.
+  outline-labels: (problems: "Problems", answer-key: "Answer Key"),
   // Hairlines between problems; see `worksheet-grid`. Set per worksheet
   // kind by `document.rs`, not by the user.
   separators: false,
 ) = {
   if outline == "problems" {
-    heading(outlined: true, bookmarked: true, level: 1)[Problems]
+    heading(outlined: true, bookmarked: true, level: 1)[#outline-labels.problems]
   } else if outline == "answer-key" {
-    heading(outlined: true, bookmarked: true, level: 1)[Answer Key]
+    heading(outlined: true, bookmarked: true, level: 1)[#outline-labels.answer-key]
   }
   worksheet-grid(
     problems,

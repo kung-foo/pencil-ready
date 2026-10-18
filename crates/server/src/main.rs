@@ -90,7 +90,8 @@ struct SharedParams {
     #[serde(default)]
     #[param(value_type = String, example = "a4")]
     paper: Option<Paper>,
-    /// Regional defaults for operator symbols.
+    /// Worksheet locale: "us" (default) or "no" (Norwegian Bokmål copy,
+    /// decimal comma, · and : symbols).
     #[serde(default)]
     locale: Option<Locale>,
     /// Override the operator symbol (typst expression, e.g. "sym.colon").

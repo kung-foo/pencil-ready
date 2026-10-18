@@ -10,7 +10,7 @@
 use anyhow::Result;
 
 use crate::{
-    ComponentOpts, Document, FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM,
+    ComponentOpts, Document, LocaleStrings, FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM,
     HEADER_PAD_TOP_CM, MARGINS_CM, RenderMode, WorksheetType, chrome_height_cm,
     margin_top_for_chrome,
 };
@@ -133,6 +133,7 @@ fn opts_body(
     opts: &ComponentOpts,
     max_digits_for_opts: u32,
     row_height_cm: f32,
+    strings: &LocaleStrings,
 ) -> String {
     let operator_arg = if opts.operator.is_empty() {
         "[]".to_string()
@@ -161,16 +162,19 @@ fn opts_body(
             // Typst array: trailing comma forces 1-tuple-as-array syntax
             // when there's a single entry; harmless for longer arrays.
             format!(
-                "operator: {operator_arg}, width: {w}cm, decimal-places: ({dp},)",
+                "operator: {operator_arg}, width: {w}cm, decimal-places: ({dp},), \
+                 decimal-sep: \"{sep}\"",
                 w = opts.width_cm,
                 dp = dp_inner,
+                sep = strings.decimal_sep,
             )
         }
         WorksheetType::LongDivision { .. } => format!(
-            "width: {w}cm, answer-rows: {r}, reserve-remainder: {rr}",
+            "width: {w}cm, answer-rows: {r}, reserve-remainder: {rr}, remainder-prefix: {rp}",
             w = opts.width_cm,
             r = opts.answer_rows,
             rr = opts.reserve_remainder,
+            rp = typst_string_literal(strings.remainder_prefix),
         ),
         WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => {
             format!("operator: {operator_arg}")
@@ -199,7 +203,10 @@ fn opts_body(
             let _ = (scaffold, digits);
             format!(
                 "layout: \"workspace\", decimal-places: {dp}, data-size: {ds}pt, \
-                 data-width: {dw}cm, data-height: {dh}cm, work-height: {wh}cm",
+                 data-width: {dw}cm, data-height: {dh}cm, work-height: {wh}cm, \
+                 decimal-sep: \"{sep}\", mean-label: \"{ml}\"",
+                sep = strings.decimal_sep,
+                ml = strings.mean_label,
                 dp = if *decimals { 1 } else { 0 },
                 ds = crate::mean::WORKSPACE_DATA_LINE_PT,
                 dw = crate::mean::data_line_wrap_width_cm(),
@@ -211,7 +218,9 @@ fn opts_body(
             "operator: {operator_arg}, stack-width: {sw}cm, div-width: {dw}cm, \
              div-rows: {dr}, scaffold: {s}, body-height: {bh}cm, \
              layout: \"scaffold\", decimal-places: 0, data-size: {ds}pt, \
-             data-height: {dh}cm",
+             data-height: {dh}cm, decimal-sep: \"{sep}\", mean-label: \"{ml}\"",
+            sep = strings.decimal_sep,
+            ml = strings.mean_label,
             ds = crate::mean::SCAFFOLD_DATA_LINE_PT,
             dh = mean_data_height(worksheet),
             // Both halves take their width from the same measured tables
@@ -288,11 +297,13 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     // metadata above). Instructions default to the per-type sentence in
     // `WorksheetType::instructions()` (None for drills); a caller can
     // override via `WorksheetParams.instructions`.
-    let header_title_arg = typst_string_literal(&sheet.worksheet.title());
+    let locale = chrome.locale;
+    let strings = locale.strings();
+    let header_title_arg = typst_string_literal(&sheet.worksheet.title(locale));
     let resolved_instructions: Option<String> = match chrome.instructions.as_deref() {
         Some(s) if !s.is_empty() => Some(s.to_string()),
         Some(_) => None, // empty override = drop the section
-        None => sheet.worksheet.instructions().map(|s| s.to_string()),
+        None => sheet.worksheet.instructions(locale).map(|s| s.to_string()),
     };
     let has_problem_instructions = resolved_instructions.is_some();
     let header_instructions_arg = match &resolved_instructions {
@@ -362,6 +373,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
         &sheet.opts,
         max_digits(&sheet.problems),
         row_height_cm,
+        strings,
     );
     let header_pad_top = HEADER_PAD_TOP_CM;
 
@@ -419,10 +431,11 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
             page_blocks.push_str(&format!(
                 r#"#set page(
   margin: (top: {answer_margin_top}cm, bottom: {margin_bottom}cm, left: {margin_left}cm, right: {margin_right}cm),
-  header: pad(top: {header_pad_top}cm, worksheet-header(show-name-date: false, title: "Answer Key", debug: {debug_str})),
+  header: pad(top: {header_pad_top}cm, worksheet-header(show-name-date: false, title: {answer_key_arg}, debug: {debug_str})),
 )
 
 "#,
+                answer_key_arg = typst_string_literal(strings.answer_key),
                 answer_margin_top = answer_margin_top,
                 margin_bottom = MARGINS_CM.bottom,
                 margin_left = MARGINS_CM.left,
@@ -431,6 +444,11 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
         }
 
         let separators = uses_separators(&sheet.worksheet);
+        let outline_labels = format!(
+            "(problems: {}, answer-key: {})",
+            typst_string_literal(strings.problems),
+            typst_string_literal(strings.answer_key),
+        );
         page_blocks.push_str(&format!(
             r#"#worksheet-page(
   (
@@ -442,6 +460,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
   modes: {modes_arg},
   opts: ({opts_text}),
   outline: "{outline_key}",
+  outline-labels: {outline_labels},
   separators: {separators},
 )
 "#
@@ -453,8 +472,18 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 
     // PDF metadata — shows up in the reader's Document Properties panel
     // and gets indexed when the file is ingested by content systems.
-    let doc_title = sheet.worksheet.title();
+    let doc_title = sheet.worksheet.title(locale);
     let doc_kind = sheet.worksheet.kind_slug();
+    let doc_description = strings.pdf_description;
+    let [doc_kw_a, doc_kw_b] = strings.pdf_keywords;
+    let lang = strings.lang;
+    let name_label_arg = typst_string_literal(strings.name_label);
+    let date_label_arg = typst_string_literal(strings.date_label);
+    let footer_content_arg = format!(
+        "pencil-ready-footer-content(made-with: {}, in-word: {})",
+        typst_string_literal(strings.footer_made_with),
+        typst_string_literal(strings.footer_in),
+    );
 
     // Initial page setup uses the problem-page chrome — `margin.top`
     // is sized for whatever sections the problem-page header has. The
@@ -471,7 +500,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
     Ok(format!(
         r#"#import "/lib/header.typ": worksheet-header
 #import "/lib/page.typ": worksheet-page
-#import "/lib/footer.typ": worksheet-footer, pencil-ready-content
+#import "/lib/footer.typ": worksheet-footer, pencil-ready-footer-content
 #import "/lib/problems/shared.typ": body-font
 // Problem components are passed to worksheet-grid by reference, so
 // they must be in scope at the call site. Each worksheet has its own
@@ -499,8 +528,8 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #set document(
   title: "{doc_title}",
   author: "Pencil Ready",
-  description: "Printable math worksheet — https://pencilready.com — licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)",
-  keywords: ("math", "worksheet", "{doc_kind}", "pencilready.com"),
+  description: "{doc_description}",
+  keywords: ("{doc_kw_a}", "{doc_kw_b}", "{doc_kind}", "pencilready.com"),
 )
 
 // Header (HEADER_HEIGHT_CM) and footer (FOOTER_HEIGHT_CM) render as
@@ -513,10 +542,10 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
   margin: (top: {margin_top}cm, bottom: {margin_bottom}cm, left: {margin_left}cm, right: {margin_right}cm),
   header-ascent: {header_ascent}cm,
   footer-descent: {footer_descent}cm,
-  header: pad(top: {header_pad_top}cm, worksheet-header(student-name: {student_name_arg}, title: {header_title_arg}, instructions: {header_instructions_arg}, debug: {debug_str})),
-  footer: pad(bottom: {footer_pad_bottom}cm, worksheet-footer(pencil-ready-content, share-url: {footer_share_url_arg}, debug: {debug_str})),
+  header: pad(top: {header_pad_top}cm, worksheet-header(student-name: {student_name_arg}, title: {header_title_arg}, instructions: {header_instructions_arg}, name-label: {name_label_arg}, date-label: {date_label_arg}, debug: {debug_str})),
+  footer: pad(bottom: {footer_pad_bottom}cm, worksheet-footer({footer_content_arg}, share-url: {footer_share_url_arg}, debug: {debug_str})),
 )
-#set text(font: body-font, size: 10pt)
+#set text(font: body-font, size: 10pt, lang: "{lang}")
 
 // Headings exist only to populate the PDF outline (sidebar bookmarks)
 // when --include-answers is used. Suppress visible rendering here — the

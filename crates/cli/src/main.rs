@@ -67,10 +67,10 @@ impl From<CliBorrowMode> for BorrowMode {
 
 #[derive(Clone, Copy, Default, ValueEnum)]
 enum CliLocale {
-    /// US defaults (× for multiply, ÷ for divide)
+    /// English, decimal point, × for multiply, ÷ for divide
     #[default]
     Us,
-    /// Norwegian defaults (· for multiply, : for divide)
+    /// Norwegian Bokmål, decimal comma, · for multiply, : for divide
     No,
 }
 
@@ -106,7 +106,7 @@ struct GlobalArgs {
     #[arg(long)]
     symbol: Option<String>,
 
-    /// Locale for regional symbol defaults: us, no
+    /// Worksheet locale (printed language, decimal separator, × / ÷ symbols): us, no
     #[arg(long, value_enum, default_value = "us")]
     locale: CliLocale,
 

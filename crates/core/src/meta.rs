@@ -10,12 +10,16 @@
 //! The only "variant" modifier that affects the name is `binary` for
 //! addition, since the page looks fundamentally different.
 
-use crate::{WorksheetParams, WorksheetType};
+use crate::{Locale, WorksheetParams, WorksheetType};
 
 impl WorksheetType {
-    /// Plain-English title.
-    pub fn title(&self) -> String {
-        base_name(self, Form::Title).to_string()
+    /// Title in the given locale's language.
+    pub fn title(&self, locale: Locale) -> String {
+        match locale {
+            Locale::Us => base_name(self, Form::Title),
+            Locale::No => title_nb(self),
+        }
+        .to_string()
     }
 
     /// Kind-only slug, no solved/seed suffixes — suitable for PDF
@@ -32,63 +36,130 @@ impl WorksheetType {
     /// the layout speaks for itself); the chrome then drops the
     /// instructions section entirely and the body grid reclaims that
     /// vertical space. Callers can override via
-    /// `WorksheetParams.instructions`. English-only for now —
-    /// internationalize alongside `title()` when Norwegian copy ships.
-    pub fn instructions(&self) -> Option<&'static str> {
-        match self {
-            WorksheetType::Add { binary: true, .. } => Some("Add each pair of binary numbers."),
-            WorksheetType::Add { .. } => Some("Add each pair of numbers."),
-            WorksheetType::Subtract { .. } => Some("Subtract the bottom number from the top."),
-            WorksheetType::Multiply { .. } => Some("Multiply each pair of numbers."),
-            WorksheetType::SimpleDivision { .. } => Some("Divide each pair of numbers."),
-            WorksheetType::LongDivision { .. } => Some("Solve each problem using long division."),
-            // The worksheet is whole × n/d, not n/d × n/d — earlier
-            // copy ("each pair of fractions") was inaccurate.
-            WorksheetType::FractionMultiply { .. } => {
-                Some("Multiply each whole number by the fraction.")
-            }
-            WorksheetType::FractionSimplify { .. } => Some("Simplify each fraction."),
-            WorksheetType::FractionEquiv { .. } => {
-                Some("Fill in the missing number to make the fractions equivalent.")
-            }
-            // All three algebra worksheets ask the same question of
-            // the student — solve for the variable. The form on the
-            // page (one-step / two-step / square / square-root)
-            // differentiates the practice; the instruction does not.
-            WorksheetType::AlgebraOneStep { .. }
-            | WorksheetType::AlgebraTwoStep { .. }
-            | WorksheetType::AlgebraSquareRoot { .. } => {
-                Some("Solve each equation for the variable.")
-            }
-            WorksheetType::DecimalAdd { .. } => Some("Add each pair of decimal numbers."),
-            WorksheetType::DecimalSubtract { .. } => Some("Subtract the bottom number from the top."),
-            WorksheetType::DecimalMultiply { .. } => Some("Multiply each pair of decimal numbers."),
-            WorksheetType::OrderOfOperations {
-                use_parens: true, ..
-            } => Some(
-                "Solve each expression. Do the work inside parentheses first, then multiply and divide, then add and subtract.",
-            ),
-            WorksheetType::OrderOfOperations { .. } => {
-                Some("Solve each expression. Multiply and divide before adding or subtracting.")
-            }
-            // "Mean" is the curriculum word; "average" is the word a
-            // parent helping at the table will use, so the instruction
-            // carries both. The count is deliberately not named — the
-            // student has to see how many numbers each set holds.
-            WorksheetType::Mean { .. } => Some(
-                "Find the mean (average) of each set: add the numbers, then divide by how many there are.",
-            ),
-            // Drills are visually self-explanatory — no instruction
-            // sentence. The chrome drops the instructions section.
-            WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => None,
+    /// `WorksheetParams.instructions`.
+    pub fn instructions(&self, locale: Locale) -> Option<&'static str> {
+        match locale {
+            Locale::Us => instructions_en(self),
+            Locale::No => instructions_nb(self),
         }
     }
 }
 
+fn instructions_en(ws: &WorksheetType) -> Option<&'static str> {
+    match ws {
+        WorksheetType::Add { binary: true, .. } => Some("Add each pair of binary numbers."),
+        WorksheetType::Add { .. } => Some("Add each pair of numbers."),
+        WorksheetType::Subtract { .. } => Some("Subtract the bottom number from the top."),
+        WorksheetType::Multiply { .. } => Some("Multiply each pair of numbers."),
+        WorksheetType::SimpleDivision { .. } => Some("Divide each pair of numbers."),
+        WorksheetType::LongDivision { .. } => Some("Solve each problem using long division."),
+        // The worksheet is whole × n/d, not n/d × n/d — earlier
+        // copy ("each pair of fractions") was inaccurate.
+        WorksheetType::FractionMultiply { .. } => {
+            Some("Multiply each whole number by the fraction.")
+        }
+        WorksheetType::FractionSimplify { .. } => Some("Simplify each fraction."),
+        WorksheetType::FractionEquiv { .. } => {
+            Some("Fill in the missing number to make the fractions equivalent.")
+        }
+        // All three algebra worksheets ask the same question of
+        // the student — solve for the variable. The form on the
+        // page (one-step / two-step / square / square-root)
+        // differentiates the practice; the instruction does not.
+        WorksheetType::AlgebraOneStep { .. }
+        | WorksheetType::AlgebraTwoStep { .. }
+        | WorksheetType::AlgebraSquareRoot { .. } => Some("Solve each equation for the variable."),
+        WorksheetType::DecimalAdd { .. } => Some("Add each pair of decimal numbers."),
+        WorksheetType::DecimalSubtract { .. } => Some("Subtract the bottom number from the top."),
+        WorksheetType::DecimalMultiply { .. } => Some("Multiply each pair of decimal numbers."),
+        WorksheetType::OrderOfOperations {
+            use_parens: true, ..
+        } => Some(
+            "Solve each expression. Do the work inside parentheses first, then multiply and divide, then add and subtract.",
+        ),
+        WorksheetType::OrderOfOperations { .. } => {
+            Some("Solve each expression. Multiply and divide before adding or subtracting.")
+        }
+        // "Mean" is the curriculum word; "average" is the word a
+        // parent helping at the table will use, so the instruction
+        // carries both. The count is deliberately not named — the
+        // student has to see how many numbers each set holds.
+        WorksheetType::Mean { .. } => Some(
+            "Find the mean (average) of each set: add the numbers, then divide by how many there are.",
+        ),
+        // Drills are visually self-explanatory — no instruction
+        // sentence. The chrome drops the instructions section.
+        WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => None,
+    }
+}
+
+/// Norwegian Bokmål instructions. Same constraints as `instructions_en`
+/// (≤ two lines at 11pt), same `None` for drills. Drafted, pending
+/// native review.
+fn instructions_nb(ws: &WorksheetType) -> Option<&'static str> {
+    match ws {
+        WorksheetType::Add { binary: true, .. } => Some("Legg sammen binærtallene."),
+        WorksheetType::Add { .. } => Some("Legg sammen tallene."),
+        WorksheetType::Subtract { .. } | WorksheetType::DecimalSubtract { .. } => {
+            Some("Trekk det nederste tallet fra det øverste.")
+        }
+        WorksheetType::Multiply { .. } => Some("Gang sammen tallene."),
+        WorksheetType::SimpleDivision { .. } => Some("Regn ut hvert divisjonsstykke."),
+        WorksheetType::LongDivision { .. } => Some("Løs hvert stykke med lang divisjon."),
+        WorksheetType::FractionMultiply { .. } => Some("Gang hvert heltall med brøken."),
+        WorksheetType::FractionSimplify { .. } => Some("Forkort hver brøk."),
+        WorksheetType::FractionEquiv { .. } => {
+            Some("Fyll inn tallet som mangler, slik at brøkene blir like store.")
+        }
+        WorksheetType::AlgebraOneStep { .. }
+        | WorksheetType::AlgebraTwoStep { .. }
+        | WorksheetType::AlgebraSquareRoot { .. } => Some("Løs hver likning."),
+        WorksheetType::DecimalAdd { .. } => Some("Legg sammen desimaltallene."),
+        WorksheetType::DecimalMultiply { .. } => Some("Gang sammen desimaltallene."),
+        WorksheetType::OrderOfOperations {
+            use_parens: true, ..
+        } => Some(
+            "Regn ut hvert uttrykk. Regn ut parentesene først, så ganging og deling, så pluss og minus.",
+        ),
+        WorksheetType::OrderOfOperations { .. } => {
+            Some("Regn ut hvert uttrykk. Gang og del før du legger sammen eller trekker fra.")
+        }
+        WorksheetType::Mean { .. } => Some(
+            "Finn gjennomsnittet av hver tallrekke: legg sammen tallene, og del på hvor mange tall det er.",
+        ),
+        WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => None,
+    }
+}
+
+/// Norwegian Bokmål titles. Drafted, pending native review.
+fn title_nb(ws: &WorksheetType) -> &'static str {
+    match ws {
+        WorksheetType::Add { binary: true, .. } => "Binær addisjon",
+        WorksheetType::Add { .. } => "Addisjon",
+        WorksheetType::Subtract { .. } => "Subtraksjon",
+        WorksheetType::Multiply { .. } => "Multiplikasjon",
+        WorksheetType::SimpleDivision { .. } => "Divisjon",
+        WorksheetType::LongDivision { .. } => "Lang divisjon",
+        WorksheetType::MultiplicationDrill { .. } => "Gangetrening",
+        WorksheetType::DivisionDrill { .. } => "Divisjonstrening",
+        WorksheetType::FractionMultiply { .. } => "Brøk ganger heltall",
+        WorksheetType::FractionSimplify { .. } => "Forkorting av brøk",
+        WorksheetType::AlgebraTwoStep { .. } => "Likninger i to steg",
+        WorksheetType::AlgebraOneStep { .. } => "Likninger i ett steg",
+        WorksheetType::FractionEquiv { .. } => "Likeverdige brøker",
+        WorksheetType::AlgebraSquareRoot { .. } => "Kvadrattall og kvadratrøtter",
+        WorksheetType::DecimalAdd { .. } => "Addisjon med desimaltall",
+        WorksheetType::DecimalSubtract { .. } => "Subtraksjon med desimaltall",
+        WorksheetType::DecimalMultiply { .. } => "Multiplikasjon med desimaltall",
+        WorksheetType::OrderOfOperations { .. } => "Regnerekkefølge",
+        WorksheetType::Mean { .. } => "Gjennomsnitt",
+    }
+}
+
 impl WorksheetParams {
-    /// Plain-English title suitable for page headers or UI labels.
+    /// Title in the params' locale, suitable for page headers or UI labels.
     pub fn title(&self) -> String {
-        self.worksheet.title()
+        self.worksheet.title(self.locale)
     }
 
     /// Filename-safe slug. Callers prefix (e.g. "pencil-ready-") and append

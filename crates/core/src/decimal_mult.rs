@@ -34,7 +34,7 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let operator = params
         .symbol
         .clone()
-        .unwrap_or_else(|| "sym.times".to_string());
+        .unwrap_or_else(|| params.locale.multiply_symbol().to_string());
 
     // Per-slot dp: top, bottom, answer (= top + bottom).
     let dp_list = vec![top_dp, bot_dp, top_dp + bot_dp];

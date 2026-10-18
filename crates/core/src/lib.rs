@@ -15,6 +15,7 @@ mod divide;
 mod fraction_equiv;
 mod fraction_mult;
 mod fraction_simplify;
+mod i18n;
 mod meta;
 mod mean;
 mod mult_drill;
@@ -26,6 +27,7 @@ mod document;
 mod world;
 
 pub use fraction_equiv::MissingSlot;
+pub use i18n::LocaleStrings;
 pub use world::Fonts;
 
 use anyhow::{Result, bail};
@@ -690,10 +692,10 @@ fn decimal_stack_width(total_glyphs: u32) -> f32 {
     }
 }
 
-/// Regional defaults for operator symbols in horizontal layouts.
-///
-/// Vertical/bracket layouts use universal notation regardless of locale.
-/// Locale only affects horizontal layouts (drills).
+/// Worksheet locale: drives the printed copy (titles, instructions,
+/// chrome labels — see `i18n.rs` and `meta.rs`), number formatting
+/// (decimal separator) and the default × / ÷ operator glyphs. Algebra
+/// keeps its own `·` regardless (see `algebra_*.rs`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum Locale {
@@ -711,7 +713,7 @@ impl Locale {
         }
     }
 
-    /// Default multiplication symbol for horizontal layouts.
+    /// Default multiplication symbol.
     pub fn multiply_symbol(&self) -> &'static str {
         match self {
             Locale::Us => "sym.times",
@@ -719,7 +721,7 @@ impl Locale {
         }
     }
 
-    /// Default division symbol for horizontal layouts.
+    /// Default division symbol.
     pub fn divide_symbol(&self) -> &'static str {
         match self {
             Locale::Us => "sym.div",
@@ -957,6 +959,8 @@ pub struct Chrome {
     /// `None` skips the QR. Plumbed in from the frontend so the QR
     /// resolves to the same `?seed=...` that produced the worksheet.
     pub share_url: Option<String>,
+    /// Language of the printed copy and number formatting.
+    pub locale: Locale,
 }
 
 impl Chrome {
@@ -970,6 +974,7 @@ impl Chrome {
             solve_first: p.solve_first,
             instructions: p.instructions.clone(),
             share_url: p.share_url.clone(),
+            locale: p.locale,
         }
     }
 
@@ -1100,7 +1105,7 @@ impl Document {
                 .instructions
                 .as_deref()
                 .map(|s| !s.is_empty())
-                .unwrap_or_else(|| sheet.worksheet.instructions().is_some()),
+                .unwrap_or_else(|| sheet.worksheet.instructions(params.locale).is_some()),
         );
         let (area_w, area_h) = chrome.content_area_cm(chrome_h);
 
@@ -1813,6 +1818,7 @@ mod tests {
             solve_first: false,
             instructions: None,
             share_url: None,
+            locale: Locale::Us,
         };
         let doc = Document {
             sheet: sheet.clone(),
