@@ -545,7 +545,13 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
   header: pad(top: {header_pad_top}cm, worksheet-header(student-name: {student_name_arg}, title: {header_title_arg}, instructions: {header_instructions_arg}, name-label: {name_label_arg}, date-label: {date_label_arg}, debug: {debug_str})),
   footer: pad(bottom: {footer_pad_bottom}cm, worksheet-footer({footer_content_arg}, share-url: {footer_share_url_arg}, debug: {debug_str})),
 )
-#set text(font: body-font, size: 10pt, lang: "{lang}")
+#set text(font: body-font, size: 10pt)
+
+// Separate from the line above on purpose: that exact line (plus the
+// blank line) is the marker the CLI's `all` command splits on to strip
+// this preamble (`typst_body` in crates/cli). Setting `lang` here also
+// keeps it in each body when `all` concatenates them.
+#set text(lang: "{lang}")
 
 // Headings exist only to populate the PDF outline (sidebar bookmarks)
 // when --include-answers is used. Suppress visible rendering here — the
