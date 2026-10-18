@@ -10,7 +10,7 @@
 use anyhow::Result;
 
 use crate::{
-    ComponentOpts, Document, LocaleStrings, FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM,
+    ComponentOpts, DivisionStyle, Document, LocaleStrings, FOOTER_DESCENT_CM, FOOTER_PAD_BOTTOM_CM, HEADER_ASCENT_CM,
     HEADER_PAD_TOP_CM, MARGINS_CM, RenderMode, WorksheetType, chrome_height_cm,
     margin_top_for_chrome,
 };
@@ -140,7 +140,14 @@ fn opts_body(
     } else {
         format!("[#{}]", opts.operator)
     };
+    let remainder_prefix = typst_string_literal(strings.remainder_prefix);
     match worksheet {
+        // Equation-style simple division renders with the drill's
+        // horizontal primitive, which only takes the operator.
+        WorksheetType::SimpleDivision {
+            style: DivisionStyle::Equation,
+            ..
+        } => format!("operator: {operator_arg}"),
         WorksheetType::Add { .. }
         | WorksheetType::Subtract { .. }
         | WorksheetType::Multiply { .. }
@@ -169,12 +176,20 @@ fn opts_body(
                 sep = strings.decimal_sep,
             )
         }
+        // Equation layout sizes itself from the digits and lays out
+        // its own working, so no width / answer-rows.
+        WorksheetType::LongDivision {
+            style: DivisionStyle::Equation,
+            ..
+        } => format!(
+            "operator: {operator_arg}, reserve-remainder: {rr}, remainder-prefix: {remainder_prefix}",
+            rr = opts.reserve_remainder,
+        ),
         WorksheetType::LongDivision { .. } => format!(
-            "width: {w}cm, answer-rows: {r}, reserve-remainder: {rr}, remainder-prefix: {rp}",
+            "width: {w}cm, answer-rows: {r}, reserve-remainder: {rr}, remainder-prefix: {remainder_prefix}",
             w = opts.width_cm,
             r = opts.answer_rows,
             rr = opts.reserve_remainder,
-            rp = typst_string_literal(strings.remainder_prefix),
         ),
         WorksheetType::MultiplicationDrill { .. } | WorksheetType::DivisionDrill { .. } => {
             format!("operator: {operator_arg}")
@@ -196,6 +211,7 @@ fn opts_body(
             count,
             digits,
             decimals,
+            ..
         } if !crate::mean::uses_scaffold_layout(count.max, *decimals) => {
             // Open-workspace layout: no stack, no bracket, so the only
             // geometry the component needs is where to wrap the data
@@ -214,11 +230,23 @@ fn opts_body(
                 dh = crate::mean::data_height_cm(count.max, digits.max, *decimals),
             )
         }
-        WorksheetType::Mean { scaffold, .. } => format!(
+        WorksheetType::Mean {
+            scaffold, style, ..
+        } => format!(
             "operator: {operator_arg}, stack-width: {sw}cm, div-width: {dw}cm, \
              div-rows: {dr}, scaffold: {s}, body-height: {bh}cm, \
              layout: \"scaffold\", decimal-places: 0, data-size: {ds}pt, \
-             data-height: {dh}cm, decimal-sep: \"{sep}\", mean-label: \"{ml}\"",
+             data-height: {dh}cm, decimal-sep: \"{sep}\", mean-label: \"{ml}\", \
+             division-style: \"{st}\", div-operator: {div_op}",
+            st = match style {
+                DivisionStyle::Bracket => "bracket",
+                DivisionStyle::Equation => "equation",
+            },
+            div_op = if opts.divide_operator.is_empty() {
+                "[]".to_string()
+            } else {
+                format!("[#{}]", opts.divide_operator)
+            },
             sep = strings.decimal_sep,
             ml = strings.mean_label,
             ds = crate::mean::SCAFFOLD_DATA_LINE_PT,
@@ -231,7 +259,7 @@ fn opts_body(
             // its box (pushing the operator out and spilling past the
             // page margin).
             sw = crate::vertical_stack_width(max_digits_for_opts),
-            dw = crate::long_division_cell(max_digits_for_opts).0,
+            dw = crate::division_cell(*style, max_digits_for_opts, false).0,
             dr = 2 * max_digits_for_opts,
             s = scaffold,
             bh = mean_fill(worksheet, row_height_cm),
@@ -512,6 +540,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/multiplication/drill.typ": multiplication-drill-problem
 #import "/lib/problems/division/simple.typ": division-simple-problem
 #import "/lib/problems/division/long.typ": division-long-problem
+#import "/lib/problems/division/equation.typ": division-equation-problem
 #import "/lib/problems/division/drill.typ": division-drill-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem

@@ -40,6 +40,23 @@ pub const FIXTURES: &[Fixture] = &[
     Fixture { id: "division-long-d3-blank", label: "long division, 3-digit dividend (blank)", snippet: r#"division-long-problem((375, 5, 75),    opts: (width: 3.0cm, answer-rows: 6))"# },
     Fixture { id: "division-long-d4-blank", label: "long division, 4-digit dividend (blank)", snippet: r#"division-long-problem((8192, 8, 1024), opts: (width: 3.6cm, answer-rows: 8))"# },
 
+    // --- long division, equation layout (`852 : 4 = 213`, working below) ---
+    // Worst case per digit count: the first digit already fits the
+    // divisor, so every digit gets a step, and the quotient is as long
+    // as the dividend. Remainder variants reserve the widest suffix
+    // (`rest 8`, the Norwegian prefix — longer than `r=`), so one size
+    // fits every locale.
+    Fixture { id: "division-equation-d2", label: "long division equation, 2-digit dividend", snippet: r#"division-equation-problem((96, 4, 24),       opts: (operator: [#sym.colon]))"# },
+    Fixture { id: "division-equation-d3", label: "long division equation, 3-digit dividend", snippet: r#"division-equation-problem((852, 4, 213),     opts: (operator: [#sym.colon]))"# },
+    Fixture { id: "division-equation-d4", label: "long division equation, 4-digit dividend", snippet: r#"division-equation-problem((8192, 8, 1024),   opts: (operator: [#sym.colon]))"# },
+    Fixture { id: "division-equation-d2-rem", label: "long division equation, 2-digit dividend, remainder", snippet: r#"division-equation-problem((97, 4, 24),   opts: (operator: [#sym.colon], reserve-remainder: true, remainder-prefix: "rest\u{a0}"))"# },
+    Fixture { id: "division-equation-d3-rem", label: "long division equation, 3-digit dividend, remainder", snippet: r#"division-equation-problem((853, 4, 213),  opts: (operator: [#sym.colon], reserve-remainder: true, remainder-prefix: "rest\u{a0}"))"# },
+    Fixture { id: "division-equation-d4-rem", label: "long division equation, 4-digit dividend, remainder", snippet: r#"division-equation-problem((9825, 6, 1637), opts: (operator: [#sym.colon], reserve-remainder: true, remainder-prefix: "rest\u{a0}"))"# },
+
+    // --- simple division, equation layout (horizontal-inline primitive) ---
+    Fixture { id: "division-drill-d2x1", label: "simple division equation, 2-digit dividend", snippet: r#"division-drill-problem((56, 7, 8),   opts: (operator: [#sym.colon]))"# },
+    Fixture { id: "division-drill-d3x1", label: "simple division equation, 3-digit dividend", snippet: r#"division-drill-problem((108, 9, 12), opts: (operator: [#sym.colon]))"# },
+
     // --- multiplication drill (horizontal-inline primitive) ---
     Fixture { id: "multiplication-drill-d1x1", label: "multiplication drill 1×1-digit (mult table)", snippet: r#"multiplication-drill-problem((7, 3, 21),  opts: (operator: [#sym.times]))"# },
     Fixture { id: "multiplication-drill-d2x1", label: "multiplication drill 2×1-digit",              snippet: r#"multiplication-drill-problem((12, 7, 84), opts: (operator: [#sym.times]))"# },
@@ -68,6 +85,8 @@ pub fn preamble() -> &'static str {
 #import "/lib/problems/multiplication/basic.typ": multiplication-basic-problem
 #import "/lib/problems/multiplication/drill.typ": multiplication-drill-problem
 #import "/lib/problems/division/long.typ": division-long-problem
+#import "/lib/problems/division/equation.typ": division-equation-problem
+#import "/lib/problems/division/drill.typ": division-drill-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem

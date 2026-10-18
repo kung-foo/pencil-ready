@@ -39,6 +39,7 @@
 #import "/lib/problems/shared.typ": problem-font, problem-text-size-horizontal, problem-features, problem-carry-space
 #import "/lib/problems/_layouts/vertical-stack.typ": vertical-stack-problem
 #import "/lib/problems/division/long.typ": division-long-problem
+#import "/lib/problems/division/equation.typ": division-equation-problem
 
 // `data` = (v1, …, vn, sum, mean). The value count is `data.len() - 2`,
 // so a page can mix 3- and 4-value problems in the same grid.
@@ -58,6 +59,13 @@
 //     switches the data line's value separator from ", " to "; " so the
 //     list stays unambiguous.
 //   mean-label: lead-in for the answer slot. Default "mean".
+//   division-style: "bracket" (default) | "equation" — layout of the
+//     division half (`DivisionStyle` in Rust). The equation form is
+//     `___ : n = ___` with the working below. The answer slot moves
+//     under the division (whose result it is): the one-line form is
+//     wider than a bracket, and only fits two cells per row if the
+//     stack's column is no wider than the stack.
+//   div-operator: division glyph for the equation form. Default `[:]`.
 //   data-width / work-height: workspace-layout geometry — where the data
 //     line wraps, and how much blank space sits under it. Required in
 //     that layout.
@@ -78,6 +86,8 @@
   let decimal-sep = opts.at("decimal-sep", default: ".")
   let list-sep = if decimal-sep == "," { "; " } else { ", " }
   let mean-label = opts.at("mean-label", default: "mean")
+  let division-style = opts.at("division-style", default: "bracket")
+  let div-operator = opts.at("div-operator", default: [:])
   let operator = opts.at("operator", default: [+])
   let scaffold = opts.at("scaffold", default: true)
   let is-workspace = layout == "workspace"
@@ -174,25 +184,43 @@
 
   // Divide half: dividend is the sum, divisor is the value count, and
   // the quotient is the mean itself.
-  let division = division-long-problem(
-    (sum, n, mean),
-    mode: mode,
-    opts: (
-      width: div-width,
-      answer-rows: div-rows,
-      answer-font: answer-font,
-      answer-color: answer-color,
-      // Blank + scaffold: draw the bracket and the divisor, withhold the
-      // dividend. `hide-dividend` is ignored once solved.
-      hide-dividend: true,
-      // Reserve the same lead-in the addition stack keeps above its top
-      // operand, so the quotient and the top addend sit on one line.
-      top-space: problem-carry-space,
-      // The composite owns its own spacing; rule 4 says a component
-      // returns its tight rect with no internal padding.
-      pad-left: 0pt,
-    ),
-  )
+  let division = if division-style == "equation" {
+    // Same hand-over as the bracket: the divisor is printed, the
+    // dividend (the sum she has yet to find) is held back, and the
+    // working is reserved under it.
+    division-equation-problem(
+      (sum, n, mean),
+      mode: mode,
+      opts: (
+        operator: div-operator,
+        answer-font: answer-font,
+        answer-color: answer-color,
+        hide-dividend: true,
+        top-space: problem-carry-space,
+        pad-left: 0pt,
+      ),
+    )
+  } else {
+    division-long-problem(
+      (sum, n, mean),
+      mode: mode,
+      opts: (
+        width: div-width,
+        answer-rows: div-rows,
+        answer-font: answer-font,
+        answer-color: answer-color,
+        // Blank + scaffold: draw the bracket and the divisor, withhold the
+        // dividend. `hide-dividend` is ignored once solved.
+        hide-dividend: true,
+        // Reserve the same lead-in the addition stack keeps above its top
+        // operand, so the quotient and the top addend sit on one line.
+        top-space: problem-carry-space,
+        // The composite owns its own spacing; rule 4 says a component
+        // returns its tight rect with no internal padding.
+        pad-left: 0pt,
+      ),
+    )
+  }
 
   // `hide` reserves the full bounding rect but paints nothing, so the
   // cell keeps the solved footprint in every mode. Don't swap either of
@@ -275,18 +303,32 @@
         dir: ttb,
         spacing: 0pt,
         box(height: data-height, data-line),
-        stack(
-          dir: ltr,
-          spacing: gap,
-          // Fixed-height left column so `v(1fr)` resolves and pins the
-          // answer slot to the bottom.
-          box(height: body-height, {
-            stack-slot
-            v(1fr)
-            answer-slot
-          }),
-          box(division-slot),
-        ),
+        if division-style == "equation" {
+          // Answer slot pinned to the bottom of the division's column.
+          stack(
+            dir: ltr,
+            spacing: gap,
+            box(stack-slot),
+            box(height: body-height, {
+              division-slot
+              v(1fr)
+              answer-slot
+            }),
+          )
+        } else {
+          stack(
+            dir: ltr,
+            spacing: gap,
+            // Fixed-height left column so `v(1fr)` resolves and pins the
+            // answer slot to the bottom.
+            box(height: body-height, {
+              stack-slot
+              v(1fr)
+              answer-slot
+            }),
+            box(division-slot),
+          )
+        },
       ),
     )
   }

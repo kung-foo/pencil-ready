@@ -105,6 +105,70 @@ measured_width_cm = 4.400
 measured_height_cm = 9.954
 
 [[cell]]
+id = "division-equation-d2"
+label = "long division equation, 2-digit dividend"
+width_cm = 5.0
+height_cm = 3.8
+measured_width_cm = 4.961
+measured_height_cm = 3.796
+
+[[cell]]
+id = "division-equation-d3"
+label = "long division equation, 3-digit dividend"
+width_cm = 5.9
+height_cm = 5.4
+measured_width_cm = 5.883
+measured_height_cm = 5.320
+
+[[cell]]
+id = "division-equation-d4"
+label = "long division equation, 4-digit dividend"
+width_cm = 6.9
+height_cm = 6.9
+measured_width_cm = 6.806
+measured_height_cm = 6.844
+
+[[cell]]
+id = "division-equation-d2-rem"
+label = "long division equation, 2-digit dividend, remainder"
+width_cm = 7.1
+height_cm = 3.8
+measured_width_cm = 7.012
+measured_height_cm = 3.796
+
+[[cell]]
+id = "division-equation-d3-rem"
+label = "long division equation, 3-digit dividend, remainder"
+width_cm = 8.0
+height_cm = 5.4
+measured_width_cm = 7.935
+measured_height_cm = 5.320
+
+[[cell]]
+id = "division-equation-d4-rem"
+label = "long division equation, 4-digit dividend, remainder"
+width_cm = 8.9
+height_cm = 6.9
+measured_width_cm = 8.857
+measured_height_cm = 6.844
+
+[[cell]]
+id = "division-drill-d2x1"
+label = "simple division equation, 2-digit dividend"
+width_cm = 5.0
+height_cm = 1.0
+measured_width_cm = 4.947
+measured_height_cm = 0.935
+
+[[cell]]
+id = "division-drill-d3x1"
+label = "simple division equation, 3-digit dividend"
+width_cm = 5.5
+height_cm = 1.0
+measured_width_cm = 5.408
+measured_height_cm = 0.935
+
+[[cell]]
 id = "multiplication-drill-d1x1"
 label = "multiplication drill 1×1-digit (mult table)"
 width_cm = 4.5

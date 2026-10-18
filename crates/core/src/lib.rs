@@ -169,10 +169,12 @@ pub enum WorksheetType {
     },
     SimpleDivision {
         max_quotient: u32,
+        style: DivisionStyle,
     },
     LongDivision {
         digits: DigitRange,
         remainder: bool,
+        style: DivisionStyle,
     },
     MultiplicationDrill {
         /// Which tables to drill (e.g. [2,3] or [1-10]).
@@ -335,6 +337,8 @@ pub enum WorksheetType {
         /// `125` — the same encoding the decimal worksheets use, and
         /// the component re-inserts the point at render time.
         decimals: bool,
+        /// Layout of the division half of the scaffold.
+        style: DivisionStyle,
     },
 }
 
@@ -346,7 +350,17 @@ impl WorksheetType {
             WorksheetType::Add { .. } => "addition-basic-problem",
             WorksheetType::Subtract { .. } => "subtraction-basic-problem",
             WorksheetType::Multiply { .. } => "multiplication-basic-problem",
+            // Equation-style simple division is a one-line problem, which
+            // is exactly the drill's horizontal layout.
+            WorksheetType::SimpleDivision {
+                style: DivisionStyle::Equation,
+                ..
+            } => "division-drill-problem",
             WorksheetType::SimpleDivision { .. } => "division-simple-problem",
+            WorksheetType::LongDivision {
+                style: DivisionStyle::Equation,
+                ..
+            } => "division-equation-problem",
             WorksheetType::LongDivision { .. } => "division-long-problem",
             WorksheetType::MultiplicationDrill { .. } => "multiplication-drill-problem",
             WorksheetType::DivisionDrill { .. } => "division-drill-problem",
@@ -382,6 +396,13 @@ impl WorksheetType {
         match self {
             // Vertical stack, single answer line — width grows with
             // digit count, height fixed at 3.5cm.
+            // Equation-style simple division: one horizontal line
+            // (`division-drill-d2x1` / `-d3x1`).
+            WorksheetType::SimpleDivision {
+                style: DivisionStyle::Equation,
+                ..
+            } => (if max_digits <= 2 { 5.0 } else { 5.5 }, 1.0),
+
             WorksheetType::Add { .. }
             | WorksheetType::Subtract { .. }
             | WorksheetType::SimpleDivision { .. } => (vertical_stack_width(max_digits), 3.5),
@@ -401,15 +422,13 @@ impl WorksheetType {
                 (vertical_stack_width(max_digits), height)
             }
 
-            // Long division: unique layout. Height grows with dividend
-            // digits (each digit contributes ~2 rows of work space).
-            // When `remainder` is on, the answer is rendered as `Q r N`,
-            // which is wider than just the quotient — bump cell width so
-            // the bracket overline + suffix fit inside the cell.
-            WorksheetType::LongDivision { digits, remainder } => {
-                let (w, h) = long_division_cell(digits.max);
-                if *remainder { (w + 1.2, h) } else { (w, h) }
-            }
+            // Long division: unique layout, sized per style. Height grows
+            // with dividend digits (each digit is a step of working).
+            WorksheetType::LongDivision {
+                digits,
+                remainder,
+                style,
+            } => division_cell(*style, digits.max, *remainder),
 
             // Horizontal drills — same primitive for multiplication and
             // division. d1x1 fits in 4.5cm; d2x1 needs 5.0cm.
@@ -505,8 +524,9 @@ impl WorksheetType {
                 count,
                 digits,
                 decimals,
+                style,
                 ..
-            } => mean::cell_size_cm(*count, *digits, *decimals, max_digits),
+            } => mean::cell_size_cm(*count, *digits, *decimals, *style, max_digits),
         }
     }
 
@@ -538,7 +558,7 @@ impl WorksheetType {
             // where quotient ≤ max_quotient and divisor is 1-digit.
             // The widest operand is the product (dividend), up to
             // ~9 * max_quotient — at most 3 digits for sane inputs.
-            WorksheetType::SimpleDivision { max_quotient } => {
+            WorksheetType::SimpleDivision { max_quotient, .. } => {
                 document::digit_count(9 * *max_quotient)
             }
             // Fraction-mult's width is driven by the whole-number LHS.
@@ -658,6 +678,41 @@ pub(crate) fn long_division_cell(digits: u32) -> (f32, f32) {
     }
 }
 
+/// Equation-layout long division (`852 : 4 = 213`, working below)
+/// cell rectangle in cm, from `cell-sizes.toml` (`division-equation-*`).
+/// The remainder variants reserve the widest suffix, `rest 8`.
+pub(crate) fn equation_division_cell(digits: u32, remainder: bool) -> (f32, f32) {
+    match (digits, remainder) {
+        (0..=2, false) => (5.0, 3.8),
+        (3, false) => (5.9, 5.4),
+        (_, false) => (6.9, 6.9), // 4+ digits
+        (0..=2, true) => (7.1, 3.8),
+        (3, true) => (8.0, 5.4),
+        (_, true) => (8.9, 6.9),
+    }
+}
+
+/// Default grid columns for a long-division worksheet: as many as fit
+/// A4, capped at the bracket's traditional four. Shared by the server
+/// and CLI so an omitted `cols` never fails the paper-fit check.
+pub fn long_division_default_cols(style: DivisionStyle, digits: DigitRange, remainder: bool) -> u32 {
+    let (w, _) = division_cell(style, digits.max, remainder);
+    let (area_w, _) = content_area_cm(Paper::A4, HEADER_HEIGHT_CM);
+    ((area_w / w).floor() as u32).clamp(1, 4)
+}
+
+/// Long-division cell for either layout. The bracket's remainder
+/// variant widens by 1.2cm for the `r=N` slot beside the overline.
+pub(crate) fn division_cell(style: DivisionStyle, digits: u32, remainder: bool) -> (f32, f32) {
+    match style {
+        DivisionStyle::Bracket => {
+            let (w, h) = long_division_cell(digits);
+            if remainder { (w + 1.2, h) } else { (w, h) }
+        }
+        DivisionStyle::Equation => equation_division_cell(digits, remainder),
+    }
+}
+
 /// Vertical-stack height in cm for `operands` operands. Measured: a
 /// 2-operand stack is 3.5cm and each further operand adds one typeset
 /// line (`cell-sizes.toml` puts the 2→3 operand step at 0.975cm).
@@ -728,6 +783,35 @@ impl Locale {
             Locale::No => "sym.colon",
         }
     }
+
+    /// How this locale writes division by default. Callers can override
+    /// per worksheet (`division=` on the API).
+    pub fn division_style(&self) -> DivisionStyle {
+        match self {
+            Locale::Us => DivisionStyle::Bracket,
+            Locale::No => DivisionStyle::Equation,
+        }
+    }
+}
+
+/// How division is laid out on the page — a notation family, not a
+/// locale, so any locale can use either and new locales pick a default
+/// (`Locale::division_style`).
+///
+/// - `Bracket`: US/UK. Long division uses the bracket (`4)852` with the
+///   quotient on top); simple division is a vertical stack.
+/// - `Equation`: Norway, Germany, Denmark, Poland, …. The problem is one
+///   line, `852 : 4 = 213`; long division writes its working under the
+///   dividend, simple division is just the line.
+///
+/// Applies to long division, simple division, and the division half of
+/// the mean scaffold. Drills are already one line in either style.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum DivisionStyle {
+    #[default]
+    Bracket,
+    Equation,
 }
 
 /// Physical paper size. Owns the page dimensions so nothing else has
@@ -1332,7 +1416,7 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 bail!("multiply supports max 2 operands, got {}", digits.len());
             }
         }
-        WorksheetType::SimpleDivision { max_quotient } => {
+        WorksheetType::SimpleDivision { max_quotient, .. } => {
             validate_max_quotient(*max_quotient)?;
         }
         WorksheetType::LongDivision { digits, .. } => {
@@ -1753,6 +1837,7 @@ mod tests {
             WorksheetType::LongDivision {
                 digits: DigitRange::fixed(3),
                 remainder: true,
+                style: Default::default(),
             }
             .max_digits_bound(),
             3
@@ -1784,6 +1869,87 @@ mod tests {
         assert!(
             err.contains("cols must be at least 1"),
             "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn locale_picks_division_style() {
+        assert_eq!(Locale::Us.division_style(), DivisionStyle::Bracket);
+        assert_eq!(Locale::No.division_style(), DivisionStyle::Equation);
+    }
+
+    #[test]
+    fn equation_style_picks_its_components_and_cells() {
+        let long = |digits, remainder, style| WorksheetType::LongDivision {
+            digits: DigitRange::fixed(digits),
+            remainder,
+            style,
+        };
+        let simple = |style| WorksheetType::SimpleDivision {
+            max_quotient: 10,
+            style,
+        };
+        assert_eq!(
+            long(3, false, DivisionStyle::Equation).component_typst_name(),
+            "division-equation-problem"
+        );
+        assert_eq!(
+            long(3, false, DivisionStyle::Bracket).component_typst_name(),
+            "division-long-problem"
+        );
+        assert_eq!(
+            simple(DivisionStyle::Equation).component_typst_name(),
+            "division-drill-problem"
+        );
+        assert_eq!(
+            simple(DivisionStyle::Bracket).component_typst_name(),
+            "division-simple-problem"
+        );
+        // division-equation-d3 / -d4-rem / division-drill-d2x1 in cell-sizes.toml.
+        assert_eq!(long(3, false, DivisionStyle::Equation).cell_size_cm(3), (5.9, 5.4));
+        assert_eq!(long(4, true, DivisionStyle::Equation).cell_size_cm(4), (8.9, 6.9));
+        assert_eq!(simple(DivisionStyle::Equation).cell_size_cm(2), (5.0, 1.0));
+    }
+
+    /// Every long-division config the API accepts must render with its
+    /// default columns, in both styles — an omitted `cols` should never
+    /// trip the paper-fit check.
+    #[test]
+    fn long_division_default_cols_always_fit() {
+        for style in [DivisionStyle::Bracket, DivisionStyle::Equation] {
+            for digits in 2..=4 {
+                for remainder in [false, true] {
+                    let digits = DigitRange::fixed(digits);
+                    let params = WorksheetParams {
+                        worksheet: WorksheetType::LongDivision {
+                            digits,
+                            remainder,
+                            style,
+                        },
+                        num_problems: 12,
+                        cols: long_division_default_cols(style, digits, remainder),
+                        paper: Paper::A4,
+                        debug: false,
+                        seed: Some(42),
+                        symbol: None,
+                        locale: Locale::No,
+                        solve_first: false,
+                        include_answers: false,
+                        student_name: None,
+                        instructions: None,
+                        share_url: None,
+                    };
+                    assert!(
+                        Document::from_params(&params).is_ok(),
+                        "{style:?} {digits:?} remainder={remainder}"
+                    );
+                }
+            }
+        }
+        // Bracket without remainders keeps its four columns.
+        assert_eq!(
+            long_division_default_cols(DivisionStyle::Bracket, DigitRange::fixed(3), false),
+            4
         );
     }
 
@@ -1864,11 +2030,13 @@ mod tests {
         let long_d3 = WorksheetType::LongDivision {
             digits: DigitRange::fixed(3),
             remainder: false,
+            style: Default::default(),
         };
         assert_eq!(long_d3.cell_size_cm(3), (3.8, 8.0));
         let long_d3_rem = WorksheetType::LongDivision {
             digits: DigitRange::fixed(3),
             remainder: true,
+            style: Default::default(),
         };
         assert_eq!(long_d3_rem.cell_size_cm(3), (5.0, 8.0));
 

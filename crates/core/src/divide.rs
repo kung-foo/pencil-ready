@@ -6,7 +6,7 @@ use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 /// Simple division: times-table recall. Divisor (2-9) × quotient (1-max_quotient).
 pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let max_quotient = match &params.worksheet {
-        WorksheetType::SimpleDivision { max_quotient } => *max_quotient,
+        WorksheetType::SimpleDivision { max_quotient, .. } => *max_quotient,
         _ => unreachable!(),
     };
 
@@ -36,7 +36,9 @@ pub fn generate_simple(params: &WorksheetParams) -> anyhow::Result<Sheet> {
 /// Long division: algorithm practice. Dividend has N digits, divisor is 1 digit (2-9).
 pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     let (digit_range, remainder) = match &params.worksheet {
-        WorksheetType::LongDivision { digits, remainder } => (*digits, *remainder),
+        WorksheetType::LongDivision {
+            digits, remainder, ..
+        } => (*digits, *remainder),
         _ => unreachable!(),
     };
 
@@ -54,9 +56,12 @@ pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<Sheet> {
         worksheet: params.worksheet.clone(),
         problems,
         opts: ComponentOpts {
-            // Long-division has no operator — the bracket glyph is
-            // drawn by the component itself.
-            operator: String::new(),
+            // The bracket layout draws its own glyph and ignores this;
+            // the equation layout prints it (`852 : 4 = …`).
+            operator: params
+                .symbol
+                .clone()
+                .unwrap_or_else(|| params.locale.divide_symbol().to_string()),
             divide_operator: String::new(),
             width_cm: document::box_width_cm(&params.worksheet, max_digits),
             answer_rows,
@@ -221,7 +226,10 @@ mod tests {
 
     fn simple_params(max_quotient: u32) -> WorksheetParams {
         WorksheetParams {
-            worksheet: WorksheetType::SimpleDivision { max_quotient },
+            worksheet: WorksheetType::SimpleDivision {
+                max_quotient,
+                style: Default::default(),
+            },
             num_problems: 12,
             cols: 4,
             paper: crate::Paper::A4,
@@ -239,7 +247,11 @@ mod tests {
 
     fn long_params(digits: u32, remainder: bool) -> WorksheetParams {
         WorksheetParams {
-            worksheet: WorksheetType::LongDivision { digits: crate::DigitRange::fixed(digits), remainder },
+            worksheet: WorksheetType::LongDivision {
+                digits: crate::DigitRange::fixed(digits),
+                remainder,
+                style: Default::default(),
+            },
             num_problems: 12,
             cols: 4,
             paper: crate::Paper::A4,
