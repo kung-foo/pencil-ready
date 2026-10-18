@@ -2,7 +2,7 @@
 title: "Division"
 summary: "Recall times tables in reverse — given a product and one factor, find the other."
 prerequisites:
-  - "Multiplication facts to at least 10 × 10."
+  - "Multiplication facts to at least $10 × 10$."
   - "Multiplication and division as inverse operations."
   - "Sharing a quantity into equal groups."
 learning:

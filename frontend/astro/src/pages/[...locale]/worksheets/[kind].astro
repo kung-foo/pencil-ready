@@ -4,6 +4,8 @@ import Stippled from "@/components/Stippled.astro";
 import { WORKSHEET_KINDS, type WorksheetKind } from "@/lib/api";
 import { getWorksheetInfo } from "@/lib/worksheet-content";
 import { linkWorksheetList } from "@/lib/worksheet-links";
+import { toPlainText } from "@/lib/math-text";
+import { MathText } from "@/components/MathText";
 import { WorksheetIsland } from "@/components/WorksheetIsland";
 import {
     Breadcrumb,
@@ -40,15 +42,17 @@ const jsonLd = [
         "@type": "LearningResource",
         "@id": `${url}#worksheet`,
         name: fmt(ui.worksheet.resourceName, { title: info.title }),
-        description: info.summary,
+        // Head and structured data can't be styled: strip the math
+        // markup, keep the real characters.
+        description: toPlainText(info.summary),
         url,
         learningResourceType: "Worksheet",
         educationalUse: "practice",
         inLanguage: localeDef(locale).bcp47,
         isAccessibleForFree: true,
         license: "https://creativecommons.org/licenses/by/4.0/",
-        competencyRequired: info.prerequisites,
-        teaches: info.learning,
+        competencyRequired: info.prerequisites.map(toPlainText),
+        teaches: info.learning.map(toPlainText),
         isPartOf: { "@id": "https://pencilready.com/#website" },
         publisher: { "@id": "https://pencilready.com/#organization" },
     },
@@ -69,7 +73,7 @@ const jsonLd = [
 
 <Layout
     title={fmt(ui.meta.worksheetTitle, { title: info.title })}
-    description={info.summary}
+    description={toPlainText(info.summary)}
     locale={locale}
     jsonLd={jsonLd}
 >
@@ -142,7 +146,7 @@ const jsonLd = [
                 </div>
                 <div class="px-6 pb-6 pt-3 space-y-4">
                     <p class="text-sm text-muted-foreground italic">
-                        {info.summary}
+                        <MathText text={info.summary} />
                     </p>
 
                     <div class="space-y-2">
@@ -176,16 +180,12 @@ const jsonLd = [
                                     info.prerequisites,
                                     kind,
                                     locale,
-                                ).map((segs) => (
+                                ).map((pieces) => (
                                     <li>
-                                        {segs.map((seg) =>
-                                            seg.href ? (
-                                                /* prettier-ignore */
-                                                <a href={seg.href} class="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors">{seg.text}</a>
-                                            ) : (
-                                                seg.text
-                                            ),
-                                        )}
+                                        <MathText
+                                            pieces={pieces}
+                                            linkClass="underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+                                        />
                                     </li>
                                 ))
                             }
@@ -220,7 +220,13 @@ const jsonLd = [
                         <ul
                             class="text-sm space-y-1.5 pl-6 list-disc marker:text-muted-foreground"
                         >
-                            {info.learning.map((l) => <li>{l}</li>)}
+                            {
+                                info.learning.map((l) => (
+                                    <li>
+                                        <MathText text={l} />
+                                    </li>
+                                ))
+                            }
                         </ul>
                     </div>
                 </div>

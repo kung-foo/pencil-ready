@@ -2,7 +2,7 @@
 title: "Divisjon"
 summary: "Bruk gangetabellen baklengs — når du kjenner produktet og én faktor, finn den andre."
 prerequisites:
-  - "Gangetabellen opp til minst 10 · 10."
+  - "Gangetabellen opp til minst $10 · 10$."
   - "Multiplikasjon og divisjon som motsatte regneoperasjoner."
   - "Å dele en mengde i like store grupper."
 learning:

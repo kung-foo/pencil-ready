@@ -7,6 +7,6 @@ prerequisites:
   - "Counting in steps — 2, 4, 6, or 5, 10, 15."
 learning:
   - "Recall a table fact in a few seconds without counting up to it."
-  - "Use commutativity — 7 × 3 and 3 × 7 are one fact, so the sheet asks it once."
+  - "Use commutativity — $7 × 3$ and $3 × 7$ are one fact, so the sheet asks it once."
   - "Build the fluency that multi-digit multiplication depends on."
 ---

@@ -4,7 +4,7 @@ summary: "Legg sammen hele tall i oppstilling, og bruk mente når en kolonne bli
 prerequisites:
   - "Sikker telling til minst 20."
   - "Plassverdi for hvert siffer — enere, tiere og hundrere."
-  - "Tegnet + som å slå sammen to mengder."
+  - "Tegnet `+` som å slå sammen to mengder."
 learning:
   - "Stille opp tallene etter plassverdi og legge sammen kolonne for kolonne fra høyre."
   - "Skrive mente når summen i en kolonne blir 10 eller mer."
