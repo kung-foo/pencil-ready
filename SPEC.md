@@ -318,9 +318,37 @@ differs between English and Norwegian worksheets:
 - Remainders: `r=3` vs `rest 3`; the mean answer slot reads `mean =` vs
   `snitt =`.
 
-Layouts are the same in both locales for now (Norwegian-style long
-division is a separate piece of work). The explicit `--symbol` flag
-overrides the operator for any worksheet.
+The explicit `--symbol` flag overrides the operator for any worksheet.
+
+### Division style
+
+How division is laid out is a notation family, `DivisionStyle`, not a
+locale: any locale can use either, and each locale picks a default
+(`Locale::division_style`).
+
+- `bracket` (US default): long division under a bracket, `4)852`, quotient
+  on top (`division/long.typ`); simple division as a vertical stack.
+- `equation` (Norwegian default; also Germany, Denmark, Poland, …): the
+  problem is one line, `852 : 4 = 213`. Long division writes its working
+  under the dividend — each subtraction with a minus sign and a rule,
+  then the next digit brought down — and appends `rest N`
+  (`division/equation.typ`). Simple division is the drill's one-line
+  layout. The mean scaffold puts `___ : n = ___` beside the addition
+  stack, with the answer slot under it.
+
+The style lives on the worksheet variant (`LongDivision`,
+`SimpleDivision`, `Mean`), so component choice, cell size and pagination
+follow it without consulting the locale. API: `division=bracket|equation`
+(omitted → locale default); CLI: `--division`. The configurator shows a
+"Layout" toggle on those three worksheets; it starts on the page locale's
+default and, once picked, the choice lives in the URL and drives the
+preview, download and QR link like any other setting.
+
+Equation cells are wider (5–9cm vs 3.8–5.6cm), so the default column
+count is computed from the cell width (`long_division_default_cols`), and
+levels carry per-style column overrides (`styleParams` in `levels.ts`).
+Multiplication keeps the vertical stack in both locales — Norwegian
+schoolbooks use it too, with `·`.
 
 ## Visual regression
 
