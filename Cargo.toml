@@ -27,8 +27,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 # Typst ecosystem — the compiler + export crates
-typst = "0.14"
-typst-library = "0.14"
-typst-pdf = "0.14"
-typst-svg = "0.14"
-typst-render = "0.14"
+typst = "0.15"
+typst-library = "0.15"
+typst-pdf = "0.15"
+typst-svg = "0.15"
+typst-render = "0.15"
+typst-layout = "0.15"

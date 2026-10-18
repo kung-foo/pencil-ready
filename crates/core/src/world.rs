@@ -8,15 +8,15 @@
 //! a concrete struct that satisfies it.
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use typst::diag::{FileError, FileResult};
-use typst::foundations::{Bytes, Datetime};
-use typst::syntax::{FileId, Source, VirtualPath};
+use typst::foundations::{Bytes, Datetime, Duration};
+use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst::text::{Font, FontBook};
-use typst::utils::LazyHash;
+use typst::utils::{LazyHash, Scalar};
 use typst::{Library, LibraryExt};
 
 use crate::OutputFormat;
@@ -72,7 +72,7 @@ impl MathWorld {
     fn new(typ_source: &str, root: &Path, fonts: Fonts) -> Result<Self> {
         // Create the "main" source file with a virtual path.
         // Typst uses virtual paths (not real filesystem paths) internally.
-        let main_id = FileId::new(None, VirtualPath::new("/main.typ"));
+        let main_id = project_file("/main.typ")?;
         let main_source = Source::new(main_id, typ_source.to_string());
 
         let mut files = HashMap::new();
@@ -130,7 +130,7 @@ impl typst::World for MathWorld {
             self.sources
                 .get(&id)
                 .cloned()
-                .ok_or(FileError::NotFound(id.vpath().as_rooted_path().to_path_buf()))
+                .ok_or_else(|| not_found(id))
         }
     }
 
@@ -139,7 +139,7 @@ impl typst::World for MathWorld {
         self.files
             .get(&id)
             .cloned()
-            .ok_or(FileError::NotFound(id.vpath().as_rooted_path().to_path_buf()))
+            .ok_or_else(|| not_found(id))
     }
 
     /// Load a font by its index in the font book.
@@ -148,12 +148,23 @@ impl typst::World for MathWorld {
     }
 
     /// Current date — used by typst's `datetime.today()`.
-    fn today(&self, _offset: Option<i64>) -> Option<Datetime> {
+    fn today(&self, _offset: Option<Duration>) -> Option<Datetime> {
         None // worksheets don't need the current date
     }
 }
 
 // --- File loading helpers ---
+
+/// FileId for an absolute path in the project root, e.g.
+/// "/lib/problems/addition/basic.typ".
+fn project_file(vpath: &str) -> Result<FileId> {
+    let vpath = VirtualPath::new(vpath).with_context(|| format!("virtual path {vpath}"))?;
+    Ok(FileId::new(RootedPath::new(VirtualRoot::Project, vpath)))
+}
+
+fn not_found(id: FileId) -> FileError {
+    FileError::NotFound(PathBuf::from(id.get().vpath().get_with_slash()))
+}
 
 /// Recursively load all .typ files from a subdirectory into the sources map.
 fn load_typ_sources(
@@ -183,7 +194,7 @@ fn visit_typ_sources(
             // Build the virtual path relative to root: "/lib/problems/addition/basic.typ"
             let rel = path.strip_prefix(root).unwrap_or(&path);
             let vpath = format!("/{}", rel.to_string_lossy());
-            let id = FileId::new(None, VirtualPath::new(&vpath));
+            let id = project_file(&vpath)?;
             let text = std::fs::read_to_string(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
             sources.insert(id, Source::new(id, text));
@@ -213,7 +224,7 @@ fn load_binary_files(
                 subdir,
                 path.file_name().unwrap().to_string_lossy()
             );
-            let id = FileId::new(None, VirtualPath::new(&vpath));
+            let id = project_file(&vpath)?;
             let data = std::fs::read(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
             files.insert(id, Bytes::new(data));
@@ -252,7 +263,7 @@ fn visit_lib_binaries(
         } else if path.extension().is_some_and(|e| e == "wasm") {
             let rel = path.strip_prefix(root).unwrap_or(&path);
             let vpath = format!("/{}", rel.to_string_lossy());
-            let id = FileId::new(None, VirtualPath::new(&vpath));
+            let id = project_file(&vpath)?;
             let data = std::fs::read(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
             files.insert(id, Bytes::new(data));
@@ -300,7 +311,7 @@ fn visit_fonts(dir: &Path, book: &mut FontBook, fonts: &mut Vec<Font>) -> Result
             // A single font file can contain multiple faces (e.g., .ttc collections).
             // We iterate all of them.
             for font in Font::iter(bytes) {
-                // font.info() returns &FontInfo in typst 0.14.
+                // font.info() returns &FontInfo.
                 // We always have info for successfully-parsed fonts.
                 book.push(font.info().clone());
                 fonts.push(font);
@@ -351,21 +362,24 @@ pub fn compile_and_export(
         OutputFormat::Svg => {
             // SVG export is per-page. Worksheets are single-page.
             let page = document
-                .pages
+                .pages()
                 .first()
                 .ok_or_else(|| anyhow::anyhow!("document has no pages"))?;
-            let svg = typst_svg::svg(page);
+            let svg = typst_svg::svg(page, &typst_svg::SvgOptions::default());
             Ok(svg.into_bytes())
         }
         OutputFormat::Png => {
             // Render at 300 PPI. Typst uses "points" (72 per inch),
             // so 300/72 ≈ 4.17 pixels per point.
-            let pixel_per_pt = 300.0 / 72.0;
+            let options = typst_render::RenderOptions {
+                pixel_per_pt: Scalar::new(300.0 / 72.0),
+                ..Default::default()
+            };
             let page = document
-                .pages
+                .pages()
                 .first()
                 .ok_or_else(|| anyhow::anyhow!("document has no pages"))?;
-            let pixmap = typst_render::render(page, pixel_per_pt);
+            let pixmap = typst_render::render(page, &options);
             let png = pixmap
                 .encode_png()
                 .map_err(|e| anyhow::anyhow!("PNG encoding failed: {e}"))?;
@@ -382,8 +396,8 @@ pub fn measure(typ_source: &str, root: &Path, fonts: &Fonts) -> Result<(f32, f32
     let world = MathWorld::new(typ_source, root, fonts.clone())?;
     // typst::compile is generic over the document type. compile_and_export
     // above infers it from typst_pdf::pdf / typst_svg::svg calls; we only
-    // read .pages, so we have to name the type explicitly.
-    let document = typst::compile::<typst::layout::PagedDocument>(&world)
+    // read .pages(), so we have to name the type explicitly.
+    let document = typst::compile::<typst_layout::PagedDocument>(&world)
         .output
         .map_err(|diagnostics| {
             let messages: Vec<String> = diagnostics
@@ -393,7 +407,7 @@ pub fn measure(typ_source: &str, root: &Path, fonts: &Fonts) -> Result<(f32, f32
             anyhow::anyhow!("typst compilation failed:\n{}", messages.join("\n"))
         })?;
     let page = document
-        .pages
+        .pages()
         .first()
         .ok_or_else(|| anyhow::anyhow!("document has no pages"))?;
     let size = page.frame.size();
