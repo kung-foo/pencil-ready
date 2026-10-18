@@ -95,7 +95,12 @@ const jsonLd = [
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                    <BreadcrumbPage>{info.title}</BreadcrumbPage>
+                    {
+                        /* The page's one h1, styled as the breadcrumb it sits in. */
+                    }
+                    <h1 class="inline [font:inherit]">
+                        <BreadcrumbPage>{info.title}</BreadcrumbPage>
+                    </h1>
                 </BreadcrumbItem>
             </BreadcrumbList>
         </Breadcrumb>
