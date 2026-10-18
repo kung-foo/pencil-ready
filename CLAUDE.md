@@ -39,7 +39,8 @@ pencilready-logo-spec.md             — brand mark / pencil underline spec
   Never `cm` inside a component. (See SPEC.md → Layout rules.)
 - When adding a worksheet type: generator in `crates/core/src/<name>.rs`,
   variant in `WorksheetType`, stories under `stories/<name>-*.typ`,
-  help content in `frontend/astro/src/lib/worksheet-info.ts`,
+  help content in `frontend/astro/src/content/worksheets/<bcp47>/<kind>.md`
+  (every locale), Norwegian title + instructions in `crates/core/src/meta.rs`,
   catalog entry in `WORKSHEET_KINDS` in `frontend/astro/src/lib/api.ts`,
   server handler + params struct in `crates/server/src/main.rs`.
 - Dedup logic in generators uses `pad_with_duplicates` (in
@@ -75,3 +76,11 @@ pencilready-logo-spec.md             — brand mark / pencil underline spec
 - The Umami proxy's `payload.ip` injection is load-bearing, not
   redundant with `X-Forwarded-For` — see SPEC.md → Analytics before
   simplifying `handle_umami_send`.
+- Root-only locale redirect is deliberate; don't extend it to other
+  paths or to `Accept-Language`. (SPEC.md → Language.)
+- Adding a language: entry in `frontend/astro/src/i18n/locales.ts`
+  (mirrored in `astro.config.mjs` and `LOCALE_PREFIXES` in the server),
+  a `src/i18n/ui/<bcp47>.ts` dictionary, `content/worksheets/<bcp47>/`,
+  and — for worksheet copy — a `LocaleStrings` table plus titles and
+  instructions in `crates/core`. "Pencil Ready" and the motto stay
+  English.
