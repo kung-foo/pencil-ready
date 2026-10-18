@@ -19,10 +19,6 @@ export function StippleBg() {
         return () => ro.disconnect();
     }, []);
     return (
-        <canvas
-            ref={ref}
-            className="stipple-canvas"
-            data-stipple-react="1"
-        />
+        <canvas ref={ref} className="stipple-canvas" data-stipple-react="1" />
     );
 }

@@ -304,12 +304,13 @@
    overflow is invisible; an opaque bg there would paint over the
    parent's border. The InputGroup itself getting bg-card is
    enough to occlude the speckle. */
-.stippled :is(
-    input:not([data-slot="input-group-control"]),
-    textarea:not([data-slot="input-group-control"]),
-    [data-slot="input-group"],
-    [data-slot="select-trigger"]
-) {
+.stippled
+    :is(
+        input:not([data-slot="input-group-control"]),
+        textarea:not([data-slot="input-group-control"]),
+        [data-slot="input-group"],
+        [data-slot="select-trigger"]
+    ) {
     background-color: var(--card);
 }
 
