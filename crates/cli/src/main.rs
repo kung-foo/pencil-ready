@@ -254,7 +254,8 @@ enum Command {
         #[arg(long)]
         problems: Option<u32>,
 
-        /// Default 4 (bracket) or 3 (equation)
+        /// Default: as many as fit the page (at most 4), from the cell
+        /// width for the layout, digits and --remainder
         #[arg(long)]
         cols: Option<u32>,
 

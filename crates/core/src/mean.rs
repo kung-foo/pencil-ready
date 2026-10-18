@@ -102,8 +102,12 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             // The stack renders as column addition; the divide step uses
             // the long-division bracket, which carries no operator glyph.
             operator: "sym.plus".to_string(),
-            // Printed by the equation-style division half only.
-            divide_operator: params.locale.divide_symbol().to_string(),
+            // Printed by the equation-style division half only. An
+            // explicit `symbol` wins, as it does for long division.
+            divide_operator: params
+                .symbol
+                .clone()
+                .unwrap_or_else(|| params.locale.divide_symbol().to_string()),
             width_cm: 0.0,
             answer_rows: 1,
             pad_width: 0,
