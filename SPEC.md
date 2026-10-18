@@ -55,10 +55,11 @@ Cargo workspace at the repo root with four crates under `crates/`:
 [Astro](https://astro.build/) at `frontend/astro/` — static per-route
 HTML + a single React island per worksheet page.
 
-- 20 pre-rendered pages at build time: landing, `/about`, `/404`,
-  `/worksheets/<kind>/` for each kind. Each page's full content
-  (title, summary, prerequisites, learning goals) sits in the HTML
-  source — no JS required for indexability.
+- Pre-rendered pages at build time, once per locale (see Language
+  below): landing, `/about`, `/worksheets/<kind>/` for each kind, plus
+  an English-only `/404`. Each page's full content (title, summary,
+  prerequisites, learning goals) sits in the HTML source — no JS
+  required for indexability.
 - React island (`client:only="react"`) holds the configurator
   (shadcn/ui: Select/Input/Switch/Button/Card/Breadcrumb/
   InputGroup). Type-change navigations go through Astro's
@@ -66,6 +67,39 @@ HTML + a single React island per worksheet page.
   full reload.
 - Prefetching: `prefetch: { prefetchAll: true, defaultStrategy: "hover" }`.
 - Sitemap + robots.txt generated at build time via `@astrojs/sitemap`.
+
+### Language
+
+English (default) and Norwegian Bokmål, as separate static pages:
+English at the root (`/`, `/about/`, `/worksheets/add/`), Norwegian
+under `/no/` with the same English slugs. URL path `no`, language tag
+`nb` (`<html lang>`, hreflang, JSON-LD `inLanguage`).
+
+- `frontend/astro/src/i18n/locales.ts` is the single list of locales;
+  pages generate every locale through an optional `[...locale]` rest
+  param. Nothing assumes exactly two.
+- UI copy lives in `src/i18n/ui/<bcp47>.ts`, typed against English and
+  key-checked at build time; worksheet help text in
+  `src/content/worksheets/<bcp47>/<kind>.md`. A missing translation
+  fails the build. The island gets its strings as props.
+- Every page carries a self-canonical plus hreflang alternates for
+  each locale and `x-default` → English; the sitemap lists the same
+  alternates.
+- The worksheet API's `locale=us|no` drives the PDF's printed language,
+  decimal separator and × / ÷ glyphs; Norwegian pages send `locale=no`.
+- "Pencil Ready" and the motto "print → solve → sharpen → repeat" stay
+  English in every locale.
+- No `Accept-Language` or IP detection. The header's language selector
+  links to the same page in the other locale and, on click, sets a
+  `lang=<id>` cookie (`Path=/`, one year, `SameSite=Lax`). The server's
+  `locale_root_redirect` uses it for exactly one thing: a `GET`/`HEAD`
+  of `/` that is an *entry* (`Sec-Fetch-Site` absent, `none` or
+  `cross-site`) with `lang=no` gets a 302 to `/no/`. Same-origin
+  navigation (logo click, ClientRouter fetch, prefetch) and every other
+  path are never redirected. `/` responds `Cache-Control: private,
+  no-cache` and `Vary: Cookie, Sec-Fetch-Site` so a cached English root
+  can't outlive a switch to Norwegian.
+- Unknown paths, `/no/…` included, get the English `404.html`.
 
 ### Output formats
 
@@ -271,13 +305,22 @@ Constants live in `lib/problems/shared.typ`.
 
 ### Locale
 
-Locale (`--locale us` / `--locale no`) affects only **horizontal** layouts
-(drills), since vertical and bracket notations are universal.
+Locale (`--locale us` / `--locale no`) sets everything printed that
+differs between English and Norwegian worksheets:
 
-- US: `×` for multiply, `÷` for divide
-- Norway: `·` for multiply, `:` for divide
+- Copy: title, instructions, Name/Date, answer-key title, PDF
+  bookmarks and metadata, footer (`crates/core/src/i18n.rs`,
+  `meta.rs`). Brand name stays English.
+- Symbols: US `×` / `÷`, Norway `·` / `:` — in vertical and horizontal
+  layouts alike. Algebra keeps `·` in both.
+- Numbers: decimal point vs decimal comma; with a comma, listed values
+  (mean data lines) are separated by `; `.
+- Remainders: `r=3` vs `rest 3`; the mean answer slot reads `mean =` vs
+  `snitt =`.
 
-The explicit `--symbol` flag overrides locale for any worksheet.
+Layouts are the same in both locales for now (Norwegian-style long
+division is a separate piece of work). The explicit `--symbol` flag
+overrides the operator for any worksheet.
 
 ## Visual regression
 

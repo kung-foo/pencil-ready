@@ -14,6 +14,8 @@ import {
 import { defaultLevel } from "@/lib/levels";
 import { useNames } from "@/lib/useNames";
 import { useWorksheet } from "@/lib/useWorksheet";
+import type { IslandStrings, LevelStrings } from "@/i18n";
+import { localizePath, type Locale } from "@/i18n/locales";
 
 /**
  * Interactive worksheet configurator, rendered as an Astro island.
@@ -27,6 +29,11 @@ import { useWorksheet } from "@/lib/useWorksheet";
  * /worksheets/{kind}/ route so the page's static content (title,
  * description, prereqs, help) updates to match. Current params are
  * carried over as query string.
+ *
+ * Localized via props, not imports: the Astro page passes the page's
+ * `locale` plus its `island` / `levels` dictionary subtrees, so the
+ * bundle carries no dictionary at all and every path the island writes
+ * (history, navigation, QR share URL) stays inside the page's locale.
  */
 /**
  * Per-kind first-visit defaults, applied only when none of a kind's
@@ -67,7 +74,19 @@ function applyFirstVisitDefaults(
     return cfg;
 }
 
-export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
+export function WorksheetIsland({
+    kind,
+    locale,
+    ui,
+    levelStrings,
+}: {
+    kind: WorksheetKind;
+    locale: Locale;
+    ui: IslandStrings;
+    levelStrings: LevelStrings;
+}) {
+    const pagePath = (k: WorksheetKind, qs: string) =>
+        `${localizePath(`/worksheets/${k}/`, locale)}${qs ? `?${qs}` : ""}`;
     const [cfg, setCfg] = useState<WorksheetConfig>(() => {
         // Seed from URL query so deep-links like /worksheets/add/?seed=42&format=svg
         // and type-change redirects that carry params land with the right state.
@@ -96,18 +115,17 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
     useEffect(() => {
         if (typeof window === "undefined") return;
         const qs = configToSearchParams(cfg).toString();
-        window.history.replaceState(
-            null,
-            "",
-            `/worksheets/${kind}/${qs ? `?${qs}` : ""}`,
-        );
+        window.history.replaceState(null, "", pagePath(kind, qs));
         // Intentionally empty deps — only run once after mount. Subsequent
         // updates flow through `onChange` below.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     const [names, patchNames] = useNames();
-    const url = useMemo(() => worksheetUrl(cfg, names), [cfg, names]);
-    const state = useWorksheet(url);
+    const url = useMemo(
+        () => worksheetUrl(cfg, names, locale),
+        [cfg, names, locale],
+    );
+    const state = useWorksheet(url, ui);
 
     const onChange = (next: WorksheetConfig) => {
         if (next.kind !== kind) {
@@ -116,14 +134,13 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
             // without a full page reload. Preserve current query params so
             // seed / format / etc. carry across.
             const qs = configToSearchParams(next).toString();
-            navigate(`/worksheets/${next.kind}/${qs ? `?${qs}` : ""}`);
+            navigate(pagePath(next.kind, qs));
             return;
         }
         setCfg(next);
         // Sync URL so the state is shareable and survives reload.
         const qs = configToSearchParams(next).toString();
-        const path = `/worksheets/${kind}/${qs ? `?${qs}` : ""}`;
-        window.history.replaceState(null, "", path);
+        window.history.replaceState(null, "", pagePath(kind, qs));
     };
 
     return (
@@ -137,12 +154,24 @@ export function WorksheetIsland({ kind }: { kind: WorksheetKind }) {
                     onChange={onChange}
                     names={names}
                     onNamesChange={patchNames}
+                    ui={ui}
+                    levelStrings={levelStrings}
                 />
-                <DownloadButton state={state} kind={kind} />
-                <PrintButton state={state} kind={kind} />
+                <DownloadButton
+                    state={state}
+                    kind={kind}
+                    locale={locale}
+                    ui={ui}
+                />
+                <PrintButton
+                    state={state}
+                    kind={kind}
+                    locale={locale}
+                    ui={ui}
+                />
             </div>
             <div className="aspect-[210/297] md:aspect-auto md:min-h-[80vh]">
-                <Preview cfg={cfg} state={state} />
+                <Preview cfg={cfg} state={state} ui={ui} />
             </div>
         </div>
     );

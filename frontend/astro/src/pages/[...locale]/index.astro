@@ -1,25 +1,34 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import Stippled from "../components/Stippled.astro";
-import WorksheetThumb from "../components/WorksheetThumb.astro";
-import { WORKSHEET_SECTIONS } from "../lib/worksheet-info";
-import { getWorksheetInfo } from "../lib/worksheet-content";
+import Layout from "@/layouts/Layout.astro";
+import Stippled from "@/components/Stippled.astro";
+import WorksheetThumb from "@/components/WorksheetThumb.astro";
+import { WORKSHEET_SECTIONS } from "@/lib/worksheet-info";
+import { getWorksheetInfo } from "@/lib/worksheet-content";
+import { t } from "@/i18n";
+import {
+    localeFromParam,
+    localeStaticParams,
+    localizePath,
+} from "@/i18n/locales";
 
-const WORKSHEET_INFO = await getWorksheetInfo();
+export function getStaticPaths() {
+    return localeStaticParams().map((params) => ({ params }));
+}
+
+const locale = localeFromParam(Astro.params.locale);
+const ui = t(locale);
+const WORKSHEET_INFO = await getWorksheetInfo(locale);
 ---
 
 <Layout
-    title="Pencil Ready — printable math worksheets"
-    description="Free, printable math worksheets for 1st–6th grade — print → solve → sharpen → repeat. Addition, subtraction, multiplication, long division, fractions, and two-step equations — configure the difficulty and download as PDF."
-    canonical="https://pencilready.com/"
+    title={ui.meta.homeTitle}
+    description={ui.meta.homeDescription}
+    locale={locale}
 >
     <div class="p-4 md:p-8 max-w-6xl mx-auto">
-        <h1 class="text-3xl font-semibold mb-4">Printable math worksheets</h1>
+        <h1 class="text-3xl font-semibold mb-4">{ui.home.heading}</h1>
         <p class="text-lg text-muted-foreground max-w-2xl mb-10">
-            Master math the old-fashioned way: with handwritten drills. No need
-            for an iPad or AI. Just print the problems you want to practice and
-            pick up a pencil. If you miss too many, print a new sheet and try
-            again.
+            {ui.home.intro}
         </p>
 
         <!--
@@ -40,7 +49,7 @@ const WORKSHEET_INFO = await getWorksheetInfo();
                 WORKSHEET_SECTIONS.map((section, sectionIndex) => (
                     <section>
                         <h2 class="text-xl font-semibold mb-4 pb-1 border-b border-pencil-no-2">
-                            {section.title}
+                            {ui.home.sections[section.id]}
                         </h2>
                         <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {section.kinds.map((kind) => {
@@ -49,7 +58,10 @@ const WORKSHEET_INFO = await getWorksheetInfo();
                                     <li>
                                         <Stippled
                                             as="a"
-                                            href={`/worksheets/${kind}/`}
+                                            href={localizePath(
+                                                `/worksheets/${kind}/`,
+                                                locale,
+                                            )}
                                             class="flex gap-3 h-full p-5 rounded-xl border bg-card text-card-foreground shadow hover:border-primary transition"
                                         >
                                             <div class="flex-1 min-w-0">
@@ -63,6 +75,7 @@ const WORKSHEET_INFO = await getWorksheetInfo();
                                             <div class="flex-shrink-0 w-14 self-start text-foreground/70">
                                                 <WorksheetThumb
                                                     kind={kind}
+                                                    locale={locale}
                                                     lazy={sectionIndex > 0}
                                                 />
                                             </div>

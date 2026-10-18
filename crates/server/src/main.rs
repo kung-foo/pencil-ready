@@ -18,7 +18,7 @@ use anyhow::{Result, anyhow};
 use axum::{
     body::{Body, Bytes},
     extract::{Query, Request, State},
-    http::{HeaderMap, HeaderValue, StatusCode, header},
+    http::{HeaderMap, HeaderValue, Method, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
 };
@@ -90,7 +90,8 @@ struct SharedParams {
     #[serde(default)]
     #[param(value_type = String, example = "a4")]
     paper: Option<Paper>,
-    /// Regional defaults for operator symbols.
+    /// Worksheet locale: "us" (default) or "no" (Norwegian Bokmål copy,
+    /// decimal comma, · and : symbols).
     #[serde(default)]
     locale: Option<Locale>,
     /// Override the operator symbol (typst expression, e.g. "sym.colon").
@@ -1488,6 +1489,77 @@ fn www_redirect_target(host: &str, path_and_query: &str) -> Option<String> {
     Some(format!("https://{apex}{path_and_query}"))
 }
 
+/// Non-default site locales, by URL path prefix and `lang` cookie value
+/// — the ids in `LOCALES` (frontend/astro/src/i18n/locales.ts) other than
+/// the root locale. Keep in step with that list.
+const LOCALE_PREFIXES: &[&str] = &["no"];
+
+/// Send a visitor *entering* the site at `/` to the locale they chose in
+/// the language selector. Deliberately narrow (see SPEC.md → Language):
+///
+/// - only `GET`/`HEAD` of exactly `/` — every other URL serves what was
+///   asked for, so links and bookmarks into either locale are stable;
+/// - only with a `lang=<locale>` cookie, which the selector sets on an
+///   explicit click (never from `Accept-Language`, so crawlers — which
+///   send no cookie — always get the English root);
+/// - only on entry: `Sec-Fetch-Site` absent, `none` (typed URL,
+///   bookmark) or `cross-site` (external link). A `same-origin` /
+///   `same-site` request — the logo on an English page, a ClientRouter
+///   fetch, a prefetch — is never redirected, so a reader who is on an
+///   English page stays there.
+///
+/// Caching for `/` (private, varies on cookie + fetch site) is set by
+/// `cache_control`, which wraps this layer and so sees both the 302 and
+/// the 200.
+async fn locale_root_redirect(req: Request, next: Next) -> Response {
+    let headers = req.headers();
+    let cookie = headers
+        .get_all(header::COOKIE)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .collect::<Vec<_>>()
+        .join("; ");
+    let fetch_site = headers.get("sec-fetch-site").and_then(|v| v.to_str().ok());
+    match locale_root_redirect_target(
+        req.method(),
+        req.uri().path(),
+        req.uri().query(),
+        &cookie,
+        fetch_site,
+    ) {
+        Some(location) => (StatusCode::FOUND, [(header::LOCATION, location)]).into_response(),
+        None => next.run(req).await,
+    }
+}
+
+fn locale_root_redirect_target(
+    method: &Method,
+    path: &str,
+    query: Option<&str>,
+    cookie: &str,
+    sec_fetch_site: Option<&str>,
+) -> Option<String> {
+    if !(method == Method::GET || method == Method::HEAD) || path != "/" {
+        return None;
+    }
+    if !matches!(sec_fetch_site, None | Some("none") | Some("cross-site")) {
+        return None;
+    }
+    // Hand-parsed: `name=value` pairs split on `;`. The first `lang`
+    // wins; an unknown value (including the root locale's `en`) is
+    // ignored.
+    let lang = cookie
+        .split(';')
+        .filter_map(|pair| pair.trim().split_once('='))
+        .find(|(name, _)| *name == "lang")
+        .map(|(_, value)| value.trim())?;
+    let prefix = LOCALE_PREFIXES.iter().find(|p| **p == lang)?;
+    Some(match query {
+        Some(q) if !q.is_empty() => format!("/{prefix}/?{q}"),
+        _ => format!("/{prefix}/"),
+    })
+}
+
 /// Cache-Control by URI prefix. Astro hashes its bundle filenames
 /// (`/_astro/*.js`, `/_astro/*.css`) so they're safe to mark immutable;
 /// fonts ship with stable filenames but never change in practice
@@ -1496,11 +1568,31 @@ fn www_redirect_target(host: &str, path_and_query: &str) -> Option<String> {
 /// HTML is held back to 5 minutes so region-rewrite tags and routine
 /// content updates propagate without forcing a hard reload.
 ///
+/// The root `/` is the exception: `locale_root_redirect` answers it per
+/// visitor (302 to `/no/` or the English page, by cookie and
+/// `Sec-Fetch-Site`), so it's `private, no-cache` and varies on both
+/// inputs. A shared 5-minute cache there would keep serving English for
+/// minutes after a visitor switched to Norwegian. Both the redirect and
+/// the page pass through here, so this is the one place that sets it.
+///
 /// Anything else (including `/api/*` worksheet generation and the
 /// Umami proxy) is left untouched — handlers set their own caching.
 async fn cache_control(req: Request, next: Next) -> Response {
     let path = req.uri().path().to_string();
     let mut response = next.run(req).await;
+
+    if path == "/" {
+        let headers = response.headers_mut();
+        headers.insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("private, no-cache"),
+        );
+        headers.append(
+            header::VARY,
+            HeaderValue::from_static("Cookie, Sec-Fetch-Site"),
+        );
+        return response;
+    }
 
     if response.headers().contains_key(header::CACHE_CONTROL) {
         return response;
@@ -1510,7 +1602,7 @@ async fn cache_control(req: Request, next: Next) -> Response {
         Some("public, max-age=31536000, immutable")
     } else if path.ends_with(".svg") || path.ends_with(".png") || path.ends_with(".ico") {
         Some("public, max-age=2592000")
-    } else if path.ends_with(".html") || path == "/" || path.ends_with('/') {
+    } else if path.ends_with(".html") || path.ends_with('/') {
         Some("public, max-age=300, must-revalidate")
     } else {
         None
@@ -1688,12 +1780,18 @@ async fn main() {
     // Layer order (innermost → outermost):
     //   1. region_rewrite — mutates text/html bodies before compression
     //      sees them. Must be innermost so we operate on plaintext.
-    //   2. compression — gzips/brs the (possibly rewritten) body.
-    //   3. www_redirect — short-circuits `www.` hosts before any of the
+    //   2. locale_root_redirect — 302s an entering `/` request to the
+    //      visitor's chosen locale. Outside ServeDir/region_rewrite (no
+    //      need to render the page it replaces), inside www_redirect
+    //      (the apex hop happens first).
+    //   3. cache_control — wraps the redirect so `/`'s private,
+    //      cookie-varying policy covers the 302 and the 200 alike.
+    //   4. compression — gzips/brs the (possibly rewritten) body.
+    //   5. www_redirect — short-circuits `www.` hosts before any of the
     //      above run.
-    //   4. cors — adds headers, including to www redirects so
+    //   6. cors — adds headers, including to www redirects so
     //      cross-origin fetches can follow them.
-    //   5. TraceLayer — request spans wrap everything above. 2xx/3xx/5xx
+    //   7. TraceLayer — request spans wrap everything above. 2xx/3xx/5xx
     //      log at INFO; 4xx (mostly scan traffic hitting our 404 page)
     //      drops to DEBUG so it doesn't flood the access log.
     let trace_layer = TraceLayer::new_for_http()
@@ -1727,6 +1825,7 @@ async fn main() {
 
     let app = app
         .layer(middleware::from_fn_with_state(state, region_rewrite))
+        .layer(middleware::from_fn(locale_root_redirect))
         .layer(middleware::from_fn(cache_control))
         .layer(compression)
         .layer(middleware::from_fn(www_redirect))
@@ -1769,7 +1868,63 @@ fn init_tracing() {
 
 #[cfg(test)]
 mod tests {
-    use super::{inject_payload_ip, www_redirect_target};
+    use super::{Method, inject_payload_ip, locale_root_redirect_target, www_redirect_target};
+
+    fn root_redirect(
+        method: Method,
+        path: &str,
+        query: Option<&str>,
+        cookie: &str,
+        site: Option<&str>,
+    ) -> Option<String> {
+        locale_root_redirect_target(&method, path, query, cookie, site)
+    }
+
+    #[test]
+    fn locale_root_redirect_on_entry_with_cookie() {
+        for site in [None, Some("none"), Some("cross-site")] {
+            assert_eq!(
+                root_redirect(Method::GET, "/", None, "lang=no", site).as_deref(),
+                Some("/no/"),
+                "sec-fetch-site {site:?}",
+            );
+        }
+        assert_eq!(
+            root_redirect(Method::HEAD, "/", None, "lang=no", None).as_deref(),
+            Some("/no/")
+        );
+        // Query string carried over; other cookies around it ignored.
+        assert_eq!(
+            root_redirect(Method::GET, "/", Some("utm_source=x"), "a=1; lang=no ; b=2", None)
+                .as_deref(),
+            Some("/no/?utm_source=x")
+        );
+    }
+
+    #[test]
+    fn locale_root_redirect_skips_internal_navigation() {
+        for site in ["same-origin", "same-site"] {
+            assert_eq!(root_redirect(Method::GET, "/", None, "lang=no", Some(site)), None);
+        }
+    }
+
+    #[test]
+    fn locale_root_redirect_needs_known_non_default_cookie() {
+        assert_eq!(root_redirect(Method::GET, "/", None, "", None), None);
+        assert_eq!(root_redirect(Method::GET, "/", None, "lang=en", None), None);
+        assert_eq!(root_redirect(Method::GET, "/", None, "lang=xx", None), None);
+        assert_eq!(root_redirect(Method::GET, "/", None, "notlang=no", None), None);
+        assert_eq!(root_redirect(Method::GET, "/", None, "lang=", None), None);
+    }
+
+    #[test]
+    fn locale_root_redirect_only_for_root_get_head() {
+        for path in ["/about/", "/worksheets/add/", "/no/", "/index.html", ""] {
+            assert_eq!(root_redirect(Method::GET, path, None, "lang=no", None), None, "{path}");
+        }
+        assert_eq!(root_redirect(Method::POST, "/", None, "lang=no", None), None);
+        assert_eq!(root_redirect(Method::OPTIONS, "/", None, "lang=no", None), None);
+    }
 
     #[test]
     fn www_redirect_target_strips_www() {

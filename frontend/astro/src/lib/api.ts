@@ -11,6 +11,7 @@
 // the server expects.
 
 import { levelParams } from "./levels";
+import { localeDef, localizePath, type Locale } from "@/i18n/locales";
 
 export const FORMATS = ["pdf", "png", "svg"] as const;
 export type Format = (typeof FORMATS)[number];
@@ -306,10 +307,15 @@ function asEnum<T extends readonly string[]>(
  * When `cfg.seed` is set, a `share_url=` param is appended pointing back
  * at the *frontend* route (with the original `level=...` form, not the
  * expanded one). The server validates it against an allowed-origin list
- * and embeds it as a QR code in the bottom-right of every page. */
+ * and embeds it as a QR code in the bottom-right of every page.
+ *
+ * `locale` is the page's locale: it picks the worksheet's printed
+ * language and notation (`locale=` on the API, omitted for the default)
+ * and the share URL's path prefix. */
 export function worksheetUrl(
     cfg: WorksheetConfig,
-    names?: { student?: string },
+    names: { student?: string } | undefined,
+    locale: Locale,
 ): string {
     const qs = configToSearchParams(cfg);
     // Snapshot the frontend-form qs (with `level=…`) before the API
@@ -328,14 +334,21 @@ export function worksheetUrl(
         }
     }
     if (names?.student) qs.set("student_name", names.student);
+    const { worksheetLocale } = localeDef(locale);
+    if (worksheetLocale !== "us") qs.set("locale", worksheetLocale);
     // QR rendering is opt-in via `cfg.qr` (set by adding `?qr=1` or
     // `?qr=true` to the route URL — see `parseConfig`). Server gates
     // on a validated `share_url`, so we also need a stable seed (so
     // the QR target reproduces the same worksheet) and a shareable
     // origin (window.location is the page URL the QR points back to).
-    if (cfg.qr === true && typeof window !== "undefined" && cfg.seed !== undefined) {
+    if (
+        cfg.qr === true &&
+        typeof window !== "undefined" &&
+        cfg.seed !== undefined
+    ) {
         const shareTail = shareSearch.toString();
-        const shareUrl = `${window.location.origin}/worksheets/${cfg.kind}/${shareTail ? `?${shareTail}` : ""}`;
+        const sharePath = localizePath(`/worksheets/${cfg.kind}/`, locale);
+        const shareUrl = `${window.location.origin}${sharePath}${shareTail ? `?${shareTail}` : ""}`;
         qs.set("share_url", shareUrl);
         qs.set("qr", "true");
     }

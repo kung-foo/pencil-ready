@@ -30,8 +30,9 @@ params are identical except `problems` replaces `--problems` and
   problem page(s). One answer page per problem page. PDF-only.
   Answers are compact: just the final numeric answer, not the full
   worked steps.
-- `locale: us | no` — regional symbol defaults for horizontal layouts.
-  US: `×` / `÷`; Norway: `·` / `:`.
+- `locale: us | no` — printed language (English / Norwegian Bokmål),
+  decimal separator, and `×` / `÷` vs `·` / `:` operator defaults. See
+  SPEC.md → Locale.
 - `symbol: string?` — explicit operator override (typst expression,
   e.g. `sym.colon`). Wins over `locale`.
 - `debug: bool` — draw red/blue debug borders on problem boxes and

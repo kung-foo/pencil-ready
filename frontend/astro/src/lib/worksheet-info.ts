@@ -1,41 +1,43 @@
 // Homepage grouping only — the per-worksheet help text lives in the
 // `worksheets` content collection (see lib/worksheet-content.ts).
 import { WORKSHEET_KINDS, type WorksheetKind } from "@/lib/api";
+import type { UiStrings } from "@/i18n";
 
 /** Homepage grouping. Ordered by rough curriculum progression — the
  * list order drives render order, and each section's `kinds` array
  * drives the per-section card order. Must cover every kind in
- * `WORKSHEET_KINDS` exactly once (enforced by the homepage's build). */
+ * `WORKSHEET_KINDS` exactly once (enforced by the homepage's build).
+ * `id` keys the localized heading in `UiStrings.home.sections`. */
 export const WORKSHEET_SECTIONS: ReadonlyArray<{
-    title: string;
+    id: keyof UiStrings["home"]["sections"];
     kinds: ReadonlyArray<WorksheetKind>;
 }> = [
     {
-        title: "Arithmetic",
+        id: "arithmetic",
         kinds: ["add", "subtract", "multiply", "simple-divide"],
     },
     {
-        title: "Fact drills",
+        id: "drills",
         kinds: ["mult-drill", "div-drill"],
     },
     {
-        title: "Long-form",
+        id: "longForm",
         kinds: ["long-divide"],
     },
     {
-        title: "Fractions",
+        id: "fractions",
         kinds: ["fraction-equiv", "fraction-simplify", "fraction-mult"],
     },
     {
-        title: "Decimals",
+        id: "decimals",
         kinds: ["decimal-add", "decimal-subtract", "decimal-multiply"],
     },
     {
-        title: "Statistics",
+        id: "statistics",
         kinds: ["mean"],
     },
     {
-        title: "Pre-algebra",
+        id: "preAlgebra",
         // order-of-ops first: precedence + parens are the conceptual
         // prereqs for the one-step / two-step equation work.
         kinds: [

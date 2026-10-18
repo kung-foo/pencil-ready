@@ -21,6 +21,7 @@ import { Shuffle } from "lucide-react";
 import { FORMATS, type WorksheetConfig } from "@/lib/api";
 import { levelsFor, defaultLevel, type Level } from "@/lib/levels";
 import type { Names } from "@/lib/useNames";
+import { fmt, type IslandStrings, type LevelStrings } from "@/i18n";
 import { StippleBg } from "@/components/StippleBg";
 
 export function WorksheetConfigPanel({
@@ -28,11 +29,15 @@ export function WorksheetConfigPanel({
     onChange,
     names,
     onNamesChange,
+    ui,
+    levelStrings,
 }: {
     cfg: WorksheetConfig;
     onChange: (cfg: WorksheetConfig) => void;
     names: Names;
     onNamesChange: (patch: Partial<Names>) => void;
+    ui: IslandStrings;
+    levelStrings: LevelStrings;
 }) {
     function patch<K extends keyof WorksheetConfig>(
         key: K,
@@ -48,14 +53,19 @@ export function WorksheetConfigPanel({
         <CardTitle>Worksheet</CardTitle>
       </CardHeader>*/}
             <CardContent className="space-y-4">
-                <KindSpecific cfg={cfg} onChange={onChange} />
+                <KindSpecific
+                    cfg={cfg}
+                    onChange={onChange}
+                    ui={ui}
+                    levelStrings={levelStrings}
+                />
 
                 <div className="pt-2 border-t space-y-4">
-                    <Field label="Seed">
+                    <Field label={ui.seed}>
                         <InputGroup>
                             <InputGroupInput
                                 type="number"
-                                placeholder="random"
+                                placeholder={ui.seedPlaceholder}
                                 value={cfg.seed ?? ""}
                                 onChange={(e) =>
                                     patch(
@@ -69,8 +79,8 @@ export function WorksheetConfigPanel({
                             <InputGroupAddon align="inline-end">
                                 <InputGroupButton
                                     type="button"
-                                    aria-label="Shuffle seed"
-                                    title="Pick a new random seed"
+                                    aria-label={ui.shuffleLabel}
+                                    title={ui.shuffleTitle}
                                     onClick={() =>
                                         // 6-digit seed: deterministic for sharing, short enough
                                         // to fit the filename slug without looking noisy.
@@ -89,7 +99,7 @@ export function WorksheetConfigPanel({
                     </Field>
 
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="solve_first">Solve first problem</Label>
+                        <Label htmlFor="solve_first">{ui.solveFirst}</Label>
                         <Switch
                             id="solve_first"
                             checked={cfg.solve_first ?? false}
@@ -99,9 +109,9 @@ export function WorksheetConfigPanel({
 
                     <div className="flex items-center justify-between">
                         <Label htmlFor="include_answers">
-                            Answer key{" "}
+                            {ui.answerKey}{" "}
                             <span className="text-xs text-muted-foreground">
-                                (PDF only)
+                                {ui.pdfOnly}
                             </span>
                         </Label>
                         <Switch
@@ -126,9 +136,10 @@ export function WorksheetConfigPanel({
                     <PersonalizeSection
                         names={names}
                         onNamesChange={onNamesChange}
+                        ui={ui}
                     />
 
-                    <Field label="Format">
+                    <Field label={ui.format}>
                         <div className="flex gap-2">
                             {FORMATS.map((f) => (
                                 <Button
@@ -160,9 +171,11 @@ export function WorksheetConfigPanel({
 function PersonalizeSection({
     names,
     onNamesChange,
+    ui,
 }: {
     names: Names;
     onNamesChange: (patch: Partial<Names>) => void;
+    ui: IslandStrings;
 }) {
     const summary = names.student ?? "";
 
@@ -171,7 +184,7 @@ function PersonalizeSection({
             <AccordionItem value="personalize" className="border-b-0">
                 <AccordionTrigger className="py-2">
                     <span className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-2">
-                        <span>Personalize</span>
+                        <span>{ui.personalize}</span>
                         {summary && (
                             <span className="truncate text-xs font-normal text-muted-foreground">
                                 {summary}
@@ -180,10 +193,10 @@ function PersonalizeSection({
                     </span>
                 </AccordionTrigger>
                 <AccordionContent className="space-y-3">
-                    <SubField label="Student name">
+                    <SubField label={ui.studentName}>
                         <DeferredNameInput
                             value={names.student ?? ""}
-                            placeholder="e.g. Math Hippo"
+                            placeholder={ui.studentNamePlaceholder}
                             onCommit={(v) => onNamesChange({ student: v })}
                         />
                     </SubField>
@@ -421,9 +434,13 @@ function SubField({
 function KindSpecific({
     cfg,
     onChange,
+    ui,
+    levelStrings,
 }: {
     cfg: WorksheetConfig;
     onChange: (cfg: WorksheetConfig) => void;
+    ui: IslandStrings;
+    levelStrings: LevelStrings;
 }) {
     // Key/value typed loosely: TS can't distribute `keyof` across the kind
     // union well enough to infer per-variant keys. The switch narrowing below
@@ -434,7 +451,7 @@ function KindSpecific({
     switch (cfg.kind) {
         case "multiply":
             return (
-                <Field label="Digits (e.g. 2,2 or 3,2)">
+                <Field label={ui.digits}>
                     <Input
                         value={cfg.digits ?? ""}
                         placeholder="2,2"
@@ -446,7 +463,7 @@ function KindSpecific({
         case "simple-divide":
             return (
                 <SliderField
-                    label="Max quotient"
+                    label={ui.maxQuotient}
                     min={2}
                     max={12}
                     value={cfg.max_quotient ?? 10}
@@ -454,12 +471,11 @@ function KindSpecific({
                 />
             );
 
-
         case "mult-drill": {
             const [mLo, mHi] = dashToRange(cfg.multiplier, [1, 10]);
             return (
                 <div className="space-y-4">
-                    <Field label="Multiplicand (e.g. 2,3 or 1-10)">
+                    <Field label={ui.multiplicand}>
                         <Input
                             value={cfg.multiplicand ?? ""}
                             placeholder="1-10"
@@ -469,7 +485,7 @@ function KindSpecific({
                         />
                     </Field>
                     <RangeSliderField
-                        label="Multiplier"
+                        label={ui.multiplier}
                         min={1}
                         max={12}
                         value={[mLo, mHi]}
@@ -485,7 +501,7 @@ function KindSpecific({
             const [qLo, qHi] = dashToRange(cfg.max_quotient, [2, 9]);
             return (
                 <div className="space-y-4">
-                    <Field label="Divisor">
+                    <Field label={ui.divisor}>
                         <Input
                             value={cfg.divisor ?? ""}
                             placeholder="2-9"
@@ -493,7 +509,7 @@ function KindSpecific({
                         />
                     </Field>
                     <RangeSliderField
-                        label="Max quotient"
+                        label={ui.maxQuotient}
                         min={2}
                         max={12}
                         value={[qLo, qHi]}
@@ -508,7 +524,7 @@ function KindSpecific({
         case "fraction-mult":
             return (
                 <div className="space-y-4">
-                    <Field label="Denominators">
+                    <Field label={ui.denominators}>
                         <Input
                             value={cfg.denominators ?? ""}
                             placeholder="2,3,4,5,10"
@@ -518,7 +534,7 @@ function KindSpecific({
                         />
                     </Field>
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="unit_only">Unit fractions only</Label>
+                        <Label htmlFor="unit_only">{ui.unitOnly}</Label>
                         <Switch
                             id="unit_only"
                             checked={cfg.unit_only ?? false}
@@ -533,7 +549,7 @@ function KindSpecific({
             return (
                 <div className="space-y-4">
                     <RangeSliderField
-                        label="Denominators"
+                        label={ui.denominators}
                         min={2}
                         max={20}
                         value={[denMin, denMax]}
@@ -542,16 +558,14 @@ function KindSpecific({
                         }
                     />
                     <SliderField
-                        label="Max numerator"
+                        label={ui.maxNumerator}
                         min={5}
                         max={30}
                         value={cfg.max_numerator ?? 20}
                         onCommit={(v) => patch("max_numerator", v)}
                     />
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="proper_only">
-                            Proper fractions only
-                        </Label>
+                        <Label htmlFor="proper_only">{ui.properOnly}</Label>
                         <Switch
                             id="proper_only"
                             checked={cfg.proper_only ?? false}
@@ -559,9 +573,7 @@ function KindSpecific({
                         />
                     </div>
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="include_whole">
-                            Allow whole-number answers
-                        </Label>
+                        <Label htmlFor="include_whole">{ui.allowWhole}</Label>
                         <Switch
                             id="include_whole"
                             checked={cfg.include_whole ?? false}
@@ -586,6 +598,8 @@ function KindSpecific({
             return (
                 <LevelPicker
                     levels={levels}
+                    copy={levelStrings[cfg.kind]}
+                    ui={ui}
                     value={current}
                     onChange={(v) => patch("level", v)}
                 />
@@ -605,14 +619,16 @@ function KindSpecific({
                 <div className="space-y-4">
                     <LevelPicker
                         levels={levels}
+                        copy={levelStrings.mean}
+                        ui={ui}
                         value={current}
                         onChange={(v) => patch("level", v)}
                     />
                     {showScaffold && (
-                        <FieldGroup label="Working out">
+                        <FieldGroup label={ui.workingOut}>
                             <OpToggle
                                 id="mean-scaffold"
-                                label="Print the addition stack"
+                                label={ui.printStack}
                                 checked={cfg.scaffold ?? false}
                                 onChange={(v) => patch("scaffold", v)}
                             />
@@ -632,17 +648,17 @@ function KindSpecific({
                 enabledCount === 1 && currentlyOn;
             return (
                 <div className="space-y-4">
-                    <FieldGroup label="Families">
+                    <FieldGroup label={ui.families}>
                         <OpToggle
                             id="op-squares"
-                            label="Squares (x²)"
+                            label={ui.squares}
                             checked={onSquares}
                             disabled={lockToggle(onSquares)}
                             onChange={(v) => patch("squares", v)}
                         />
                         <OpToggle
                             id="op-roots"
-                            label="Square roots (√x)"
+                            label={ui.roots}
                             checked={onRoots}
                             disabled={lockToggle(onRoots)}
                             onChange={(v) => patch("roots", v)}
@@ -661,10 +677,15 @@ function KindSpecific({
  * directly — see `lib/levels.ts`. */
 function LevelPicker({
     levels,
+    copy,
+    ui,
     value,
     onChange,
 }: {
     levels: readonly Level[];
+    /** Label + example per level, same order as `levels`. */
+    copy: readonly { label: string; example: string }[];
+    ui: IslandStrings;
     value: string | undefined;
     onChange: (next: string) => void;
 }) {
@@ -673,6 +694,10 @@ function LevelPicker({
             {levels.map((level, idx) => {
                 const id = String(idx + 1);
                 const active = id === value;
+                const { label, example } = copy[idx] ?? {
+                    label: id,
+                    example: "",
+                };
                 return (
                     <button
                         key={id}
@@ -687,10 +712,10 @@ function LevelPicker({
                         }
                     >
                         <div className="flex flex-1 flex-col items-start gap-0.5 px-3 py-2 text-left">
-                            <span className="font-medium">{level.label}</span>
-                            {level.example && (
+                            <span className="font-medium">{label}</span>
+                            {example && (
                                 <span className="text-xs text-muted-foreground">
-                                    e.g. {level.example}
+                                    {fmt(ui.example, { example })}
                                 </span>
                             )}
                         </div>
@@ -703,7 +728,7 @@ function LevelPicker({
                             }
                         >
                             <span className="text-[10px] font-semibold uppercase tracking-wider [writing-mode:vertical-rl]">
-                                Level {idx + 1}
+                                {fmt(ui.level, { n: idx + 1 })}
                             </span>
                         </div>
                     </button>

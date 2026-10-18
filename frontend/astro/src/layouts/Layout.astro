@@ -4,7 +4,19 @@ import { ClientRouter } from "astro:transitions";
 import PencilRule from "../components/PencilRule.astro";
 import InlineIcon from "../components/InlineIcon.astro";
 import Stippled from "../components/Stippled.astro";
+import LanguageSelector from "../components/LanguageSelector.astro";
 import "../styles/global.css";
+import { t } from "@/i18n";
+import {
+    DEFAULT_LOCALE,
+    LOCALES,
+    absoluteUrl,
+    alternatePaths,
+    localeDef,
+    localeFromUrl,
+    localizePath,
+    type Locale,
+} from "@/i18n/locales";
 // `?raw` reads the SVG files at build time so the markup ships inlined
 // in the HTML — no extra round trip. The public/ files remain the single
 // source of truth (favicon link still references /rainbow-heart.svg).
@@ -13,13 +25,50 @@ import heartSvgRaw from "../../public/rainbow-heart.svg?raw";
 interface Props {
     title: string;
     description?: string;
-    canonical?: string;
+    /** Page locale. Defaults to the one implied by the URL. */
+    locale?: Locale;
+    /**
+     * Emit the self-canonical link plus hreflang alternates for every
+     * locale. Off for pages that aren't one URL per locale (404).
+     */
+    indexable?: boolean;
     /** Extra schema.org nodes for this page, merged into the site graph. */
     jsonLd?: Record<string, unknown>[];
 }
 
-const { title, description, canonical, jsonLd = [] } = Astro.props;
+const {
+    title,
+    description,
+    locale = localeFromUrl(Astro.url),
+    indexable = true,
+    jsonLd = [],
+} = Astro.props;
 const ogImage = "https://pencilready.com/og-image-1200x630.png";
+const def = localeDef(locale);
+const ui = t(locale);
+
+// The page's own URL is the canonical — never another locale's — and
+// every locale variant (this one included) is listed as an hreflang
+// alternate, with English doubling as x-default. Normalized to a
+// trailing slash, the form the static build serves.
+const pathname = Astro.url.pathname.endsWith("/")
+    ? Astro.url.pathname
+    : `${Astro.url.pathname}/`;
+const canonical = indexable ? absoluteUrl(pathname) : undefined;
+const alternates = indexable
+    ? alternatePaths(pathname).map((a) => ({
+          hreflang: a.bcp47,
+          href: absoluteUrl(a.path),
+      }))
+    : [];
+const xDefault = indexable
+    ? absoluteUrl(localizePath(pathname, DEFAULT_LOCALE))
+    : undefined;
+const ogAlternates = LOCALES.filter((l) => l.id !== locale).map(
+    (l) => l.ogLocale,
+);
+const homePath = localizePath("/", locale);
+const aboutPath = localizePath("/about/", locale);
 
 // schema.org structured data. Every page carries the WebSite +
 // Organization entities so search engines tie all URLs to one site;
@@ -33,7 +82,7 @@ const structuredData = JSON.stringify({
             "@id": "https://pencilready.com/#website",
             name: "Pencil Ready",
             url: "https://pencilready.com/",
-            inLanguage: "en",
+            inLanguage: def.bcp47,
             publisher: { "@id": "https://pencilready.com/#organization" },
         },
         {
@@ -59,14 +108,30 @@ const umami = {
 ---
 
 <!doctype html>
-<html lang="en" data-theme="graph-paper">
+<html lang={def.bcp47} dir={def.dir} data-theme="graph-paper">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title}</title>
         {description && <meta name="description" content={description} />}
         {canonical && <link rel="canonical" href={canonical} />}
+        {
+            alternates.map((a) => (
+                <link rel="alternate" hreflang={a.hreflang} href={a.href} />
+            ))
+        }
+        {
+            xDefault && (
+                <link rel="alternate" hreflang="x-default" href={xDefault} />
+            )
+        }
         <meta property="og:type" content="website" />
+        <meta property="og:locale" content={def.ogLocale} />
+        {
+            ogAlternates.map((l) => (
+                <meta property="og:locale:alternate" content={l} />
+            ))
+        }
         <meta property="og:title" content={title} />
         {
             description && (
@@ -85,7 +150,11 @@ const umami = {
             )
         }
         <meta name="twitter:image" content={ogImage} />
-        <script is:inline type="application/ld+json" set:html={structuredData} />
+        <script
+            is:inline
+            type="application/ld+json"
+            set:html={structuredData}
+        />
         <link rel="icon" type="image/svg+xml" href="/rainbow-heart.svg" />
         <link
             rel="sitemap"
@@ -219,7 +288,7 @@ const umami = {
                      sibling — putting it inside this anchor would widen
                      the column and stretch the pencil rule. -->
                 <a
-                    href="/"
+                    href={homePath}
                     class="inline-flex flex-col items-stretch leading-none isolate"
                 >
                     <h1 class="text-[2.5em] leading-none relative z-10">
@@ -233,13 +302,14 @@ const umami = {
                     print → solve → sharpen → repeat
                 </p>
             </div>
-            <nav class="text-sm">
+            <nav class="text-sm flex items-center gap-1 md:gap-3">
                 <a
-                    href="/about/"
+                    href={aboutPath}
                     class="text-muted-foreground hover:text-foreground transition-colors"
                 >
-                    About
+                    {ui.nav.about}
                 </a>
+                <LanguageSelector locale={locale} homeOnly={!indexable} />
             </nav>
         </Stippled>
         <main class="flex-1">
@@ -250,11 +320,13 @@ const umami = {
             <div class="px-6 py-3">
                 <span class="font-semibold">Pencil Ready</span>
                 <span class="mx-2">—</span>
-                made with <InlineIcon svg={heartSvgRaw} /> in Oslo
+                {ui.footer.madeWith}
+                <InlineIcon svg={heartSvgRaw} />
+                {ui.footer.inOslo}
                 <span class="mx-2">—</span>
-                worksheets licensed
+                {ui.footer.licensed}
                 <a
-                    href="/about/#using-the-worksheets"
+                    href={`${aboutPath}#using-the-worksheets`}
                     class="hover:text-foreground transition-colors"
                 >
                     CC BY 4.0

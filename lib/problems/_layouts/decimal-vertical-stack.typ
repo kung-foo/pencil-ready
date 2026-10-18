@@ -20,6 +20,8 @@
 //   decimal-places: array of dp counts, one per number in `data` (operands
 //          and answer). e.g. (2, 2, 2) for 1.23 + 4.56 = 5.79;
 //          (1, 0, 1) for 2.5 × 3 = 7.5.
+//   decimal-sep: decimal separator glyph. "." (default) or "," for
+//          locales that write a decimal comma.
 
 #import "/lib/problems/shared.typ": problem-font, operator-font, problem-text-size, problem-tracking, problem-features, problem-line-height
 
@@ -27,6 +29,7 @@
   let operator = opts.at("operator")
   let width = opts.at("width", default: 3.5em)
   let dp-list = opts.at("decimal-places", default: (0,) * data.len())
+  let decimal-sep = opts.at("decimal-sep", default: ".")
   // Optional answer-font / answer-color: matches the vertical-stack
   // primitive so homepage thumbs can pass `..thumb-answer-style` and
   // get the handwriting + graphite-pencil look on the filled answer.
@@ -52,7 +55,7 @@
         s = "0" + s
       }
       let pivot = s.clusters().len() - dp
-      s.slice(0, pivot) + "." + s.slice(pivot)
+      s.slice(0, pivot) + decimal-sep + s.slice(pivot)
     }
   }
 

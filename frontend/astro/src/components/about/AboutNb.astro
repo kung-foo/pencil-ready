@@ -1,0 +1,129 @@
+---
+// Norwegian Bokmål body of the About page. Drafted, pending native
+// review — see TRANSLATION-REVIEW.md. Same sections and ids as
+// AboutEn.astro so the page template's in-page nav works for both.
+import { t } from "@/i18n";
+
+const s = t("no").about.sections;
+---
+
+<section id="why-this-exists" class="space-y-4 scroll-mt-8">
+    <h2 class="text-xl font-semibold">{s.why}</h2>
+    <p>
+        Pencil Ready begynte som et verktøy for én femteklassing i Oslo som
+        skulle lære lang divisjon. Faren hennes — en programvareutvikler —
+        løftet et øyenbryn over moderne matteundervisning som lente seg tungt på
+        skjermer og KI. Selv lærte han matte steg for steg, ferdighet for
+        ferdighet, med mye repetisjon. Han ville gi datteren den samme øvingen,
+        og lette etter mattearkgeneratorer på nettet. De fleste var fulle av
+        reklame, krevde innlogging eller hadde strenge bruksgrenser. Ingen av
+        dem var laget for det som virket som et tydelig og verdig mål:
+    </p>
+    <p>Gjøre matteøving enkelt og tilgjengelig for alle.</p>
+    <p>
+        Pencil Ready er svaret: én side som lager en ryddig PDF klar til
+        utskrift, uten reklame, uten innlogging og uten bruksgrenser.
+    </p>
+    <p>
+        En far som er glad i matte, laget altså det han trengte for å hjelpe
+        barnet sitt med grunnleggende ferdigheter — og for å hjelpe andre
+        foreldre som trenger en matteressurs på nettet som bare virker.
+    </p>
+</section>
+
+<section id="using-the-worksheets" class="space-y-4 scroll-mt-8">
+    <h2 class="text-xl font-semibold">{s.using}</h2>
+    <p>
+        PDF-ene du laster ned fra Pencil Ready, er utgitt under <a
+            href="https://creativecommons.org/licenses/by/4.0/deed.no"
+            class="underline underline-offset-2 hover:text-primary"
+            rel="license noopener">Creative Commons BY 4.0</a
+        >. Kort fortalt:
+    </p>
+    <ul class="list-disc pl-6 space-y-2">
+        <li>
+            <strong>Skriv ut så mange du trenger.</strong> Et klassesett, en bunke
+            til personalrommet, ett ark til hver elev på skolen — alt er greit.
+        </li>
+        <li>
+            <strong>Del dem.</strong> Legg dem ut på klassesiden, i Teams eller Google
+            Classroom, gi dem til en kollega eller send dem til en forelder.
+        </li>
+        <li>
+            <strong>Endre dem.</strong> Stryk oppgaver, skriv notater i margen, skann
+            og merk opp. Når du har skrevet ut et ark, er det ditt å gjøre hva du
+            vil med.
+        </li>
+        <li>
+            <strong>Bruk dem i jobben.</strong> Privatlærere, leksehjelp, SFO, betalte
+            kurs og trykte arbeidsbøker — ja, også kommersiell bruk.
+        </li>
+    </ul>
+    <p>
+        Det eneste lisensen ber om: Hvis du <em>publiserer arkene på nytt</em>
+        — på en nettside, i en arbeidsbok eller som del av et undervisningsopplegg
+        — må du kreditere Pencil Ready og lenke til <a
+            href="https://pencilready.com"
+            class="underline underline-offset-2 hover:text-primary"
+            >pencilready.com</a
+        >. Til vanlig bruk i klasserommet — skriv ut, del ut, kast i
+        papirgjenvinningen — er det ikke noe mer å tenke på.
+    </p>
+</section>
+
+<section id="whats-inside" class="space-y-4 scroll-mt-8">
+    <h2 class="text-xl font-semibold">{s.inside}</h2>
+    <p>
+        Hvert ark lages på serveren av et Rust-program som sender en nøye
+        tilpasset beskrivelse til <a
+            href="https://typst.app"
+            class="underline underline-offset-2 hover:text-primary">Typst</a
+        >, et moderne system for typografi. Typst gjør grovarbeidet med å
+        plassere sifre, regnetegn, divisjonsbuer og brøkstreker i
+        utskriftskvalitet. Resultatet er innebygde skrifter og vektorgrafikk —
+        like skarpt enten du skriver ut på A4 i Oslo eller US Letter i Indiana.
+    </p>
+    <p>
+        Nettsiden du bruker nå, er laget med Astro og en liten React-del for
+        selve oppsettet av arket. Hver arktype har sin egen adresse som lages
+        som ferdig HTML når siden bygges, så søkemotorer (og nettlesere uten
+        JavaScript) fortsatt kan lese siden.
+    </p>
+</section>
+
+<section id="open-source" class="space-y-4 scroll-mt-8">
+    <h2 class="text-xl font-semibold">{s.openSource}</h2>
+    <p>
+        Hele prosjektet — Rust-generatorene, Typst-malene og Astro-nettsiden —
+        ligger på <a
+            href="https://github.com/kung-foo/pencil-ready"
+            class="underline underline-offset-2 hover:text-primary"
+            rel="noopener">github.com/kung-foo/pencil-ready</a
+        >. Kildekoden er utgitt under MIT-lisensen — klon den, kjør den selv,
+        lag din egen versjon, eller <a
+            href="https://github.com/kung-foo/pencil-ready/issues"
+            class="underline underline-offset-2 hover:text-primary"
+            rel="noopener">meld inn en sak</a
+        > hvis du finner en feil eller har et forslag. Pull requests med nye arktyper
+        tas imot med glede.
+    </p>
+</section>
+
+<section id="whats-next" class="space-y-4 scroll-mt-8">
+    <h2 class="text-xl font-semibold">{s.next}</h2>
+    <p>
+        Utvalget av ark vokser når et nytt tema dukker opp i pensum. På lista
+        nå: regning med desimaltall, regnerekkefølge, negative tall, areal og
+        omkrets, og omgjøring mellom måleenheter.
+    </p>
+</section>
+
+<section id="credits" class="space-y-4 scroll-mt-8">
+    <h2 class="text-xl font-semibold">{s.credits}</h2>
+    <p>
+        Laget med Rust, Typst, Astro, React, Tailwind, shadcn/ui og fly.io.
+        Skrifter: Roboto Slab (brødtekst), Fira Mono / Fira Code (sifre), Fira
+        Math (regnetegn), STIX Two Text (variabler). Regnbuehjertet er tegnet av
+        datteren min.
+    </p>
+</section>

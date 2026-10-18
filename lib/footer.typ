@@ -31,6 +31,11 @@
 // The flag needs no nudge: since typst 0.15 the Noto Color Emoji glyph
 // already spans cap height to baseline (the old `baseline: -20%` box now
 // lifts it above the line).
-#let pencil-ready-content = [
-  *Pencil Ready* — made with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) in Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com] — #link("https://creativecommons.org/licenses/by/4.0/")[CC BY 4.0]
+//
+// `made-with` / `in` carry the only locale-dependent words; `document.rs`
+// calls `pencil-ready-footer-content` with the locale's pair, while
+// `pencil-ready-content` stays the English default the stories import.
+#let pencil-ready-footer-content(made-with: "made with", in-word: "in") = [
+  *Pencil Ready* — #made-with #box(height: 1.2em, baseline: 20%, image("/assets/rainbow-heart.svg")) #in-word Oslo, 🇳🇴 — #link("https://pencilready.com")[pencilready.com] — #link("https://creativecommons.org/licenses/by/4.0/")[CC BY 4.0]
 ]
+#let pencil-ready-content = pencil-ready-footer-content()

@@ -51,6 +51,8 @@
 //   pad-left: left padding around the cell — breathing room from
 //     the worksheet-grid cell edge. Default 0.5cm. Pass 0pt for
 //     single-cell thumbnails so the content centers symmetrically.
+//   remainder-prefix: text before the remainder digit. Default "r=";
+//     `document.rs` passes the locale's form (e.g. "rest ").
 //
 // `mode` = "blank" | "worked" | "answer-only". "answer-only" renders
 // just the quotient above the bar and skips the work rows.
@@ -108,7 +110,8 @@
     calc.rem(data.at(0), data.at(1))
   } else { 0 }
   let has-remainder = remainder-val > 0
-  let remainder-str = if has-remainder { "r=" + str(remainder-val) } else { "" }
+  let remainder-prefix = opts.at("remainder-prefix", default: "r=")
+  let remainder-str = if has-remainder { remainder-prefix + str(remainder-val) } else { "" }
   // Smaller font for the `r=N` annotation so it reads as auxiliary
   // info, not part of the main quotient.
   let remainder-size-factor = 0.75
@@ -141,7 +144,7 @@
       // across blank, solved, and answer-only modes — `r=N` just
       // doesn't paint when there's no remainder.
       let r-slot-width = if reserve-remainder {
-        measure(text("r=8", size: problem-text-size * remainder-size-factor)).width + 0.5em
+        measure(text(remainder-prefix + "8", size: problem-text-size * remainder-size-factor)).width + 0.5em
       } else {
         0pt
       }

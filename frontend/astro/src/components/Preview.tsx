@@ -1,5 +1,6 @@
 import type { WorksheetConfig } from "@/lib/api";
 import type { WorksheetState } from "@/lib/useWorksheet";
+import type { IslandStrings } from "@/i18n";
 
 /**
  * Pure renderer — state is owned by the parent (WorksheetPage) so the
@@ -10,9 +11,11 @@ import type { WorksheetState } from "@/lib/useWorksheet";
 export function Preview({
     cfg,
     state,
+    ui,
 }: {
     cfg: WorksheetConfig;
     state: WorksheetState;
+    ui: IslandStrings;
 }) {
     return (
         <div
@@ -33,17 +36,25 @@ export function Preview({
                     aspectRatio: "210 / 297",
                 }}
             >
-                <Body cfg={cfg} state={state} />
+                <Body cfg={cfg} state={state} ui={ui} />
             </div>
         </div>
     );
 }
 
-function Body({ cfg, state }: { cfg: WorksheetConfig; state: WorksheetState }) {
+function Body({
+    cfg,
+    state,
+    ui,
+}: {
+    cfg: WorksheetConfig;
+    state: WorksheetState;
+    ui: IslandStrings;
+}) {
     if (state.status === "loading") {
         return (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                Rendering…
+                {ui.rendering}
             </div>
         );
     }
@@ -55,7 +66,7 @@ function Body({ cfg, state }: { cfg: WorksheetConfig; state: WorksheetState }) {
                         {state.message}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Check back in a moment, or refresh the page.
+                        {ui.errorHint}
                     </p>
                 </div>
             </div>
@@ -71,7 +82,7 @@ function Body({ cfg, state }: { cfg: WorksheetConfig; state: WorksheetState }) {
         return (
             <iframe
                 src={pdfSrc}
-                title="worksheet preview"
+                title={ui.previewTitle}
                 className="w-full h-full border-0"
             />
         );

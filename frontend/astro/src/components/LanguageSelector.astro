@@ -1,0 +1,566 @@
+---
+/*
+ * Header language selector ("Option A": globe button + menu; bottom
+ * sheet on mobile). Every item is a real link to the *same page* in
+ * another locale, so it works without JS and is crawlable.
+ *
+ * Built on the native `popover` attribute rather than an absolutely
+ * positioned dropdown: the header is a `.stippled` surface
+ * (`overflow: hidden`) with a `backdrop-filter`, which would clip a
+ * dropdown and capture a `position: fixed` sheet. A popover renders in
+ * the top layer, outside both. It also brings light dismiss (outside
+ * click, Escape) and a `::backdrop` for the mobile sheet's dim layer.
+ *
+ * Without JS: `popovertarget` still opens and closes the menu, and the
+ * links navigate (no query string carry-over, no cookie). The script
+ * below adds placement under the button, focus management, arrow keys,
+ * close-on-Tab, query-string preservation and the `lang` cookie.
+ *
+ * Renders from `LOCALES`. The >6 (scrolling list + "Suggested" group)
+ * and >10 (filter box) branches are dormant with two locales; `options`
+ * exists so they can be exercised with fake locales.
+ */
+import PencilRule from "./PencilRule.astro";
+import { t } from "@/i18n";
+import { LOCALES, localizePath, localeDef, type Locale } from "@/i18n/locales";
+
+export type SelectorOption = {
+    id: string;
+    bcp47: string;
+    short: string;
+    endonym: string;
+    /** The language's name in the current UI language. */
+    localizedName: string;
+    dir: "ltr" | "rtl";
+    href: string;
+};
+
+interface Props {
+    locale: Locale;
+    /**
+     * Link every item to that locale's home page instead of the current
+     * page — for pages that don't exist per locale (404).
+     */
+    homeOnly?: boolean;
+    /** Override the rendered options (testing the large-list branches). */
+    options?: SelectorOption[];
+}
+
+const { locale, homeOnly = false, options: optionsOverride } = Astro.props;
+const ui = t(locale);
+const current = localeDef(locale);
+
+const pathname = Astro.url.pathname;
+const options: SelectorOption[] =
+    optionsOverride ??
+    LOCALES.map((l) => ({
+        id: l.id,
+        bcp47: l.bcp47,
+        short: l.short,
+        endonym: l.endonym,
+        localizedName: ui.languageNames[l.id],
+        dir: l.dir,
+        href: localizePath(homeOnly ? "/" : pathname, l.id),
+    }));
+
+const isLarge = options.length > 6;
+const hasFilter = options.length > 10;
+
+// Large lists sort by endonym, Latin scripts first, so a reader scanning
+// for their own language finds it in a predictable place.
+const latin = /^\p{Script=Latin}/u;
+const collator = new Intl.Collator(current.bcp47);
+const sorted = isLarge
+    ? [...options].sort(
+          (a, b) =>
+              Number(!latin.test(a.endonym)) - Number(!latin.test(b.endonym)) ||
+              collator.compare(a.endonym, b.endonym),
+      )
+    : options;
+
+const currentOption = options.find((o) => o.id === locale) ?? options[0];
+const menuId = "language-menu";
+---
+
+<div
+    class="language-selector"
+    data-language-selector
+    data-home-only={homeOnly ? "" : undefined}
+>
+    <button
+        type="button"
+        popovertarget={menuId}
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls={menuId}
+        aria-label={ui.selector.buttonLabel}
+        class="inline-flex items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors size-11 md:size-auto md:h-8 md:px-2 cursor-pointer"
+        data-language-button
+    >
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="size-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+        </svg>
+        <span class="text-sm font-medium" aria-hidden="true"
+            >{currentOption.short}</span
+        >
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="hidden md:block size-3.5 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
+            <path d="m6 9 6 6 6-6"></path>
+        </svg>
+    </button>
+
+    <div
+        id={menuId}
+        popover="auto"
+        class="language-menu"
+        aria-label={ui.selector.heading}
+        data-language-menu
+    >
+        <PencilRule class="h-0.5 block" />
+        <div class="flex items-center justify-between px-4 pt-3 pb-1">
+            <p
+                class="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground"
+                id={`${menuId}-heading`}
+            >
+                {ui.selector.heading}
+            </p>
+            <button
+                type="button"
+                popovertarget={menuId}
+                popovertargetaction="hide"
+                class="md:hidden inline-flex items-center justify-center size-11 -mr-3 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label={ui.selector.close}
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="size-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        {
+            hasFilter && (
+                <div class="px-3 pb-2">
+                    <input
+                        type="search"
+                        class="w-full h-9 rounded-md border border-input bg-background px-2 text-sm"
+                        placeholder={ui.selector.filter}
+                        aria-label={ui.selector.filter}
+                        data-language-filter
+                    />
+                    <p
+                        class="hidden px-1 pt-2 text-sm text-muted-foreground"
+                        data-language-empty
+                    >
+                        {ui.selector.noMatches}
+                    </p>
+                </div>
+            )
+        }
+
+        <div
+            class:list={[
+                "pb-2",
+                isLarge && "max-h-[min(60vh,22rem)] overflow-y-auto",
+            ]}
+        >
+            {
+                isLarge && (
+                    <div hidden data-language-suggested>
+                        <p class="px-4 pt-1 pb-1 text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                            {ui.selector.suggested}
+                        </p>
+                        <ul role="menu" aria-label={ui.selector.suggested} />
+                        <p class="px-4 pt-2 pb-1 text-[0.7rem] uppercase tracking-wider text-muted-foreground">
+                            {ui.selector.all}
+                        </p>
+                    </div>
+                )
+            }
+            <ul
+                role="menu"
+                aria-labelledby={`${menuId}-heading`}
+                data-language-list
+            >
+                {
+                    sorted.map((o) => {
+                        const active = o.id === currentOption.id;
+                        return (
+                            <li role="none">
+                                <a
+                                    role="menuitem"
+                                    href={o.href}
+                                    hreflang={o.bcp47}
+                                    lang={o.bcp47}
+                                    dir={o.dir}
+                                    aria-current={active ? "true" : undefined}
+                                    data-astro-prefetch="false"
+                                    data-lang-option={o.id}
+                                    data-lang-search={`${o.endonym} ${o.localizedName} ${o.id} ${o.bcp47}`}
+                                    class:list={[
+                                        "language-option flex items-center gap-3 px-4 min-h-14 md:min-h-11 text-sm text-foreground hover:bg-muted focus-visible:bg-muted outline-none",
+                                        active && "bg-muted",
+                                    ]}
+                                >
+                                    <span
+                                        class:list={[
+                                            "md:hidden size-4 shrink-0 rounded-full border-2",
+                                            active
+                                                ? "border-primary bg-primary shadow-[inset_0_0_0_2px_var(--color-card)]"
+                                                : "border-muted-foreground/50",
+                                        ]}
+                                        aria-hidden="true"
+                                    />
+                                    <span class="flex-1 min-w-0">
+                                        <span class="block font-medium">
+                                            {o.endonym}
+                                        </span>
+                                        {o.localizedName !== o.endonym && (
+                                            <span
+                                                class="block text-xs text-muted-foreground"
+                                                lang={current.bcp47}
+                                                dir="auto"
+                                            >
+                                                {o.localizedName}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {active && (
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="hidden md:block size-4 shrink-0 text-primary"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2.5"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M20 6 9 17l-5-5" />
+                                        </svg>
+                                    )}
+                                </a>
+                            </li>
+                        );
+                    })
+                }
+            </ul>
+        </div>
+        <p class="md:hidden px-4 pb-4 pt-1 text-xs text-muted-foreground">
+            {ui.selector.remember}
+        </p>
+    </div>
+</div>
+
+<style>
+    /* Popovers get UA styles (centered, border, padding); reset them and
+       place the menu explicitly. Mobile: bottom sheet. Desktop: card
+       under the button — `top`/`left` come from the script; without JS
+       it falls back to the top-right corner. */
+    .language-menu {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        inset: auto 0 0 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+        background: var(--color-card);
+        color: var(--color-card-foreground);
+        border-radius: 0.75rem 0.75rem 0 0;
+        box-shadow: 0 -8px 24px
+            color-mix(in srgb, var(--color-foreground) 18%, transparent);
+    }
+    .language-menu > :global(svg:first-child) {
+        border-radius: 0.75rem 0.75rem 0 0;
+    }
+    .language-menu::backdrop {
+        background: color-mix(
+            in srgb,
+            var(--color-foreground) 35%,
+            transparent
+        );
+    }
+    @media (min-width: 48rem) {
+        .language-menu {
+            inset: var(--lang-menu-top, 4rem) auto auto
+                var(--lang-menu-left, calc(100vw - 232px - 1rem));
+            width: 232px;
+            max-height: none;
+            border-radius: 0.5rem;
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+            box-shadow:
+                0 4px 16px
+                    color-mix(in srgb, var(--color-foreground) 12%, transparent),
+                0 1px 3px
+                    color-mix(in srgb, var(--color-foreground) 8%, transparent);
+        }
+        .language-menu > :global(svg:first-child) {
+            border-radius: 0;
+        }
+        .language-menu::backdrop {
+            background: transparent;
+        }
+    }
+</style>
+
+<script>
+    import {
+        LANG_COOKIE,
+        isLocale,
+        localeFromPath,
+        localizePath,
+    } from "@/i18n/locales";
+
+    // Set the preference cookie on an explicit choice, before the
+    // navigation starts. Registered on `window` in the capture phase so
+    // it runs ahead of both ClientRouter's delegated click handler and
+    // the iOS Chrome/Edge workaround in Layout.astro (a `document`
+    // capture listener that stops propagation and navigates itself).
+    // Once per page lifetime: `window` survives ClientRouter swaps.
+    const w = window as Window & { __langCookieBound?: boolean };
+    if (!w.__langCookieBound) {
+        w.__langCookieBound = true;
+        window.addEventListener(
+            "click",
+            (e) => {
+                const target = e.target as Element | null;
+                const option = target?.closest?.<HTMLAnchorElement>(
+                    "a[data-lang-option]",
+                );
+                const id = option?.dataset.langOption;
+                if (!id || !isLocale(id)) return;
+                const secure = location.protocol === "https:" ? "; Secure" : "";
+                document.cookie = `${LANG_COOKIE}=${id}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+                // Only actual switches; re-picking the current language
+                // just refreshes the cookie.
+                const from = localeFromPath(location.pathname);
+                if (from !== id) {
+                    window.umami?.track("language-switch", { from, to: id });
+                }
+            },
+            true,
+        );
+    }
+
+    function setup() {
+        const root = document.querySelector<HTMLElement>(
+            "[data-language-selector]",
+        );
+        if (!root || root.dataset.bound) return;
+        root.dataset.bound = "1";
+
+        const button = root.querySelector<HTMLButtonElement>(
+            "[data-language-button]",
+        )!;
+        const menu = root.querySelector<HTMLElement>("[data-language-menu]")!;
+        const filter = root.querySelector<HTMLInputElement>(
+            "[data-language-filter]",
+        );
+        const empty = root.querySelector<HTMLElement>("[data-language-empty]");
+        const homeOnly = root.hasAttribute("data-home-only");
+        if (typeof menu.showPopover !== "function") return;
+
+        const items = () =>
+            [
+                ...menu.querySelectorAll<HTMLAnchorElement>(
+                    "a[data-lang-option]",
+                ),
+            ].filter((a) => a.offsetParent !== null);
+
+        // The worksheet configurator keeps its state in the query
+        // string and rewrites it with replaceState, so build hrefs from
+        // the live location at open time rather than at render time.
+        const refreshHrefs = () => {
+            if (homeOnly) return;
+            for (const a of menu.querySelectorAll<HTMLAnchorElement>(
+                "a[data-lang-option]",
+            )) {
+                const id = a.dataset.langOption;
+                if (!id || !isLocale(id)) continue;
+                a.href = `${localizePath(location.pathname, id)}${location.search}${location.hash}`;
+            }
+        };
+
+        // "Suggested": current locale plus any browser-preferred ones.
+        // Only rendered for long lists (see `isLarge` above).
+        const suggested = menu.querySelector<HTMLElement>(
+            "[data-language-suggested]",
+        );
+        if (suggested) {
+            const list = suggested.querySelector("ul")!;
+            const prefs = (navigator.languages ?? []).map((l) =>
+                l.toLowerCase(),
+            );
+            const all = [
+                ...menu.querySelectorAll<HTMLAnchorElement>(
+                    "[data-language-list] a[data-lang-option]",
+                ),
+            ];
+            const picks = all.filter((a) => {
+                if (a.getAttribute("aria-current") === "true") return true;
+                const tag = (a.hreflang || "").toLowerCase();
+                return prefs.some(
+                    (p) => p === tag || p.split("-")[0] === tag.split("-")[0],
+                );
+            });
+            const seen = new Set<string>();
+            for (const a of picks) {
+                const id = a.dataset.langOption!;
+                if (seen.has(id)) continue;
+                seen.add(id);
+                list.appendChild(a.closest("li")!.cloneNode(true));
+            }
+            suggested.hidden = seen.size === 0;
+        }
+
+        const place = () => {
+            const r = button.getBoundingClientRect();
+            const width = 232;
+            const left = Math.max(
+                8,
+                Math.min(r.right - width, window.innerWidth - width - 8),
+            );
+            menu.style.setProperty("--lang-menu-top", `${r.bottom + 6}px`);
+            menu.style.setProperty("--lang-menu-left", `${left}px`);
+        };
+
+        menu.addEventListener("beforetoggle", (e) => {
+            if ((e as ToggleEvent).newState === "open") {
+                refreshHrefs();
+                place();
+            }
+        });
+        menu.addEventListener("toggle", (e) => {
+            const open = (e as ToggleEvent).newState === "open";
+            button.setAttribute("aria-expanded", String(open));
+            if (open) {
+                const active =
+                    items().find(
+                        (a) => a.getAttribute("aria-current") === "true",
+                    ) ?? items()[0];
+                (filter ?? active)?.focus();
+            } else if (filter) {
+                filter.value = "";
+                applyFilter();
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (menu.matches(":popover-open")) place();
+        });
+
+        // Arrow keys move between items; Escape closes and returns focus
+        // to the button (the browser's light dismiss does the closing,
+        // this makes the focus return explicit); Tab out closes.
+        menu.addEventListener("keydown", (e) => {
+            const list = items();
+            const i = list.indexOf(document.activeElement as HTMLAnchorElement);
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                const step = e.key === "ArrowDown" ? 1 : -1;
+                const next =
+                    i === -1
+                        ? step === 1
+                            ? 0
+                            : list.length - 1
+                        : (i + step + list.length) % list.length;
+                list[next]?.focus();
+            } else if (e.key === "Home" || e.key === "End") {
+                e.preventDefault();
+                list[e.key === "Home" ? 0 : list.length - 1]?.focus();
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                menu.hidePopover();
+                button.focus();
+            }
+        });
+        menu.addEventListener("focusout", (e) => {
+            const next = (e as FocusEvent).relatedTarget as Node | null;
+            if (next && !menu.contains(next) && next !== button) {
+                menu.hidePopover();
+            }
+        });
+
+        // Filter (long lists only): endonym, localized name and codes,
+        // diacritic- and case-insensitive.
+        const fold = (s: string) =>
+            s
+                .normalize("NFD")
+                .replace(/\p{Diacritic}/gu, "")
+                .toLowerCase();
+        function applyFilter() {
+            if (!filter) return;
+            const q = fold(filter.value.trim());
+            let shown = 0;
+            for (const a of menu.querySelectorAll<HTMLAnchorElement>(
+                "a[data-lang-option]",
+            )) {
+                const hit = !q || fold(a.dataset.langSearch ?? "").includes(q);
+                a.closest("li")!.hidden = !hit;
+                if (hit) shown++;
+            }
+            if (suggested)
+                suggested.hidden = !!q || !suggested.querySelector("li");
+            if (empty) empty.hidden = shown > 0;
+        }
+        filter?.addEventListener("input", applyFilter);
+        filter?.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                items()[0]?.focus();
+            }
+        });
+    }
+
+    // Re-bind after every ClientRouter swap (new header DOM), and close
+    // the menu before a swap so no stale top-layer element lingers.
+    document.addEventListener("astro:page-load", setup);
+    document.addEventListener("astro:before-swap", () => {
+        const menu = document.querySelector<HTMLElement>(
+            "[data-language-menu]",
+        );
+        if (menu?.matches(":popover-open")) menu.hidePopover();
+    });
+    document.addEventListener("astro:after-swap", () => {
+        const menu = document.querySelector<HTMLElement>(
+            "[data-language-menu]",
+        );
+        if (menu?.matches(":popover-open")) menu.hidePopover();
+    });
+    if (document.readyState !== "loading") setup();
+</script>
