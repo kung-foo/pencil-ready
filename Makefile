@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs site-size
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs site-size indexnow
 
 build:
 	cargo build
@@ -85,6 +85,11 @@ site-size: frontend-build
 # serving the bundle + API on :8080 — same shape the Docker image uses.
 serve: frontend-build server-release
 	./target/release/pencil-ready-server --port 8080
+
+# Ping IndexNow (Bing et al.) with every URL in the live sitemap. Run
+# after `flyctl deploy`; `make indexnow ARGS=--dry-run` lists the URLs.
+indexnow:
+	node frontend/astro/scripts/indexnow.mjs $(ARGS)
 
 # --- Supply-chain: regenerate Cargo.lock with a 14-day cooldown on new
 # crate versions. Mirrors the `minimumReleaseAge` pnpm policy — buys
