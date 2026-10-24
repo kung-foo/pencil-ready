@@ -83,5 +83,6 @@ pencilready-logo-spec.md             — brand mark / pencil underline spec
   is the one hand-kept copy),
   a `src/i18n/ui/<bcp47>.ts` dictionary, `content/worksheets/<bcp47>/`,
   and — for worksheet copy — a `LocaleStrings` table plus titles and
-  instructions in `crates/core`. "Pencil Ready" and the motto stay
-  English.
+  instructions in `crates/core`, plus the language name in the
+  "What's inside" sentence of every `components/about/About*.astro`.
+  "Pencil Ready" and the motto stay English.
