@@ -2032,7 +2032,6 @@ name = "pencil-ready-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "rand 0.8.8",
  "serde",
  "typst",
  "typst-layout",
@@ -2383,8 +2382,6 @@ version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e058c7de0b26af77780c769414d6257830bb240f3c38477dbc2c16e5f54d6d4c"
 dependencies = [
- "libc",
- "rand_chacha",
  "rand_core 0.6.4",
 ]
 
@@ -2414,9 +2411,6 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
-dependencies = [
- "getrandom 0.2.17",
-]
 
 [[package]]
 name = "rand_core"

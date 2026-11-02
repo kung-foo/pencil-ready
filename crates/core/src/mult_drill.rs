@@ -1,5 +1,6 @@
 //! Multiplication drill — horizontal times-table recall.
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, DigitRange, Sheet, WorksheetParams, WorksheetType};
 
@@ -40,14 +41,9 @@ fn generate_problems(
     multiplicand_ranges: &[DigitRange],
     multiplier_range: DigitRange,
 ) -> Vec<Vec<u32>> {
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-    use rand::SeedableRng;
+    use crate::rng::SliceShuffle;
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Expand multiplicand ranges into a flat set of values.
     let multiplicands: Vec<u32> = multiplicand_ranges

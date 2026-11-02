@@ -3,6 +3,7 @@
 //! The base fraction is always in lowest terms. A scale factor k turns it
 //! into an equivalent fraction. One of the four slots is left blank.
 
+use crate::rng::Rng;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
 pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
@@ -34,16 +35,9 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         } => (denominators, *scale, missing, *proper_only),
         _ => unreachable!(),
     };
+    use crate::rng::SliceShuffle;
 
-    use rand::SeedableRng;
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-    use rand::Rng;
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Enumerate all (base_num, base_den, scale_k) triples.
     // Base fraction is always in lowest terms (gcd == 1).

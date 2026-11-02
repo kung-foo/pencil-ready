@@ -23,6 +23,7 @@
 //! so the typst component never has to know which family a problem
 //! belongs to to render the final row.
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -79,15 +80,9 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         } => (*b_range, *squares, *roots),
         _ => unreachable!(),
     };
+    use crate::rng::SliceShuffle;
 
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-    use rand::{Rng, SeedableRng};
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Enumerate (inner, b) pairs for each enabled family. For each pair
     // pick a random form within that family; the form-2 minus variant

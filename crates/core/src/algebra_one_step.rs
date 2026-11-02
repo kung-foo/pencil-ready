@@ -18,6 +18,7 @@
 //!   - subtraction skips triples with `x < b` (would make `c < 0`)
 //!   - division iterates `x` in multiples of `a` (clean integer `c`)
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -74,15 +75,9 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         ),
         _ => unreachable!(),
     };
+    use crate::rng::SliceShuffle;
 
-    use rand::SeedableRng;
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Enumerate per-op pools separately so we can sample evenly across
     // enabled ops. The add pool grows much faster than mul/div as ranges

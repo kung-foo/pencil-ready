@@ -21,6 +21,7 @@ mod mean;
 mod mult_drill;
 mod multiply;
 mod order_of_ops;
+mod rng;
 mod subtract;
 
 mod document;
@@ -86,7 +87,7 @@ impl DigitRange {
 
     /// Pick a random digit count in the range, then generate a random
     /// number with that many digits.
-    pub fn random(&self, rng: &mut impl rand::Rng) -> u32 {
+    pub fn random(&self, rng: &mut crate::rng::Rng) -> u32 {
         let d = rng.gen_range(self.min..=self.max);
         let lo = 10u32.pow(d - 1);
         let hi = 10u32.pow(d) - 1;
@@ -1735,9 +1736,8 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
 pub(crate) fn pad_with_duplicates<T: Clone>(
     problems: &mut Vec<T>,
     target: usize,
-    rng: &mut rand::rngs::SmallRng,
+    rng: &mut crate::rng::Rng,
 ) {
-    use rand::Rng;
     if problems.is_empty() || problems.len() >= target {
         return;
     }

@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs site-size indexnow
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve snapshots-check snapshots-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs site-size indexnow
 
 build:
 	cargo build
@@ -37,6 +37,15 @@ stories-check:
 
 stories-approve:
 	cargo run -p pencil-ready-stories -- approve
+
+# --- Problem snapshots (seeded output must stay stable) ---
+
+snapshots-check:
+	cargo test -p pencil-ready-server problem_snapshots
+
+# Rewrite crates/server/snapshots/problems.txt. Review the diff first.
+snapshots-approve:
+	UPDATE_SNAPSHOTS=1 cargo test -p pencil-ready-server problem_snapshots
 
 # --- Homepage thumbnails ---
 #

@@ -24,6 +24,7 @@
 //! free trick that doesn't exercise precedence, so the generator
 //! excludes any problem that would print a `÷ 1` step.
 
+use crate::rng::Rng;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType, pad_with_duplicates};
 
 /// Per-operand range used when sampling. Operands are single-digit so
@@ -109,14 +110,9 @@ fn generate_problems(
     operations: u32,
     use_parens: bool,
 ) -> Vec<Vec<u32>> {
-    use rand::SeedableRng;
-    use rand::rngs::SmallRng;
     use std::collections::HashSet;
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     let target = params.total_problems() as usize;
     if target == 0 {
@@ -142,21 +138,19 @@ fn generate_problems(
     problems
 }
 
-fn sample_one(rng: &mut rand::rngs::SmallRng, operations: u32, use_parens: bool) -> Option<Vec<u32>> {
-    use rand::Rng;
-
-    let pick_op = |rng: &mut rand::rngs::SmallRng| -> u32 { rng.gen_range(0..4) };
-    let pick_val = |rng: &mut rand::rngs::SmallRng| -> i64 { rng.gen_range(OPERAND_MIN..=OPERAND_MAX) };
+fn sample_one(rng: &mut Rng, operations: u32, use_parens: bool) -> Option<Vec<u32>> {
+    let pick_op = |rng: &mut Rng| -> u32 { rng.gen_range(0..4) };
+    let pick_val = |rng: &mut Rng| -> i64 { rng.gen_range(OPERAND_MIN..=OPERAND_MAX) };
 
     if use_parens {
         // Two parens shapes:
         //   form 2: `(a + b) × c` — parens wrap the additive LHS
         //   form 3: `a × (b + c)` — parens wrap the additive RHS
         // Coin flip per problem so a page mixes both layouts.
-        if rng.r#gen::<bool>() {
+        if rng.gen_bool(0.5) {
             // Form 2: `(a op1 b) op2 c`. op1 additive, op2 multiplicative.
-            let op1 = if rng.r#gen::<bool>() { OP_PLUS } else { OP_MINUS };
-            let op2 = if rng.r#gen::<bool>() { OP_TIMES } else { OP_DIVIDE };
+            let op1 = if rng.gen_bool(0.5) { OP_PLUS } else { OP_MINUS };
+            let op2 = if rng.gen_bool(0.5) { OP_TIMES } else { OP_DIVIDE };
             let a = pick_val(rng);
             let b = pick_val(rng);
             let c = pick_val(rng);
@@ -182,8 +176,8 @@ fn sample_one(rng: &mut rand::rngs::SmallRng, operations: u32, use_parens: bool)
             ])
         } else {
             // Form 3: `a op1 (b op2 c)`. op1 multiplicative, op2 additive.
-            let op1 = if rng.r#gen::<bool>() { OP_TIMES } else { OP_DIVIDE };
-            let op2 = if rng.r#gen::<bool>() { OP_PLUS } else { OP_MINUS };
+            let op1 = if rng.gen_bool(0.5) { OP_TIMES } else { OP_DIVIDE };
+            let op2 = if rng.gen_bool(0.5) { OP_PLUS } else { OP_MINUS };
             let a = pick_val(rng);
             let b = pick_val(rng);
             let c = pick_val(rng);
