@@ -76,32 +76,31 @@ struct AppState {
 #[derive(Debug, Default, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct SharedParams {
-    /// Output format (default: pdf).
+    /// Output format. Default `pdf`.
     #[serde(default)]
     format: Option<OutputFormat>,
-    /// Seed for reproducible output.
+    /// Seed for reproducible output. Omit for a random worksheet.
     #[serde(default)]
     seed: Option<u64>,
-    /// Number of problems on the page (per-type default).
+    /// Number of problems. Default depends on the worksheet type.
     #[serde(default)]
     problems: Option<u32>,
-    /// Columns in the problem grid (per-type default).
+    /// Columns in the problem grid. Default depends on the worksheet type.
     #[serde(default)]
     cols: Option<u32>,
-    /// Paper size. Accepts "a4" (default) or "us-letter" (alias: "letter").
+    /// Paper size. Default `a4`; `letter` is accepted as an alias for
+    /// `us-letter`.
     #[serde(default)]
-    #[param(value_type = String, example = "a4")]
     paper: Option<Paper>,
-    /// Worksheet locale: "us" (default) or "no" (Norwegian Bokmål copy,
-    /// decimal comma, · and : symbols).
+    /// Printed language and number notation. Default `us`.
     #[serde(default)]
     locale: Option<Locale>,
-    /// Division layout: "bracket" (`4)852`, vertical simple division) or
-    /// "equation" (`852 : 4 = 213`, working below). Defaults to the
-    /// locale's style. Applies to long-divide, simple-divide and mean.
+    /// Division layout for long-divide, simple-divide and mean. Default
+    /// follows `locale`: `bracket` for `us`, `equation` for `no`.
     #[serde(default)]
     division: Option<DivisionStyle>,
-    /// Override the operator symbol (typst expression, e.g. "sym.colon").
+    /// Override the operator symbol, as a typst symbol expression
+    /// (e.g. `sym.colon`). Default follows `locale`.
     #[serde(default)]
     symbol: Option<String>,
     /// Render the first problem as a worked example.
@@ -116,16 +115,15 @@ struct SharedParams {
     /// Pre-fill the student name on the header in a handwriting font.
     #[serde(default)]
     student_name: Option<String>,
-    /// Render a bottom-right QR code on every page. Off by default —
-    /// callers that want one set `qr=true` (or `qr=1`) and supply a
-    /// validated `share_url`. Without `share_url`, `qr=true` is a no-op.
+    /// Print a QR code encoding `share_url` in the bottom-right of every
+    /// page. Default false; has no effect without a valid `share_url`.
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     qr: Option<bool>,
-    /// URL the QR (when `qr=true`) encodes. Only allowed-origin URLs
-    /// are honoured (see [`SHARE_URL_ALLOWED_PREFIXES`]); anything else
-    /// is silently dropped — a worksheet PDF lives forever once
-    /// printed, so an arbitrary `share_url` would let any caller mint a
-    /// scannable redirect to anywhere.
+    /// URL encoded by the QR code when `qr=true`. Must start with
+    /// `https://pencilready.com/`; other URLs are silently ignored.
+    // Allow-list rationale: a printed worksheet lives forever, so an
+    // arbitrary `share_url` would let any caller mint a scannable
+    // redirect to anywhere. See `SHARE_URL_ALLOWED_PREFIXES`.
     #[serde(default)]
     share_url: Option<String>,
 }
@@ -270,13 +268,14 @@ fn digits_or(opt: Option<String>, default: &[u32]) -> Result<Vec<DigitRange>> {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct AddSpecific {
-    /// Comma-separated digit counts per operand (e.g. "2,2" or "2-4,2-4").
+    /// Digit count (range) per operand, comma-separated. Default `2,2`.
     #[serde(default)]
     #[param(value_type = String, example = "2,2")]
     digits: Option<String>,
+    /// Carrying constraint. Default `any`.
     #[serde(default)]
     carry: Option<CarryMode>,
-    /// Binary mode: render in base 2.
+    /// Render in base 2; `digits` become bit counts. Default false.
     #[serde(default)]
     binary: Option<bool>,
 }
@@ -298,9 +297,11 @@ impl AddSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct SubtractSpecific {
+    /// Digit count (range) per operand, comma-separated. Default `2,2`.
     #[serde(default)]
     #[param(value_type = String, example = "2,2")]
     digits: Option<String>,
+    /// Borrowing constraint. Default `any`.
     #[serde(default)]
     borrow: Option<BorrowMode>,
 }
@@ -321,6 +322,7 @@ impl SubtractSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct MultiplySpecific {
+    /// Digit count (range) per operand, comma-separated. Default `2,2`.
     #[serde(default)]
     #[param(value_type = String, example = "2,2")]
     digits: Option<String>,
@@ -341,7 +343,7 @@ impl MultiplySpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct SimpleDivideSpecific {
-    /// Max quotient (answer). 2-12.
+    /// Largest quotient (the answer), 2-12. Default 10.
     #[serde(default)]
     max_quotient: Option<u32>,
 }
@@ -369,10 +371,11 @@ impl SimpleDivideSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct LongDivideSpecific {
-    /// Dividend digit count. "N" or "N-M", e.g. "3" or "2-4".
+    /// Dividend digit count (range). Default `3`.
     #[serde(default)]
     #[param(value_type = String, example = "3")]
     digits: Option<String>,
+    /// Allow problems with a remainder. Default false.
     #[serde(default)]
     remainder: Option<bool>,
 }
@@ -403,15 +406,16 @@ impl LongDivideSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct MultDrillSpecific {
-    /// Which tables to drill, comma-separated. e.g. "2,3" or "1-10".
+    /// Tables to drill: ranges, comma-separated (e.g. `2,3` or `1-10`).
+    /// Default `1-10`.
     #[serde(default)]
     #[param(value_type = String, example = "1-10")]
     multiplicand: Option<String>,
-    /// Range of the other factor.
+    /// Range of the other factor. Default `1-10`.
     #[serde(default)]
     #[param(value_type = String, example = "1-10")]
     multiplier: Option<String>,
-    /// Problem count (0 = all problems from the enumerated tables).
+    /// Problem count; 0 = every fact in the chosen tables. Default 0.
     #[serde(default)]
     count: Option<u32>,
 }
@@ -444,12 +448,15 @@ impl MultDrillSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct DivDrillSpecific {
+    /// Divisors to drill: ranges, comma-separated. Default `2-9`.
     #[serde(default)]
     #[param(value_type = String, example = "2-9")]
     divisor: Option<String>,
+    /// Quotient range. Default `2-9`.
     #[serde(default)]
     #[param(value_type = String, example = "2-9")]
     max_quotient: Option<String>,
+    /// Problem count; 0 = every fact in range. Default 0.
     #[serde(default)]
     count: Option<u32>,
 }
@@ -482,14 +489,17 @@ impl DivDrillSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct FractionMultSpecific {
-    /// Allowed denominators, comma-separated.
+    /// Allowed denominators, comma-separated. Default `2,3,4,5,10`.
     #[serde(default)]
     #[param(value_type = String, example = "2,3,4,5,10")]
     denominators: Option<String>,
+    /// Smallest whole number. Default 2.
     #[serde(default)]
     min_whole: Option<u32>,
+    /// Largest whole number. Default 20.
     #[serde(default)]
     max_whole: Option<u32>,
+    /// Numerator is always 1. Default false.
     #[serde(default)]
     unit_only: Option<bool>,
 }
@@ -517,18 +527,20 @@ impl FractionMultSpecific {
 #[into_params(parameter_in = Query)]
 struct FractionSimplifySpecific {
     /// Allowed denominators of the printed fraction, comma-separated.
+    /// Default `2,3,4,5,6,8,10,12`.
     #[serde(default)]
     #[param(value_type = String, example = "2,3,4,5,6,8,10,12")]
     denominators: Option<String>,
-    /// Maximum numerator of the printed fraction.
+    /// Largest numerator of the printed fraction. Default 20.
     #[serde(default)]
     max_numerator: Option<u32>,
-    /// When true, only proper fractions (num < den) appear. Polarity
-    /// is flipped so the default (mixed proper + improper) is the
-    /// false case and round-trips cleanly through the URL encoder.
+    /// Only proper fractions (numerator < denominator), so no mixed-number
+    /// answers. Default false.
+    // Polarity is flipped so the default (mixed proper + improper) is
+    // the false case and round-trips cleanly through the URL encoder.
     #[serde(default)]
     proper_only: Option<bool>,
-    /// Include problems whose answer is a pure whole number.
+    /// Include problems whose answer is a whole number. Default false.
     #[serde(default)]
     include_whole: Option<bool>,
 }
@@ -555,16 +567,17 @@ impl FractionSimplifySpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct AlgebraSquareRootSpecific {
+    /// Constant range. Default `1-50`.
     #[serde(default)]
     #[param(value_type = String, example = "1-30")]
     b_range: Option<String>,
-    /// Variable glyph (single character).
+    /// Variable letter. Default `x`.
     #[serde(default)]
     variable: Option<String>,
-    /// Include `x² ± b = c` problems.
+    /// Include `x² ± b = c` problems. Default false.
     #[serde(default)]
     squares: Option<bool>,
-    /// Include `√x ± b = c` problems.
+    /// Include `√x ± b = c` problems. Default false.
     #[serde(default)]
     roots: Option<bool>,
 }
@@ -594,21 +607,25 @@ impl AlgebraSquareRootSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct AlgebraTwoStepSpecific {
+    /// Coefficient range. Default `2-10`.
     #[serde(default)]
     #[param(value_type = String, example = "2-10")]
     a_range: Option<String>,
+    /// Constant range. Default `1-30`.
     #[serde(default)]
     #[param(value_type = String, example = "1-30")]
     b_range: Option<String>,
+    /// Answer (`x`) range. Default `0-20`.
     #[serde(default)]
     #[param(value_type = String, example = "0-20")]
     x_range: Option<String>,
-    /// Variable glyph (single character).
+    /// Variable letter. Default `x`.
     #[serde(default)]
     variable: Option<String>,
-    /// Render coefficient-variable as `4x` (no operator).
+    /// Write the coefficient as `4x` instead of `4 · x`. Default false.
     #[serde(default)]
     implicit: Option<bool>,
+    /// Vary the equation form (e.g. `b + a·x = c`). Default true.
     #[serde(default)]
     mix_forms: Option<bool>,
 }
@@ -645,22 +662,25 @@ impl AlgebraTwoStepSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct AlgebraOneStepSpecific {
+    /// Coefficient range. Default `2-10`.
     #[serde(default)]
     #[param(value_type = String, example = "2-10")]
     a_range: Option<String>,
+    /// Constant range. Default `1-30`.
     #[serde(default)]
     #[param(value_type = String, example = "1-30")]
     b_range: Option<String>,
+    /// Answer (`x`) range. Default `0-20`.
     #[serde(default)]
     #[param(value_type = String, example = "0-20")]
     x_range: Option<String>,
-    /// Variable glyph (single character).
+    /// Variable letter. Default `x`.
     #[serde(default)]
     variable: Option<String>,
-    /// Include `x + b = c` problems. Default true.
+    /// Include `x + b = c` problems. Default false.
     #[serde(default)]
     add: Option<bool>,
-    /// Include `x − b = c` problems. Default true.
+    /// Include `x − b = c` problems. Default false.
     #[serde(default)]
     subtract: Option<bool>,
     /// Include `a · x = c` problems. Default false.
@@ -708,11 +728,12 @@ impl AlgebraOneStepSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct DecimalAddSpecific {
-    /// Comma-separated integer-part digit counts per operand (e.g. "2,2").
+    /// Integer-part digit count (range) per operand, comma-separated.
+    /// Default `2,2`.
     #[serde(default)]
     #[param(value_type = String, example = "2,2")]
     digits: Option<String>,
-    /// Decimal places shared by every operand and answer (1-4).
+    /// Decimal places on every operand and the answer, 1-4. Default 2.
     #[serde(default)]
     decimal_places: Option<u32>,
 }
@@ -733,9 +754,12 @@ impl DecimalAddSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct DecimalSubtractSpecific {
+    /// Integer-part digit count (range) per operand, comma-separated.
+    /// Default `2,2`.
     #[serde(default)]
     #[param(value_type = String, example = "2,2")]
     digits: Option<String>,
+    /// Decimal places on every operand and the answer, 1-4. Default 2.
     #[serde(default)]
     decimal_places: Option<u32>,
 }
@@ -756,20 +780,20 @@ impl DecimalSubtractSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct DecimalMultiplySpecific {
-    /// Integer-part digit count of the top decimal operand. "N" or "N-M".
+    /// Integer-part digit count (range) of the top operand. Default `2`.
     #[serde(default)]
     #[param(value_type = String, example = "2")]
     digits: Option<String>,
-    /// Decimal places on the top operand (1-4).
+    /// Decimal places on the top operand, 1-4. Default 1.
     #[serde(default)]
     decimal_places: Option<u32>,
-    /// Multiplier integer-part minimum value (0-99).
+    /// Smallest multiplier integer part, 0-99. Default 2.
     #[serde(default)]
     multiplier_min: Option<u32>,
-    /// Multiplier integer-part maximum value (0-99).
+    /// Largest multiplier integer part, 0-99. Default 9.
     #[serde(default)]
     multiplier_max: Option<u32>,
-    /// Decimal places on the multiplier. 0 = whole number (default).
+    /// Decimal places on the multiplier; 0 = whole number. Default 0.
     #[serde(default)]
     bottom_decimal_places: Option<u32>,
 }
@@ -797,11 +821,11 @@ impl DecimalMultiplySpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct OrderOfOpsSpecific {
-    /// Number of operators per problem (2 or 3).
+    /// Operators per problem, 2 or 3. Default 2.
     #[serde(default)]
     operations: Option<u32>,
-    /// Wrap the additive sub-expression in parentheses, forcing it
-    /// to evaluate first (e.g. `(a + b) × c`).
+    /// Wrap the additive part in parentheses so it evaluates first
+    /// (e.g. `(a + b) × c`). Default false.
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     parens: Option<bool>,
 }
@@ -822,25 +846,23 @@ impl OrderOfOpsSpecific {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct MeanSpecific {
-    /// How many values per data set, e.g. `4` or `3-4`. A range mixes
-    /// counts across the page so the divisor changes per problem.
+    /// Values per data set (range). A range varies the count, and so
+    /// the divisor, per problem. Default `3-4`.
     #[serde(default)]
     #[param(value_type = String, example = "3-4")]
     count: Option<String>,
-    /// Digit count of each value, read as a value range: `1-2` gives
-    /// values in 1-99, `3` gives 100-999.
+    /// Digit count (range) of each value: `1-2` gives 1-99, `3` gives
+    /// 100-999. Default `1-2`.
     #[serde(default)]
     #[param(value_type = String, example = "1-2")]
     digits: Option<String>,
-    /// Print the pre-filled column-addition stack under the data line.
-    /// The division work space is reserved either way, so this changes
-    /// how much scaffolding the student gets, not the page layout.
+    /// Print a pre-filled column-addition stack under the data. Changes
+    /// the scaffolding, not the layout. Default false.
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     scaffold: Option<bool>,
-    /// Give every value one decimal place (tenths), e.g. `12.5`. Wide or
-    /// decimal sets print an open work area instead of the addition
-    /// stack, since column addition and single-digit long division can't
-    /// express that work.
+    /// Give every value one decimal place (e.g. `12.5`). Decimal or wide
+    /// sets get an open work area instead of the addition stack. Default
+    /// false.
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     decimals: Option<bool>,
 }
@@ -999,11 +1021,18 @@ fn region_display(region: &Option<String>) -> &str {
 // Handlers
 // ---------------------------------------------------------------------------
 
+/// Addition
+///
+/// Multi-digit addition in columns, with control over carrying. `binary=true` renders in base 2.
 #[utoipa::path(
     get,
     path = "/api/worksheets/add",
+    operation_id = "add",
     params(SharedParams, AddSpecific),
-    responses((status = 200, description = "Worksheet bytes (PDF/PNG/SVG)")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_add(
@@ -1015,11 +1044,18 @@ async fn handle_add(
     render(&s, "add", p.build(shared), &headers)
 }
 
+/// Subtraction
+///
+/// Multi-digit subtraction in columns, with control over borrowing.
 #[utoipa::path(
     get,
     path = "/api/worksheets/subtract",
+    operation_id = "subtract",
     params(SharedParams, SubtractSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_subtract(
@@ -1031,11 +1067,18 @@ async fn handle_subtract(
     render(&s, "subtract", p.build(shared), &headers)
 }
 
+/// Multiplication
+///
+/// Multi-digit long multiplication in columns.
 #[utoipa::path(
     get,
     path = "/api/worksheets/multiply",
+    operation_id = "multiply",
     params(SharedParams, MultiplySpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_multiply(
@@ -1047,11 +1090,18 @@ async fn handle_multiply(
     render(&s, "multiply", p.build(shared), &headers)
 }
 
+/// Simple division
+///
+/// Single-digit divisor, whole-number quotient. Times-table recall in reverse.
 #[utoipa::path(
     get,
     path = "/api/worksheets/simple-divide",
+    operation_id = "simple_divide",
     params(SharedParams, SimpleDivideSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_simple_divide(
@@ -1063,11 +1113,18 @@ async fn handle_simple_divide(
     render(&s, "simple-divide", p.build(shared), &headers)
 }
 
+/// Long division
+///
+/// Single-digit divisor, multi-digit dividend, optionally with remainders.
 #[utoipa::path(
     get,
     path = "/api/worksheets/long-divide",
+    operation_id = "long_divide",
     params(SharedParams, LongDivideSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_long_divide(
@@ -1079,11 +1136,18 @@ async fn handle_long_divide(
     render(&s, "long-divide", p.build(shared), &headers)
 }
 
+/// Multiplication drill
+///
+/// One-line times-table facts from the chosen tables.
 #[utoipa::path(
     get,
     path = "/api/worksheets/mult-drill",
+    operation_id = "mult_drill",
     params(SharedParams, MultDrillSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_mult_drill(
@@ -1095,11 +1159,18 @@ async fn handle_mult_drill(
     render(&s, "mult-drill", p.build(shared), &headers)
 }
 
+/// Division drill
+///
+/// One-line division facts built from the chosen divisors.
 #[utoipa::path(
     get,
     path = "/api/worksheets/div-drill",
+    operation_id = "div_drill",
     params(SharedParams, DivDrillSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_div_drill(
@@ -1111,11 +1182,18 @@ async fn handle_div_drill(
     render(&s, "div-drill", p.build(shared), &headers)
 }
 
+/// Fraction multiplication
+///
+/// Whole number times a proper fraction, with a whole-number answer.
 #[utoipa::path(
     get,
     path = "/api/worksheets/fraction-mult",
+    operation_id = "fraction_mult",
     params(SharedParams, FractionMultSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_fraction_mult(
@@ -1127,11 +1205,18 @@ async fn handle_fraction_mult(
     render(&s, "fraction-mult", p.build(shared), &headers)
 }
 
+/// Fraction simplification
+///
+/// Reduce a fraction to lowest terms (or to a mixed/whole number).
 #[utoipa::path(
     get,
     path = "/api/worksheets/fraction-simplify",
+    operation_id = "fraction_simplify",
     params(SharedParams, FractionSimplifySpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_fraction_simplify(
@@ -1147,17 +1232,18 @@ async fn handle_fraction_simplify(
 #[into_params(parameter_in = Query)]
 struct FractionEquivSpecific {
     /// Allowed denominators of the base fraction, comma-separated.
+    /// Default `2,3,4,5,6,8,10`.
     #[serde(default)]
     #[param(value_type = String, example = "2,3,4,5,6,8,10")]
     denominators: Option<String>,
-    /// Scale-factor range (the multiplier). Min 2, max 10.
+    /// Scale-factor range (the multiplier), within 2-10. Default `2-5`.
     #[serde(default)]
     #[param(value_type = String, example = "2-5")]
     scale: Option<String>,
-    /// Which slot is blank: any, left-num, left-den, right-num, right-den.
+    /// Which slot is blank. Default `any` (varies per problem).
     #[serde(default)]
     missing: Option<MissingSlot>,
-    /// Restrict base fraction to proper fractions (num < den).
+    /// Base fraction is proper (numerator < denominator). Default true.
     #[serde(default)]
     proper_only: Option<bool>,
 }
@@ -1185,11 +1271,18 @@ impl FractionEquivSpecific {
     }
 }
 
+/// Equivalent fractions
+///
+/// Fill in the missing numerator or denominator of `a/b = c/d`.
 #[utoipa::path(
     get,
     path = "/api/worksheets/fraction-equiv",
+    operation_id = "fraction_equiv",
     params(SharedParams, FractionEquivSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_fraction_equiv(
@@ -1201,11 +1294,18 @@ async fn handle_fraction_equiv(
     render(&s, "fraction-equiv", p.build(shared), &headers)
 }
 
+/// Algebra: two-step equations
+///
+/// Solve `a·x + b = c` and related forms for a whole-number `x`.
 #[utoipa::path(
     get,
     path = "/api/worksheets/algebra-two-step",
+    operation_id = "algebra_two_step",
     params(SharedParams, AlgebraTwoStepSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_algebra_two_step(
@@ -1217,11 +1317,18 @@ async fn handle_algebra_two_step(
     render(&s, "algebra-two-step", p.build(shared), &headers)
 }
 
+/// Algebra: one-step equations
+///
+/// Solve `x + b = c`, `x − b = c`, `a·x = c` or `x ÷ a = c`. Enable at least one form.
 #[utoipa::path(
     get,
     path = "/api/worksheets/algebra-one-step",
+    operation_id = "algebra_one_step",
     params(SharedParams, AlgebraOneStepSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_algebra_one_step(
@@ -1233,11 +1340,18 @@ async fn handle_algebra_one_step(
     render(&s, "algebra-one-step", p.build(shared), &headers)
 }
 
+/// Algebra: squares and square roots
+///
+/// Solve `x² ± b = c` and `√x ± b = c`. Enable at least one of `squares` / `roots`.
 #[utoipa::path(
     get,
     path = "/api/worksheets/algebra-square-root",
+    operation_id = "algebra_square_root",
     params(SharedParams, AlgebraSquareRootSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_algebra_square_root(
@@ -1249,11 +1363,18 @@ async fn handle_algebra_square_root(
     render(&s, "algebra-square-root", p.build(shared), &headers)
 }
 
+/// Decimal addition
+///
+/// Column addition with a fixed number of decimal places.
 #[utoipa::path(
     get,
     path = "/api/worksheets/decimal-add",
+    operation_id = "decimal_add",
     params(SharedParams, DecimalAddSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_decimal_add(
@@ -1265,11 +1386,18 @@ async fn handle_decimal_add(
     render(&s, "decimal-add", p.build(shared), &headers)
 }
 
+/// Decimal subtraction
+///
+/// Column subtraction with a fixed number of decimal places.
 #[utoipa::path(
     get,
     path = "/api/worksheets/decimal-subtract",
+    operation_id = "decimal_subtract",
     params(SharedParams, DecimalSubtractSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_decimal_subtract(
@@ -1281,11 +1409,18 @@ async fn handle_decimal_subtract(
     render(&s, "decimal-subtract", p.build(shared), &headers)
 }
 
+/// Decimal multiplication
+///
+/// A decimal times a whole number (or a second decimal).
 #[utoipa::path(
     get,
     path = "/api/worksheets/decimal-multiply",
+    operation_id = "decimal_multiply",
     params(SharedParams, DecimalMultiplySpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_decimal_multiply(
@@ -1297,11 +1432,18 @@ async fn handle_decimal_multiply(
     render(&s, "decimal-multiply", p.build(shared), &headers)
 }
 
+/// Order of operations
+///
+/// Evaluate expressions with 2-3 operators, optionally with parentheses.
 #[utoipa::path(
     get,
     path = "/api/worksheets/order-of-ops",
+    operation_id = "order_of_ops",
     params(SharedParams, OrderOfOpsSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_order_of_ops(
@@ -1313,11 +1455,18 @@ async fn handle_order_of_ops(
     render(&s, "order-of-ops", p.build(shared), &headers)
 }
 
+/// Mean (average)
+///
+/// Find the average of a small data set, optionally with a column-addition scaffold.
 #[utoipa::path(
     get,
     path = "/api/worksheets/mean",
+    operation_id = "mean",
     params(SharedParams, MeanSpecific),
-    responses((status = 200, description = "Worksheet bytes")),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
     tag = "worksheets",
 )]
 async fn handle_mean(
@@ -1649,15 +1798,52 @@ async fn cache_control(req: Request, next: Next) -> Response {
 // OpenAPI + entry
 // ---------------------------------------------------------------------------
 
+/// Raw file bytes.
+// Spec-only: handlers return the bytes directly, never this type.
+#[derive(utoipa::ToSchema)]
+#[schema(value_type = String, format = Binary)]
+#[allow(dead_code)]
+struct WorksheetBytes(Vec<u8>);
+
+/// The rendered worksheet. Media type follows `format`.
+/// `Content-Disposition` is `inline` with a suggested filename.
+#[derive(utoipa::ToResponse)]
+#[response(headers(
+    ("Content-Disposition" = String, description = "inline; filename=\"pencil-ready-<slug>.<ext>\""),
+))]
+#[allow(dead_code)]
+enum WorksheetFile {
+    Pdf(#[content("application/pdf")] WorksheetBytes),
+    Png(#[content("image/png")] WorksheetBytes),
+    Svg(#[content("image/svg+xml")] WorksheetBytes),
+}
+
+/// Parameters failed to parse or validate, or the combination can't
+/// produce a worksheet. Body is a one-line, human-readable error.
+#[derive(utoipa::ToResponse)]
+#[response(content_type = "text/plain", example = json!("digits: bad digit count: invalid digit found in string\n"))]
+#[allow(dead_code)]
+struct InvalidParams(String);
+
 #[derive(OpenApi)]
 #[openapi(
     info(
         title = "Pencil Ready",
-        version = "0.1.0",
-        description = "Generate printable math worksheets.",
+        description = include_str!("openapi-description.md"),
+        license(name = "MIT", identifier = "MIT"),
+    ),
+    servers(
+        (url = "/", description = "This server"),
+        (url = "https://pencilready.com", description = "Production"),
     ),
     tags((name = "worksheets", description = "Worksheet generation endpoints")),
-    components(schemas(CarryMode, BorrowMode, Locale, DivisionStyle, OutputFormat)),
+    components(
+        schemas(
+            CarryMode, BorrowMode, Locale, DivisionStyle, OutputFormat, Paper, MissingSlot,
+            WorksheetBytes,
+        ),
+        responses(WorksheetFile, InvalidParams),
+    ),
 )]
 struct ApiDoc;
 

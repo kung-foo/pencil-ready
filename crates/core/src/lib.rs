@@ -131,6 +131,7 @@ impl std::str::FromStr for DigitRange {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
+#[schema(description = "none: no carries. any: unconstrained. force: every problem carries at least once. ripple: every problem has a carry chaining through 2+ columns.")]
 pub enum CarryMode {
     None,
     #[default]
@@ -141,6 +142,7 @@ pub enum CarryMode {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
+#[schema(description = "none: no borrows. no-across-zero: borrows allowed, never across a 0 digit. any: unconstrained. force: every problem borrows at least once. ripple: every problem has a borrow chaining through 2+ columns.")]
 pub enum BorrowMode {
     None,
     NoAcrossZero,
@@ -769,6 +771,7 @@ fn decimal_stack_width(total_glyphs: u32) -> f32 {
 /// keeps its own `·` regardless (see `algebra_*.rs`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
+#[schema(description = "us: English copy, decimal point, × and ÷. no: Norwegian Bokmål copy, decimal comma, · and :.")]
 pub enum Locale {
     #[default]
     Us,
@@ -824,6 +827,7 @@ impl Locale {
 /// the mean scaffold. Drills are already one line in either style.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
+#[schema(description = "bracket: `4)852`, quotient on top; simple division as a vertical stack. equation: one line, `852 : 4 = 213`, long-division working written under the dividend.")]
 pub enum DivisionStyle {
     #[default]
     Bracket,
@@ -835,6 +839,7 @@ pub enum DivisionStyle {
 /// field change: all downstream layout math keys off
 /// `Paper::dimensions_cm()` and `content_area_cm(paper)`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema)]
+#[schema(description = "a4 or us-letter (alias: letter). Problem count and layout are identical on both.")]
 pub enum Paper {
     #[default]
     #[serde(rename = "a4")]
@@ -1335,6 +1340,7 @@ impl WorksheetParams {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
+#[schema(description = "pdf: printable, any page count. png / svg: single page only; multi-page worksheets and include_answers return 400.")]
 pub enum OutputFormat {
     Pdf,
     Png,
