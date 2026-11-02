@@ -50,11 +50,9 @@ pencilready-logo-spec.md             — brand mark / pencil underline spec
   baselines are reviewed by a human. When `make stories-check` fails,
   surface the diff (path printed in the failure line) and let the
   user decide whether to approve.
-- Seeded output is stable: generators draw only from `crate::rng`
-  (never `rand`), and `make snapshots-check` pins the problems for
-  every default and level preset. Don't change `rng.rs` output.
-  Same rule as stories: **never run `make snapshots-approve`
-  yourself** — surface the diff and let the user decide.
+- Generators draw only from `crate::rng` (never `rand`) so seeded
+  worksheets stay stable across dependency bumps. Don't change
+  `rng.rs` output.
 - Frontend is single-framework (Astro). Don't reintroduce a React SPA
   under `frontend/react/` — the Astro site with React islands covers
   both SEO and interactivity.

@@ -11,8 +11,7 @@
 //! generator changes.
 //!
 //! **Don't change the output of anything in this file.** Every seeded
-//! worksheet depends on it; the snapshot test in the server crate
-//! (`problem_snapshots`) catches accidental changes.
+//! worksheet depends on it; the tests below pin it.
 
 use std::ops::{Range, RangeInclusive};
 
