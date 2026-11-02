@@ -201,6 +201,22 @@ measured_width_cm = 5.955
 measured_height_cm = 2.776
 
 [[cell]]
+id = "fraction-addition-worst"
+label = "fraction addition (unrelated denominators, 36ths)"
+width_cm = 5.5
+height_cm = 4.0
+measured_width_cm = 5.406
+measured_height_cm = 3.904
+
+[[cell]]
+id = "fraction-addition-same-den"
+label = "fraction addition (same denominator, 2 rows)"
+width_cm = 5.5
+height_cm = 2.7
+measured_width_cm = 5.406
+measured_height_cm = 2.604
+
+[[cell]]
 id = "algebra-two-step-small-form0"
 label = "algebra two-step (small, form 0)"
 width_cm = 7.3

@@ -50,6 +50,54 @@
             }
         }
     ],
+    "fraction-add": [
+        {
+            "params": {
+                "relation": "same"
+            }
+        },
+        {
+            "note": "One denominator divides the other, so only one fraction gets rewritten — the step between combining numerators and finding a new common denominator.",
+            "params": {
+                "relation": "multiple"
+            }
+        },
+        {
+            "params": {
+                "relation": "unrelated"
+            }
+        },
+        {
+            "note": "Mixed review: all three relations on one page.",
+            "params": {
+                "relation": "any"
+            }
+        }
+    ],
+    "fraction-subtract": [
+        {
+            "params": {
+                "relation": "same"
+            }
+        },
+        {
+            "note": "One denominator divides the other, so only one fraction gets rewritten — the step between combining numerators and finding a new common denominator.",
+            "params": {
+                "relation": "multiple"
+            }
+        },
+        {
+            "params": {
+                "relation": "unrelated"
+            }
+        },
+        {
+            "note": "Mixed review: all three relations on one page.",
+            "params": {
+                "relation": "any"
+            }
+        }
+    ],
     "decimal-add": [
         {
             "params": {

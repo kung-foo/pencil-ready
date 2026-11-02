@@ -59,6 +59,12 @@ fn instructions_en(ws: &WorksheetType) -> Option<&'static str> {
             Some("Multiply each whole number by the fraction.")
         }
         WorksheetType::FractionSimplify { .. } => Some("Simplify each fraction."),
+        WorksheetType::FractionAdd { .. } => {
+            Some("Add the fractions. Write each answer in simplest form.")
+        }
+        WorksheetType::FractionSubtract { .. } => {
+            Some("Subtract the fractions. Write each answer in simplest form.")
+        }
         WorksheetType::FractionEquiv { .. } => {
             Some("Fill in the missing number to make the fractions equivalent.")
         }
@@ -108,6 +114,12 @@ fn instructions_nb(ws: &WorksheetType) -> Option<&'static str> {
         WorksheetType::LongDivision { .. } => Some("Løs hvert stykke med lang divisjon."),
         WorksheetType::FractionMultiply { .. } => Some("Gang hvert heltall med brøken."),
         WorksheetType::FractionSimplify { .. } => Some("Forkort hver brøk."),
+        WorksheetType::FractionAdd { .. } => {
+            Some("Legg sammen brøkene. Skriv svaret på enklest mulig form.")
+        }
+        WorksheetType::FractionSubtract { .. } => {
+            Some("Trekk fra brøkene. Skriv svaret på enklest mulig form.")
+        }
         WorksheetType::FractionEquiv { .. } => {
             Some("Fyll inn tallet som mangler, slik at brøkene blir like store.")
         }
@@ -144,6 +156,8 @@ fn title_nb(ws: &WorksheetType) -> &'static str {
         WorksheetType::DivisionDrill { .. } => "Divisjonstrening",
         WorksheetType::FractionMultiply { .. } => "Brøk ganger heltall",
         WorksheetType::FractionSimplify { .. } => "Forkorting av brøk",
+        WorksheetType::FractionAdd { .. } => "Addisjon med brøk",
+        WorksheetType::FractionSubtract { .. } => "Subtraksjon med brøk",
         WorksheetType::AlgebraTwoStep { .. } => "Likninger i to steg",
         WorksheetType::AlgebraOneStep { .. } => "Likninger i ett steg",
         WorksheetType::FractionEquiv { .. } => "Likeverdige brøker",
@@ -210,6 +224,10 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::FractionMultiply { .. }, Form::Slug) => "fraction-multiplication",
         (WorksheetType::FractionSimplify { .. }, Form::Title) => "Fraction simplification",
         (WorksheetType::FractionSimplify { .. }, Form::Slug) => "fraction-simplification",
+        (WorksheetType::FractionAdd { .. }, Form::Title) => "Fraction addition",
+        (WorksheetType::FractionAdd { .. }, Form::Slug) => "fraction-addition",
+        (WorksheetType::FractionSubtract { .. }, Form::Title) => "Fraction subtraction",
+        (WorksheetType::FractionSubtract { .. }, Form::Slug) => "fraction-subtraction",
         (WorksheetType::AlgebraTwoStep { .. }, Form::Title) => "Two-step equations",
         (WorksheetType::AlgebraTwoStep { .. }, Form::Slug) => "two-step-equations",
         (WorksheetType::AlgebraOneStep { .. }, Form::Title) => "One-step equations",

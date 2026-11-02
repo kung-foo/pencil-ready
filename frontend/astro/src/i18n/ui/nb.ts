@@ -146,6 +146,24 @@ export const nb: UiStrings = {
             { label: "3 sifre, blandet", example: "624 − 287" },
             { label: "3 sifre, låning over null", example: "403 − 178" },
         ],
+        "fraction-add": [
+            { label: "Samme nevner", example: "3/8 + 1/8" },
+            {
+                label: "Den ene nevneren går opp i den andre",
+                example: "1/2 + 1/4",
+            },
+            { label: "Ulike nevnere", example: "2/3 + 3/4" },
+            { label: "Blandet repetisjon", example: "5/6 + 3/8" },
+        ],
+        "fraction-subtract": [
+            { label: "Samme nevner", example: "5/8 − 3/8" },
+            {
+                label: "Den ene nevneren går opp i den andre",
+                example: "3/4 − 1/2",
+            },
+            { label: "Ulike nevnere", example: "3/4 − 2/3" },
+            { label: "Blandet repetisjon", example: "5/6 − 3/8" },
+        ],
         "decimal-add": [
             { label: "Tideler", example: "12,5 + 34,7" },
             { label: "Hundredeler", example: "12,34 + 56,78" },

@@ -43,6 +43,7 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         // emitted here is a grid hint, not consumed by the component.
         WorksheetType::FractionMultiply { .. } => 6.0,
         WorksheetType::FractionSimplify { .. } => 5.0,
+        WorksheetType::FractionAdd { .. } | WorksheetType::FractionSubtract { .. } => 5.5,
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
         WorksheetType::AlgebraOneStep { .. } => 6.0,
         WorksheetType::AlgebraSquareRoot { .. } => 6.0,
@@ -199,6 +200,12 @@ fn opts_body(
         // and `=` are universal. `:` interpolates into `(:)` which is
         // typst's empty-dict literal (as opposed to `()`, an empty array).
         WorksheetType::FractionSimplify { .. } => ":".to_string(),
+        WorksheetType::FractionAdd { relation, .. }
+        | WorksheetType::FractionSubtract { relation, .. } => format!(
+            "operator: {operator_arg}, subtract: {s}, rows: {r}",
+            s = matches!(worksheet, WorksheetType::FractionSubtract { .. }),
+            r = crate::fraction_add_rows(*relation),
+        ),
         // Mean composes two primitives, so it needs geometry for both
         // halves. The divide half is sized off the sum's digit count
         // (`max_digits` here is already that bound) and gets 2 rows of
@@ -544,6 +551,8 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/division/drill.typ": division-drill-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
+#import "/lib/problems/fraction/addition.typ": fraction-addition-problem
+#import "/lib/problems/fraction/subtraction.typ": fraction-subtraction-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/algebra/square-root.typ": algebra-square-root-problem

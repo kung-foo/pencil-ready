@@ -157,6 +157,24 @@ export const en = {
             { label: "3-digit, mixed", example: "624 − 287" },
             { label: "3-digit, ripple borrow", example: "403 − 178" },
         ],
+        "fraction-add": [
+            { label: "Same denominator", example: "3/8 + 1/8" },
+            {
+                label: "One denominator divides the other",
+                example: "1/2 + 1/4",
+            },
+            { label: "Different denominators", example: "2/3 + 3/4" },
+            { label: "Mixed review", example: "5/6 + 3/8" },
+        ],
+        "fraction-subtract": [
+            { label: "Same denominator", example: "5/8 − 3/8" },
+            {
+                label: "One denominator divides the other",
+                example: "3/4 − 1/2",
+            },
+            { label: "Different denominators", example: "3/4 − 2/3" },
+            { label: "Mixed review", example: "5/6 − 3/8" },
+        ],
         "decimal-add": [
             { label: "Tenths", example: "12.5 + 34.7" },
             { label: "Hundredths", example: "12.34 + 56.78" },

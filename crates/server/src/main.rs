@@ -24,7 +24,8 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot, OutputFormat,
+    BorrowMode, CarryMode, DenominatorRelation, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot,
+    OutputFormat,
     Paper,
     WorksheetParams, WorksheetType, generate, long_division_default_cols,
     long_division_default_problems,
@@ -1230,6 +1231,85 @@ async fn handle_fraction_simplify(
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+struct FractionAddSpecific {
+    /// Allowed denominators of the two fractions, comma-separated.
+    /// Default `2,3,4,5,6,8,10,12`.
+    #[serde(default)]
+    #[param(value_type = String, example = "2,3,4,5,6,8,10,12")]
+    denominators: Option<String>,
+    /// How the two denominators relate, which sets the difficulty.
+    /// Default `any`.
+    #[serde(default)]
+    relation: Option<DenominatorRelation>,
+}
+
+impl FractionAddSpecific {
+    fn build(self, shared: SharedParams, subtract: bool) -> Result<(OutputFormat, WorksheetParams)> {
+        let denominators = match self.denominators {
+            Some(s) => parse_u32_csv(&s, "denominators")?,
+            None => vec![2, 3, 4, 5, 6, 8, 10, 12],
+        };
+        let relation = self.relation.unwrap_or_default();
+        // A full page: 3 columns of 5 rows, or 7 when every problem
+        // shares its denominator (shorter cells, no rewrite step).
+        let problems = if relation == DenominatorRelation::Same { 21 } else { 15 };
+        let worksheet = if subtract {
+            WorksheetType::FractionSubtract { denominators, relation }
+        } else {
+            WorksheetType::FractionAdd { denominators, relation }
+        };
+        Ok(shared.fold(worksheet, problems, 3))
+    }
+}
+
+/// Fraction addition
+///
+/// Add two proper fractions; answers in simplest form. `relation` sets the difficulty: same denominator, one a multiple of the other, or unrelated.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-add",
+    operation_id = "fraction_add",
+    params(SharedParams, FractionAddSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_fraction_add(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionAddSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-add", p.build(shared, false), &headers)
+}
+
+/// Fraction subtraction
+///
+/// Subtract two proper fractions (the first is always larger); answers in simplest form. Same parameters as fraction addition.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-subtract",
+    operation_id = "fraction_subtract",
+    params(SharedParams, FractionAddSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_fraction_subtract(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionAddSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-subtract", p.build(shared, true), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct FractionEquivSpecific {
     /// Allowed denominators of the base fraction, comma-separated.
     /// Default `2,3,4,5,6,8,10`.
@@ -1840,6 +1920,7 @@ struct InvalidParams(String);
     components(
         schemas(
             CarryMode, BorrowMode, Locale, DivisionStyle, OutputFormat, Paper, MissingSlot,
+            DenominatorRelation,
             WorksheetBytes,
         ),
         responses(WorksheetFile, InvalidParams),
@@ -1930,6 +2011,8 @@ async fn main() {
         .routes(routes!(handle_fraction_mult))
         .routes(routes!(handle_fraction_simplify))
         .routes(routes!(handle_fraction_equiv))
+        .routes(routes!(handle_fraction_add))
+        .routes(routes!(handle_fraction_subtract))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .routes(routes!(handle_algebra_square_root))
@@ -2100,6 +2183,8 @@ mod tests {
             "fraction-mult",
             "fraction-simplify",
             "fraction-equiv",
+            "fraction-add",
+            "fraction-subtract",
             "algebra-two-step",
             "algebra-one-step",
             "algebra-square-root",
@@ -2136,6 +2221,18 @@ mod tests {
                 "fraction-mult" => build!(FractionMultSpecific),
                 "fraction-simplify" => build!(FractionSimplifySpecific),
                 "fraction-equiv" => build!(FractionEquivSpecific),
+                "fraction-add" => Query::<FractionAddSpecific>::try_from_uri(&uri)
+                    .unwrap()
+                    .0
+                    .build(shared, false)
+                    .unwrap_or_else(|e| panic!("{kind}?{qs}: {e}"))
+                    .1,
+                "fraction-subtract" => Query::<FractionAddSpecific>::try_from_uri(&uri)
+                    .unwrap()
+                    .0
+                    .build(shared, true)
+                    .unwrap_or_else(|e| panic!("{kind}?{qs}: {e}"))
+                    .1,
                 "algebra-two-step" => build!(AlgebraTwoStepSpecific),
                 "algebra-one-step" => build!(AlgebraOneStepSpecific),
                 "algebra-square-root" => build!(AlgebraSquareRootSpecific),

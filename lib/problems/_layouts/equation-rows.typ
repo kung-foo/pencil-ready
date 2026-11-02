@@ -11,7 +11,11 @@
 //   row2-lhs |  =  | row2-rhs
 //   ...
 //
-// `rows` is an array of `(lhs, rhs)` tuples. To keep the bounding box
+// `rows` is an array of `(lhs, rhs)` tuples, or `(lhs, rhs, false)` to
+// leave that row's `=` out (it still takes its width, so columns don't
+// move). Used for rows a problem reserves but doesn't fill — a blank
+// worksheet cell shouldn't hint at how many steps the answer takes.
+// To keep the bounding box
 // identical between blank and solved modes, callers should hide
 // solved-only content with `hide(...)` rather than swapping it out
 // for empty: `hide` reserves the full bounding rect of its argument
@@ -35,9 +39,9 @@
     // Measure each row's LHS and RHS to find the widest cell on each side.
     let lhs-max = 0pt
     let rhs-max = 0pt
-    for (lhs, rhs) in rows {
-      lhs-max = calc.max(lhs-max, measure(lhs).width)
-      rhs-max = calc.max(rhs-max, measure(rhs).width)
+    for row in rows {
+      lhs-max = calc.max(lhs-max, measure(row.at(0)).width)
+      rhs-max = calc.max(rhs-max, measure(row.at(1)).width)
     }
     // `symmetric: true` (default): col1 = col3 = max(lhs-max, rhs-max).
     // Puts `=` at the visual center of the bounding rect — when the
@@ -70,10 +74,11 @@
     // "15") and you want the values to stack vertically aligned by
     // their centers rather than by their left edges.
     let cells = ()
-    for (lhs, rhs) in rows {
-      cells.push(align(right + horizon, lhs))
-      cells.push(align(center + horizon, sym.eq))
-      cells.push(align(rhs-align, rhs))
+    for row in rows {
+      let show-eq = row.at(2, default: true)
+      cells.push(align(right + horizon, row.at(0)))
+      cells.push(align(center + horizon, if show-eq { sym.eq } else { hide(sym.eq) }))
+      cells.push(align(rhs-align, row.at(1)))
     }
 
     // Top inset so above-cap-height content (superscripts, fraction
