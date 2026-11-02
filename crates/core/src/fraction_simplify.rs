@@ -7,6 +7,7 @@
 //!   - the same fraction       (e.g. 7/12 → 7/12, already in lowest terms)
 //!   - a whole number          (e.g. 12/4 → 3, only when `include_whole` is set)
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -48,15 +49,9 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         ),
         _ => unreachable!(),
     };
+    use crate::rng::SliceShuffle;
 
-    use rand::SeedableRng;
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Enumerate every valid (num, den) pair, splitting into two pools:
     //   - `needs_work`: requires reduction or improper→mixed conversion.

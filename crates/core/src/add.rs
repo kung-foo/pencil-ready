@@ -1,5 +1,6 @@
 //! Addition worksheet.
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{CarryMode, ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -50,13 +51,7 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         _ => unreachable!(),
     };
 
-    use rand::rngs::SmallRng;
-    use rand::{Rng, SeedableRng};
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // In binary mode, `digits` is really a bit-count range per operand.
     // Draw values in the full [0, 2^d − 1] range — unlike decimal, we
@@ -65,7 +60,7 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
     // that bit). The operand is displayed with pad-width zeros so a
     // value of 0b0010 still reads as a 4-bit number on the page.
     let radix: u32 = if binary { 2 } else { 10 };
-    let pick = |range: crate::DigitRange, rng: &mut SmallRng| -> u32 {
+    let pick = |range: crate::DigitRange, rng: &mut Rng| -> u32 {
         if binary {
             let d = rng.gen_range(range.min..=range.max);
             let hi = (1u32 << d) - 1;

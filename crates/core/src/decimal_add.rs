@@ -4,6 +4,7 @@
 //! `123`). All numbers on a worksheet share the same `decimal_places`,
 //! so the printed decimal points line up column-wise.
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -49,18 +50,13 @@ fn generate_problems(
     decimal_places: u32,
     params: &WorksheetParams,
 ) -> Vec<Vec<u32>> {
-    use rand::rngs::SmallRng;
-    use rand::{Rng, SeedableRng};
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     let scale = 10u32.pow(decimal_places);
     // Pick the integer-part value and a random fraction in [0, scale).
     // Encoded result = int * scale + frac.
-    let pick = |range: crate::DigitRange, rng: &mut SmallRng| -> u32 {
+    let pick = |range: crate::DigitRange, rng: &mut Rng| -> u32 {
         let int_part = range.random(rng);
         let frac = rng.gen_range(0..scale);
         int_part * scale + frac

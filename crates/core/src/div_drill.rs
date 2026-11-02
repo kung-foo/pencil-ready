@@ -3,6 +3,7 @@
 //! Same facts as multiplication drill but reversed:
 //!   56 ÷ 7 = ___  (instead of 7 × 8 = ___)
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, DigitRange, Sheet, WorksheetParams, WorksheetType};
 
@@ -42,14 +43,9 @@ fn generate_problems(
     divisor_ranges: &[DigitRange],
     max_quotient: DigitRange,
 ) -> Vec<Vec<u32>> {
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-    use rand::SeedableRng;
+    use crate::rng::SliceShuffle;
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Expand divisor ranges into a flat set.
     let divisors: Vec<u32> = divisor_ranges

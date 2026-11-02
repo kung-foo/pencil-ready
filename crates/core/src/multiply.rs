@@ -1,5 +1,6 @@
 //! Multiplication worksheet.
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -43,13 +44,7 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         _ => unreachable!(),
     };
 
-    use rand::rngs::SmallRng;
-    use rand::SeedableRng;
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     let top_range = digits[0];
     let bot_range = *digits.get(1).unwrap_or(&top_range);

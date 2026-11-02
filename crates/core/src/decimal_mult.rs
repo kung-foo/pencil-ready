@@ -8,6 +8,7 @@
 //! per-slot decimal-point placement via the `decimal-places: (top_dp,
 //! bot_dp, ans_dp)` opt.
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -64,18 +65,13 @@ fn generate_problems(
     bot_dp: u32,
     params: &WorksheetParams,
 ) -> Vec<Vec<u32>> {
-    use rand::rngs::SmallRng;
-    use rand::{Rng, SeedableRng};
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     let top_scale = 10u32.pow(top_dp);
     let bot_scale = 10u32.pow(bot_dp);
 
-    let pick_top = |rng: &mut SmallRng| -> u32 {
+    let pick_top = |rng: &mut Rng| -> u32 {
         let int_part = digits.random(rng);
         let frac = if top_scale > 1 {
             rng.gen_range(0..top_scale)
@@ -84,7 +80,7 @@ fn generate_problems(
         };
         int_part * top_scale + frac
     };
-    let pick_mult = |rng: &mut SmallRng| -> u32 {
+    let pick_mult = |rng: &mut Rng| -> u32 {
         let int_part = rng.gen_range(mult_min..=mult_max);
         let frac = if bot_scale > 1 {
             rng.gen_range(0..bot_scale)

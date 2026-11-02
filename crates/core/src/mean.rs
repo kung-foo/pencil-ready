@@ -25,6 +25,7 @@
 //! measurement series (five classmates' heights) rather than five
 //! unrelated numbers.
 
+use crate::rng::Rng;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType, pad_with_duplicates};
 
 /// The sum is the long-division dividend, and the cell reserves work
@@ -130,14 +131,9 @@ fn generate_problems(
     digits_max: u32,
     decimals: bool,
 ) -> Vec<Vec<u32>> {
-    use rand::SeedableRng;
-    use rand::rngs::SmallRng;
     use std::collections::HashSet;
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     let target = params.total_problems() as usize;
     if target == 0 {
@@ -163,14 +159,13 @@ fn generate_problems(
 }
 
 fn sample_one(
-    rng: &mut rand::rngs::SmallRng,
+    rng: &mut Rng,
     count_min: u32,
     count_max: u32,
     lo: u32,
     hi: u32,
 ) -> Option<Vec<u32>> {
-    use rand::Rng;
-    use rand::seq::SliceRandom;
+    use crate::rng::SliceShuffle;
 
     let n = rng.gen_range(count_min..=count_max) as usize;
     let spread = spread_for(lo, hi) as i64;

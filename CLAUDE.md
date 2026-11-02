@@ -50,6 +50,9 @@ pencilready-logo-spec.md             — brand mark / pencil underline spec
   baselines are reviewed by a human. When `make stories-check` fails,
   surface the diff (path printed in the failure line) and let the
   user decide whether to approve.
+- Generators draw only from `crate::rng` (never `rand`) so seeded
+  worksheets stay stable across dependency bumps. Don't change
+  `rng.rs` output.
 - Frontend is single-framework (Astro). Don't reintroduce a React SPA
   under `frontend/react/` — the Astro site with React islands covers
   both SEO and interactivity.

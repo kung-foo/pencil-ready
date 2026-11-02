@@ -14,7 +14,6 @@ edition = "2024"
 # with `dep.workspace = true` in their own Cargo.toml.
 [workspace.dependencies]
 anyhow = "1"
-rand = { version = "0.8", features = ["small_rng"] }
 clap = { version = "4", features = ["derive", "env"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

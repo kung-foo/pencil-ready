@@ -2,6 +2,7 @@
 //!
 //! Always produces whole-integer answers (no remainders).
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -41,15 +42,9 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         } => (denominators, *min_whole, *max_whole, *unit_only),
         _ => unreachable!(),
     };
+    use crate::rng::SliceShuffle;
 
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-    use rand::SeedableRng;
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Enumerate every (whole, numerator, denominator) triple where the answer
     // is a whole integer. For whole × num/den to be integer, whole must be

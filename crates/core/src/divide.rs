@@ -1,5 +1,6 @@
 //! Division worksheets (simple + long).
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -75,13 +76,8 @@ pub fn generate_long(params: &WorksheetParams) -> anyhow::Result<Sheet> {
 }
 
 fn generate_simple_problems(params: &WorksheetParams, max_quotient: u32) -> Vec<Vec<u32>> {
-    use rand::rngs::SmallRng;
-    use rand::{Rng, SeedableRng};
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     let total = params.total_problems();
     let max_attempts = total * 100;
@@ -115,13 +111,8 @@ fn generate_long_problems(
     digit_range: crate::DigitRange,
     remainder: bool,
 ) -> Vec<Vec<u32>> {
-    use rand::rngs::SmallRng;
-    use rand::{Rng, SeedableRng};
 
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     let total = params.total_problems();
     let max_attempts = total * 100;

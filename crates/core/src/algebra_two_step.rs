@@ -8,6 +8,7 @@
 //!   form = 1 → const-first plus     `b + ax = c`
 //!   form = 2 → canonical minus      `ax - b = c` (only when a*x ≥ b)
 
+use crate::rng::Rng;
 use crate::document;
 use crate::{ComponentOpts, Sheet, WorksheetParams, WorksheetType};
 
@@ -58,15 +59,9 @@ fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
         } => (*a_range, *b_range, *x_range, *mix_forms),
         _ => unreachable!(),
     };
+    use crate::rng::SliceShuffle;
 
-    use rand::rngs::SmallRng;
-    use rand::seq::SliceRandom;
-    use rand::{Rng, SeedableRng};
-
-    let mut rng = match params.seed {
-        Some(s) => SmallRng::seed_from_u64(s),
-        None => SmallRng::from_entropy(),
-    };
+    let mut rng = Rng::from_seed(params.seed);
 
     // Enumerate every (a, b, x) triple. Answers are always clean integers
     // by construction. One entry per combination — the form is randomized
