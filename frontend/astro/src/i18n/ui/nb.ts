@@ -38,6 +38,7 @@ export const nb: UiStrings = {
             longForm: "Oppstilling",
             fractions: "Brøk",
             decimals: "Desimaltall",
+            percent: "Prosent",
             statistics: "Statistikk",
             preAlgebra: "Algebra",
         },
@@ -145,6 +146,43 @@ export const nb: UiStrings = {
             { label: "2 sifre, med låning", example: "73 − 48" },
             { label: "3 sifre, blandet", example: "624 − 287" },
             { label: "3 sifre, låning over null", example: "403 − 178" },
+        ],
+        "fraction-add": [
+            { label: "Samme nevner", example: "3/8 + 1/8" },
+            {
+                label: "Den ene nevneren går opp i den andre",
+                example: "1/2 + 1/4",
+            },
+            { label: "Ulike nevnere", example: "2/3 + 3/4" },
+            { label: "Blandet repetisjon", example: "5/6 + 3/8" },
+        ],
+        "fraction-subtract": [
+            { label: "Samme nevner", example: "5/8 − 3/8" },
+            {
+                label: "Den ene nevneren går opp i den andre",
+                example: "3/4 − 1/2",
+            },
+            { label: "Ulike nevnere", example: "3/4 − 2/3" },
+            { label: "Blandet repetisjon", example: "5/6 − 3/8" },
+        ],
+        "fraction-decimal-percent": [
+            { label: "Tideler og hundredeler", example: "7/100 = 0,07 = 7 %" },
+            {
+                label: "Halve, fjerdedeler og femtedeler",
+                example: "3/4 = 0,75 = 75 %",
+            },
+            {
+                label: "Åttendedeler, og tall over 1",
+                example: "1 3/8 = 1,375 = 137,5 %",
+            },
+        ],
+        "percent-of": [
+            { label: "10 % og 50 %", example: "10 % av 240 = 24" },
+            { label: "20 %, 25 % og 75 %", example: "25 % av 84 = 21" },
+            {
+                label: "Alle prosenter, svar med desimaler",
+                example: "37 % av 48 = 17,76",
+            },
         ],
         "decimal-add": [
             { label: "Tideler", example: "12,5 + 34,7" },

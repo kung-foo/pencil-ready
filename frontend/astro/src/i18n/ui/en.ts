@@ -41,6 +41,7 @@ export const en = {
             longForm: "Long-form",
             fractions: "Fractions",
             decimals: "Decimals",
+            percent: "Percent",
             statistics: "Statistics",
             preAlgebra: "Pre-algebra",
         },
@@ -156,6 +157,43 @@ export const en = {
             { label: "2-digit with borrow", example: "73 − 48" },
             { label: "3-digit, mixed", example: "624 − 287" },
             { label: "3-digit, ripple borrow", example: "403 − 178" },
+        ],
+        "fraction-add": [
+            { label: "Same denominator", example: "3/8 + 1/8" },
+            {
+                label: "One denominator divides the other",
+                example: "1/2 + 1/4",
+            },
+            { label: "Different denominators", example: "2/3 + 3/4" },
+            { label: "Mixed review", example: "5/6 + 3/8" },
+        ],
+        "fraction-subtract": [
+            { label: "Same denominator", example: "5/8 − 3/8" },
+            {
+                label: "One denominator divides the other",
+                example: "3/4 − 1/2",
+            },
+            { label: "Different denominators", example: "3/4 − 2/3" },
+            { label: "Mixed review", example: "5/6 − 3/8" },
+        ],
+        "fraction-decimal-percent": [
+            { label: "Tenths and hundredths", example: "7/100 = 0.07 = 7%" },
+            {
+                label: "Halves, quarters and fifths",
+                example: "3/4 = 0.75 = 75%",
+            },
+            {
+                label: "Eighths, and numbers above 1",
+                example: "1 3/8 = 1.375 = 137.5%",
+            },
+        ],
+        "percent-of": [
+            { label: "10% and 50%", example: "10% of 240 = 24" },
+            { label: "20%, 25% and 75%", example: "25% of 84 = 21" },
+            {
+                label: "Any percent, decimal answers",
+                example: "37% of 48 = 17.76",
+            },
         ],
         "decimal-add": [
             { label: "Tenths", example: "12.5 + 34.7" },

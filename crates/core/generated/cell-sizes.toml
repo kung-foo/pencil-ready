@@ -201,6 +201,38 @@ measured_width_cm = 5.955
 measured_height_cm = 2.776
 
 [[cell]]
+id = "fraction-addition-worst"
+label = "fraction addition (unrelated denominators, 36ths)"
+width_cm = 5.5
+height_cm = 3.9
+measured_width_cm = 5.406
+measured_height_cm = 3.840
+
+[[cell]]
+id = "fraction-addition-same-den"
+label = "fraction addition (same denominator, 2 rows)"
+width_cm = 5.5
+height_cm = 2.7
+measured_width_cm = 5.406
+measured_height_cm = 2.667
+
+[[cell]]
+id = "fraction-conversion-widest"
+label = "fraction/decimal/percent (2 39/40 = 2,975 = 297,5 %)"
+width_cm = 8.9
+height_cm = 2.2
+measured_width_cm = 8.869
+measured_height_cm = 2.141
+
+[[cell]]
+id = "percent-of-widest"
+label = "percent of (99 % av 999 = 989,01)"
+width_cm = 8.6
+height_cm = 6.3
+measured_width_cm = 8.569
+measured_height_cm = 6.277
+
+[[cell]]
 id = "algebra-two-step-small-form0"
 label = "algebra two-step (small, form 0)"
 width_cm = 7.3

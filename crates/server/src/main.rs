@@ -24,7 +24,8 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot, OutputFormat,
+    BorrowMode, CarryMode, ConversionGiven, DenominatorRelation, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot,
+    OutputFormat,
     Paper,
     WorksheetParams, WorksheetType, generate, long_division_default_cols,
     long_division_default_problems,
@@ -1230,6 +1231,210 @@ async fn handle_fraction_simplify(
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+struct FractionAddSpecific {
+    /// Allowed denominators of the two fractions, comma-separated.
+    /// Default `2,3,4,5,6,8,10,12`.
+    #[serde(default)]
+    #[param(value_type = String, example = "2,3,4,5,6,8,10,12")]
+    denominators: Option<String>,
+    /// How the two denominators relate, which sets the difficulty.
+    /// Default `any`.
+    #[serde(default)]
+    relation: Option<DenominatorRelation>,
+}
+
+impl FractionAddSpecific {
+    fn build(self, shared: SharedParams, subtract: bool) -> Result<(OutputFormat, WorksheetParams)> {
+        let denominators = match self.denominators {
+            Some(s) => parse_u32_csv(&s, "denominators")?,
+            None => vec![2, 3, 4, 5, 6, 8, 10, 12],
+        };
+        let relation = self.relation.unwrap_or_default();
+        // A full page: 3 columns of 5 rows, or 7 when every problem
+        // shares its denominator (shorter cells, no rewrite step).
+        let problems = if relation == DenominatorRelation::Same { 21 } else { 15 };
+        let worksheet = if subtract {
+            WorksheetType::FractionSubtract { denominators, relation }
+        } else {
+            WorksheetType::FractionAdd { denominators, relation }
+        };
+        Ok(shared.fold(worksheet, problems, 3))
+    }
+}
+
+/// Fraction addition
+///
+/// Add two proper fractions; answers in simplest form. `relation` sets the difficulty: same denominator, one a multiple of the other, or unrelated.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-add",
+    operation_id = "fraction_add",
+    params(SharedParams, FractionAddSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_fraction_add(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionAddSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-add", p.build(shared, false), &headers)
+}
+
+/// Fraction subtraction
+///
+/// Subtract two proper fractions (the first is always larger); answers in simplest form. Same parameters as fraction addition.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-subtract",
+    operation_id = "fraction_subtract",
+    params(SharedParams, FractionAddSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_fraction_subtract(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionAddSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-subtract", p.build(shared, true), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct FractionDecimalPercentSpecific {
+    /// Allowed denominators, comma-separated; each must divide 1000
+    /// (2, 4, 5, 8, 10, 20, 25, 40, 50, 100). Default `2,4,5,10,20,25,50`.
+    #[serde(default)]
+    #[param(value_type = String, example = "2,4,5,10,20,25,50")]
+    denominators: Option<String>,
+    /// Include values above 1 (below 3), as mixed numbers. Default false.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    improper: Option<bool>,
+    /// Which form is printed. Default `any`.
+    #[serde(default)]
+    given: Option<ConversionGiven>,
+}
+
+impl FractionDecimalPercentSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let denominators = match self.denominators {
+            Some(s) => parse_u32_csv(&s, "denominators")?,
+            None => vec![2, 4, 5, 10, 20, 25, 50],
+        };
+        Ok(shared.fold(
+            WorksheetType::FractionDecimalPercent {
+                denominators,
+                improper: self.improper.unwrap_or(false),
+                given: self.given.unwrap_or_default(),
+            },
+            // 2 columns of 5: the rows get extra space for working out
+            // the conversions (the page would hold 9).
+            10,
+            2,
+        ))
+    }
+}
+
+/// Fractions, decimals and percents
+///
+/// One number written three ways (`3/4 = 0.75 = 75%`): one form is printed, the student writes the other two.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-decimal-percent",
+    operation_id = "fraction_decimal_percent",
+    params(SharedParams, FractionDecimalPercentSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_fraction_decimal_percent(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionDecimalPercentSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-decimal-percent", p.build(shared), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct PercentOfSpecific {
+    /// Percents to use (1-100): values or ranges, comma-separated
+    /// (e.g. `10,50` or `1-99`). Default `10,20,25,50,75`.
+    #[serde(default)]
+    #[param(value_type = String, example = "10,20,25,50,75")]
+    percents: Option<String>,
+    /// Largest base number, 10-1000. Default 400.
+    #[serde(default)]
+    max_base: Option<u32>,
+    /// Allow answers with up to two decimal places (`37% of 48 =
+    /// 17.76`), so any percent pairs with any base. Default false
+    /// (whole-number answers only).
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    decimals: Option<bool>,
+}
+
+impl PercentOfSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let percents = match self.percents {
+            Some(s) => parse_digits_csv(&s, "percents")?
+                .into_iter()
+                .flat_map(|r| r.min..=r.max)
+                .collect(),
+            None => vec![10, 20, 25, 50, 75],
+        };
+        Ok(shared.fold(
+            WorksheetType::PercentOf {
+                percents,
+                max_base: self.max_base.unwrap_or(400),
+                decimals: self.decimals.unwrap_or(false),
+            },
+            PERCENT_OF_PROBLEMS,
+            2,
+        ))
+    }
+}
+
+/// Percent-of problems that fill one page: 2 columns of 3, each with
+/// room under it for the working (a decimal column multiplication).
+const PERCENT_OF_PROBLEMS: u32 = 6;
+
+/// Percent of a number
+///
+/// `20% of 350 = ___`: whole-number answers, or up to two decimals with `decimals=true`.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/percent-of",
+    operation_id = "percent_of",
+    params(SharedParams, PercentOfSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_percent_of(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<PercentOfSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "percent-of", p.build(shared), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct FractionEquivSpecific {
     /// Allowed denominators of the base fraction, comma-separated.
     /// Default `2,3,4,5,6,8,10`.
@@ -1840,6 +2045,7 @@ struct InvalidParams(String);
     components(
         schemas(
             CarryMode, BorrowMode, Locale, DivisionStyle, OutputFormat, Paper, MissingSlot,
+            DenominatorRelation, ConversionGiven,
             WorksheetBytes,
         ),
         responses(WorksheetFile, InvalidParams),
@@ -1930,6 +2136,10 @@ async fn main() {
         .routes(routes!(handle_fraction_mult))
         .routes(routes!(handle_fraction_simplify))
         .routes(routes!(handle_fraction_equiv))
+        .routes(routes!(handle_fraction_add))
+        .routes(routes!(handle_fraction_subtract))
+        .routes(routes!(handle_fraction_decimal_percent))
+        .routes(routes!(handle_percent_of))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .routes(routes!(handle_algebra_square_root))
@@ -2100,6 +2310,10 @@ mod tests {
             "fraction-mult",
             "fraction-simplify",
             "fraction-equiv",
+            "fraction-add",
+            "fraction-subtract",
+            "fraction-decimal-percent",
+            "percent-of",
             "algebra-two-step",
             "algebra-one-step",
             "algebra-square-root",
@@ -2136,6 +2350,20 @@ mod tests {
                 "fraction-mult" => build!(FractionMultSpecific),
                 "fraction-simplify" => build!(FractionSimplifySpecific),
                 "fraction-equiv" => build!(FractionEquivSpecific),
+                "fraction-decimal-percent" => build!(FractionDecimalPercentSpecific),
+                "percent-of" => build!(PercentOfSpecific),
+                "fraction-add" => Query::<FractionAddSpecific>::try_from_uri(&uri)
+                    .unwrap()
+                    .0
+                    .build(shared, false)
+                    .unwrap_or_else(|e| panic!("{kind}?{qs}: {e}"))
+                    .1,
+                "fraction-subtract" => Query::<FractionAddSpecific>::try_from_uri(&uri)
+                    .unwrap()
+                    .0
+                    .build(shared, true)
+                    .unwrap_or_else(|e| panic!("{kind}?{qs}: {e}"))
+                    .1,
                 "algebra-two-step" => build!(AlgebraTwoStepSpecific),
                 "algebra-one-step" => build!(AlgebraOneStepSpecific),
                 "algebra-square-root" => build!(AlgebraSquareRootSpecific),

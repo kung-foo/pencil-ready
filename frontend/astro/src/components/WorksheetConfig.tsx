@@ -716,6 +716,10 @@ function KindSpecific({
 
         case "add":
         case "subtract":
+        case "fraction-add":
+        case "fraction-subtract":
+        case "fraction-decimal-percent":
+        case "percent-of":
         case "long-divide":
         case "algebra-two-step":
         case "algebra-one-step":

@@ -12,6 +12,8 @@ mod decimal_mult;
 mod decimal_sub;
 mod div_drill;
 mod divide;
+mod fraction_add;
+mod fraction_convert;
 mod fraction_equiv;
 mod fraction_mult;
 mod fraction_simplify;
@@ -21,6 +23,7 @@ mod mean;
 mod mult_drill;
 mod multiply;
 mod order_of_ops;
+mod percent_of;
 mod rng;
 mod subtract;
 
@@ -153,6 +156,43 @@ pub enum BorrowMode {
     Ripple,
 }
 
+/// How the two denominators of a fraction addition / subtraction problem
+/// relate. This is what sets the difficulty.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schema(description = "same: 3/8 + 1/8. multiple: one denominator divides the other, 1/2 + 1/4. unrelated: neither divides the other, 2/3 + 3/4. any: all of these.")]
+pub enum DenominatorRelation {
+    Same,
+    Multiple,
+    Unrelated,
+    #[default]
+    Any,
+}
+
+impl DenominatorRelation {
+    pub(crate) fn allows(self, b: u32, d: u32) -> bool {
+        match self {
+            DenominatorRelation::Same => b == d,
+            DenominatorRelation::Multiple => b != d && (b % d == 0 || d % b == 0),
+            DenominatorRelation::Unrelated => b % d != 0 && d % b != 0,
+            DenominatorRelation::Any => true,
+        }
+    }
+}
+
+/// Which form a fraction ↔ decimal ↔ percent problem prints; the
+/// student writes the other two.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schema(description = "fraction, decimal or percent: that form is printed on every problem. any: a third of the page each.")]
+pub enum ConversionGiven {
+    #[default]
+    Any,
+    Fraction,
+    Decimal,
+    Percent,
+}
+
 #[derive(Debug, Clone)]
 pub enum WorksheetType {
     Add {
@@ -199,6 +239,38 @@ pub enum WorksheetType {
         max_whole: u32,
         /// If true, numerator is always 1 (unit fractions only).
         unit_only: bool,
+    },
+    /// `a/b + c/d`, proper fractions in lowest terms, answer in
+    /// simplest form. See `fraction_add.rs`.
+    FractionAdd {
+        /// Allowed denominators of the two operands.
+        denominators: Vec<u32>,
+        relation: DenominatorRelation,
+    },
+    /// `a/b − c/d` with a/b > c/d. Same generator as `FractionAdd`.
+    FractionSubtract {
+        denominators: Vec<u32>,
+        relation: DenominatorRelation,
+    },
+    /// `3/4 = 0.75 = 75%`: one form given, two to fill in. See
+    /// `fraction_convert.rs`.
+    FractionDecimalPercent {
+        /// Allowed denominators; each must divide 1000
+        /// (`fraction_convert::ALLOWED_DENOMINATORS`).
+        denominators: Vec<u32>,
+        /// Allow values above 1 (below 3), written as mixed numbers.
+        improper: bool,
+        given: ConversionGiven,
+    },
+    /// `20% of 350 = ___`, whole-number answers. See `percent_of.rs`.
+    PercentOf {
+        /// Percents to use (1-100).
+        percents: Vec<u32>,
+        /// Largest base (10-1000).
+        max_base: u32,
+        /// Allow answers with up to two decimal places, so any percent
+        /// pairs with any base. Otherwise answers are whole numbers.
+        decimals: bool,
     },
     FractionSimplify {
         /// Allowed denominators of the printed fraction.
@@ -369,6 +441,10 @@ impl WorksheetType {
             WorksheetType::DivisionDrill { .. } => "division-drill-problem",
             WorksheetType::FractionMultiply { .. } => "fraction-multiplication-problem",
             WorksheetType::FractionSimplify { .. } => "fraction-simplification-problem",
+            WorksheetType::FractionAdd { .. } => "fraction-addition-problem",
+            WorksheetType::FractionDecimalPercent { .. } => "fraction-conversion-problem",
+            WorksheetType::PercentOf { .. } => "percent-of-problem",
+            WorksheetType::FractionSubtract { .. } => "fraction-subtraction-problem",
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
             WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
             WorksheetType::FractionEquiv { .. } => "fraction-equivalence-problem",
@@ -448,6 +524,25 @@ impl WorksheetType {
             // on a single row. Width fixed — largest answers fit a 2-digit
             // mixed number (e.g. "2 7/12"). Height is the fraction stack.
             WorksheetType::FractionSimplify { .. } => (5.0, 2.6),
+
+            // Fraction add / subtract: `equation-rows`, one row per
+            // step. Same-denominator pages skip the rewrite step, so
+            // they reserve two rows instead of three. Width covers the
+            // widest rewrite the common-denominator cap allows
+            // (`fraction-addition-worst` in cell-sizes.toml).
+            WorksheetType::FractionAdd { relation, .. }
+            | WorksheetType::FractionSubtract { relation, .. } => {
+                (FRACTION_ADD_CELL_W, fraction_add_cell_h(fraction_add_rows(*relation)))
+            }
+
+            // Fraction ↔ decimal ↔ percent: one row of three fixed-width
+            // slots (`fraction-conversion-widest` in cell-sizes.toml).
+            WorksheetType::FractionDecimalPercent { .. } => (8.9, 2.2),
+
+            // Percent of: one line, the expression boxed to the widest
+            // allowed, over room for the working (a decimal column
+            // multiplication; `percent-of-widest` in cell-sizes.toml).
+            WorksheetType::PercentOf { .. } => (8.6, 6.3),
 
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).
@@ -564,6 +659,14 @@ impl WorksheetType {
             WorksheetType::SimpleDivision { max_quotient, .. } => {
                 document::digit_count(9 * *max_quotient)
             }
+            // Fixed-size cells (see `cell_size_cm`): the bound only
+            // feeds the grid-hint width.
+            WorksheetType::FractionAdd { .. } | WorksheetType::FractionSubtract { .. } => {
+                document::digit_count(fraction_add::MAX_COMMON_DENOMINATOR)
+            }
+            // Fixed slots; the widest denominator is 100.
+            WorksheetType::FractionDecimalPercent { .. } => 3,
+            WorksheetType::PercentOf { max_base, .. } => document::digit_count(*max_base),
             // Fraction-mult's width is driven by the whole-number LHS.
             WorksheetType::FractionMultiply { max_whole, .. } => document::digit_count(*max_whole),
             // Simplify's width is capped by max_numerator (the widest
@@ -661,6 +764,22 @@ impl WorksheetType {
 
 /// Shared with Add/Subtract/Multiply/SimpleDivision. Vertical-stack
 /// width is driven by the widest operand.
+/// Fraction add / subtract cell width in cm, from the
+/// `fraction-addition-worst` fixture in cell-sizes.toml.
+const FRACTION_ADD_CELL_W: f32 = 5.5;
+
+/// Rows a fraction add / subtract cell reserves: same-denominator
+/// problems never need the rewrite step.
+pub(crate) fn fraction_add_rows(relation: DenominatorRelation) -> u32 {
+    if relation == DenominatorRelation::Same { 2 } else { 3 }
+}
+
+/// Fraction add / subtract cell height in cm for `rows` rows
+/// (`fraction-addition-same-den` / `-worst` in cell-sizes.toml).
+fn fraction_add_cell_h(rows: u32) -> f32 {
+    if rows == 2 { 2.7 } else { 3.9 }
+}
+
 pub(crate) fn vertical_stack_width(max_digits: u32) -> f32 {
     match max_digits {
         0..=2 => 2.5,
@@ -1209,6 +1328,11 @@ impl Document {
             WorksheetType::DivisionDrill { .. } => div_drill::generate(params)?,
             WorksheetType::FractionMultiply { .. } => fraction_mult::generate(params)?,
             WorksheetType::FractionSimplify { .. } => fraction_simplify::generate(params)?,
+            WorksheetType::FractionAdd { .. } | WorksheetType::FractionSubtract { .. } => {
+                fraction_add::generate(params)?
+            }
+            WorksheetType::FractionDecimalPercent { .. } => fraction_convert::generate(params)?,
+            WorksheetType::PercentOf { .. } => percent_of::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
             WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
             WorksheetType::FractionEquiv { .. } => fraction_equiv::generate(params)?,
@@ -1530,6 +1654,58 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             }
             if *min_whole < 2 || *max_whole > 99 || min_whole > max_whole {
                 bail!("whole range must be 2-99 with min ≤ max, got {min_whole}-{max_whole}");
+            }
+        }
+        WorksheetType::FractionAdd { .. } | WorksheetType::FractionSubtract { .. } => {
+            let (denominators, relation, subtract) = fraction_add::terms(&params.worksheet);
+            if denominators.is_empty() {
+                bail!("denominators must have at least one value");
+            }
+            for &d in denominators {
+                if d < 2 || d > 20 {
+                    bail!("denominator must be 2-20, got {d}");
+                }
+            }
+            if fraction_add::candidates(denominators, relation, subtract).is_empty() {
+                bail!(
+                    "no problems fit these denominators with relation={} \
+                     (common denominator at most {})",
+                    format!("{relation:?}").to_lowercase(),
+                    fraction_add::MAX_COMMON_DENOMINATOR
+                );
+            }
+        }
+        WorksheetType::PercentOf {
+            percents,
+            max_base,
+            decimals,
+        } => {
+            if percents.is_empty() {
+                bail!("percents must have at least one value");
+            }
+            for &p in percents {
+                if p == 0 || p > 100 {
+                    bail!("percent must be 1-100, got {p}");
+                }
+            }
+            if *max_base < 10 || *max_base > 1000 {
+                bail!("max-base must be 10-1000, got {max_base}");
+            }
+            if percent_of::candidates(percents, *max_base, *decimals).is_empty() {
+                bail!("no base up to {max_base} gives a whole-number answer for these percents");
+            }
+        }
+        WorksheetType::FractionDecimalPercent { denominators, .. } => {
+            if denominators.is_empty() {
+                bail!("denominators must have at least one value");
+            }
+            for &d in denominators {
+                if !fraction_convert::ALLOWED_DENOMINATORS.contains(&d) {
+                    bail!(
+                        "denominator must be one of {:?} (decimals that end within three places), got {d}",
+                        fraction_convert::ALLOWED_DENOMINATORS
+                    );
+                }
             }
         }
         WorksheetType::FractionSimplify {

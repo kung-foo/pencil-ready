@@ -50,6 +50,98 @@
             }
         }
     ],
+    "fraction-add": [
+        {
+            "params": {
+                "relation": "same"
+            }
+        },
+        {
+            "note": "One denominator divides the other, so only one fraction gets rewritten — the step between combining numerators and finding a new common denominator.",
+            "params": {
+                "relation": "multiple"
+            }
+        },
+        {
+            "params": {
+                "relation": "unrelated"
+            }
+        },
+        {
+            "note": "Mixed review: all three relations on one page.",
+            "params": {
+                "relation": "any"
+            }
+        }
+    ],
+    "fraction-subtract": [
+        {
+            "params": {
+                "relation": "same"
+            }
+        },
+        {
+            "note": "One denominator divides the other, so only one fraction gets rewritten — the step between combining numerators and finding a new common denominator.",
+            "params": {
+                "relation": "multiple"
+            }
+        },
+        {
+            "params": {
+                "relation": "unrelated"
+            }
+        },
+        {
+            "note": "Mixed review: all three relations on one page.",
+            "params": {
+                "relation": "any"
+            }
+        }
+    ],
+    "fraction-decimal-percent": [
+        {
+            "note": "Denominators 10 and 100 only: the fraction is the decimal read aloud (7/100 = 0.07), so this level is about place value.",
+            "params": {
+                "denominators": "10,100"
+            }
+        },
+        {
+            "params": {
+                "denominators": "2,4,5,10,20,25,50"
+            }
+        },
+        {
+            "note": "Eighths and fortieths need three decimal places (0.125) and give half percents (12.5%); improper adds a few values between 1 and 2.",
+            "params": {
+                "denominators": "2,4,5,8,10,20,25,40,50",
+                "improper": true
+            }
+        }
+    ],
+    "percent-of": [
+        {
+            "note": "10% and 50% are the anchors: divide by 10, halve. Bases up to 200 keep the arithmetic mental.",
+            "params": {
+                "percents": "10,50",
+                "max_base": 200
+            }
+        },
+        {
+            "note": "20% is two tens, 25% a quarter, 75% three quarters, built from the level 1 anchors.",
+            "params": {
+                "percents": "10,20,25,50,75",
+                "max_base": 400
+            }
+        },
+        {
+            "note": "Any percent of a two-digit number, with up to two decimals in the answer: a two-digit by two-digit multiplication, then dividing by 100 by moving the decimal point. Whole-number answers would force odd percents (37%) onto bases of 100, 200, … and the multiplication disappears.",
+            "params": {
+                "percents": "1-99",
+                "max_base": 99,
+                "decimals": true
+            }
+        }
+    ],
     "decimal-add": [
         {
             "params": {

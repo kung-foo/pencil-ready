@@ -40,6 +40,10 @@ export const WORKSHEET_KINDS = [
     "fraction-mult",
     "fraction-simplify",
     "fraction-equiv",
+    "fraction-add",
+    "fraction-subtract",
+    "fraction-decimal-percent",
+    "percent-of",
     "algebra-one-step",
     "algebra-two-step",
     "algebra-square-root",
@@ -122,6 +126,26 @@ export type KindConfig =
           scale?: string;
           missing?: "any" | "left-num" | "left-den" | "right-num" | "right-den";
           proper_only?: boolean;
+      }
+    | {
+          kind: "fraction-add";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "fraction-subtract";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "fraction-decimal-percent";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "percent-of";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
       }
     | {
           kind: "algebra-two-step";
@@ -272,6 +296,11 @@ export function parseConfig(
                 ] as const),
                 proper_only: b("proper_only"),
             };
+        case "fraction-add":
+        case "fraction-subtract":
+        case "fraction-decimal-percent":
+        case "percent-of":
+            return { ...shared, kind, level: s("level") };
         case "algebra-two-step":
             return { ...shared, kind, level: s("level") };
         case "algebra-one-step":

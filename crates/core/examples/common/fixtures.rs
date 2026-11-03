@@ -64,6 +64,16 @@ pub const FIXTURES: &[Fixture] = &[
     // --- fraction multiplication ---
     Fixture { id: "fraction-multiplication-unit-d2",     label: "fraction multiplication (unit, 2-digit whole)",     snippet: r#"fraction-multiplication-problem((12, 1, 2), opts: (operator: [#sym.times]))"# },
     Fixture { id: "fraction-multiplication-non-unit-d2", label: "fraction multiplication (non-unit, 2-digit whole)", snippet: r#"fraction-multiplication-problem((15, 2, 3), opts: (operator: [#sym.times]))"# },
+    // --- fraction addition / subtraction (one component) ---
+    // Worst case under MAX_COMMON_DENOMINATOR = 36: two-digit numerators
+    // in the rewrite (33/36 + 32/36) and a mixed-number answer.
+    Fixture { id: "fraction-addition-worst",    label: "fraction addition (unrelated denominators, 36ths)", snippet: r#"fraction-addition-problem((11, 12, 8, 9, 1, 29, 36), mode: "worked", opts: (operator: [#sym.plus]))"# },
+    Fixture { id: "fraction-addition-same-den", label: "fraction addition (same denominator, 2 rows)",      snippet: r#"fraction-addition-problem((11, 12, 7, 12, 1, 1, 2), mode: "worked", opts: (operator: [#sym.plus], rows: 2))"# },
+    // --- fraction ↔ decimal ↔ percent ---
+    // Widest values the generator allows, Norwegian notation (" %").
+    Fixture { id: "fraction-conversion-widest", label: "fraction/decimal/percent (2 39/40 = 2,975 = 297,5 %)", snippet: r#"fraction-conversion-problem((119, 40, 0, 2975, 3, 2975, 1), mode: "worked", opts: (decimal-sep: ",", percent-suffix: "\u{a0}%"))"# },
+    // --- percent of a number ---
+    Fixture { id: "percent-of-widest", label: "percent of (99 % av 999 = 989,01)", snippet: r#"percent-of-problem((99, 999, 98901, 2), mode: "worked", opts: (operator: [#sym.dot.op], percent-suffix: "\u{a0}%", of: "av", decimal-sep: ","))"# },
 
     // --- algebra two-step ---
     Fixture { id: "algebra-two-step-small-form0", label: "algebra two-step (small, form 0)", snippet: r#"algebra-two-step-problem((4, 5, 4, 21, 0),    opts: (operator: [#sym.dot.op]))"# },
@@ -88,6 +98,9 @@ pub fn preamble() -> &'static str {
 #import "/lib/problems/division/equation.typ": division-equation-problem
 #import "/lib/problems/division/drill.typ": division-drill-problem
 #import "/lib/problems/fraction/multiplication.typ": fraction-multiplication-problem
+#import "/lib/problems/fraction/addition.typ": fraction-addition-problem
+#import "/lib/problems/fraction/conversion.typ": fraction-conversion-problem
+#import "/lib/problems/percent/of.typ": percent-of-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/shared.typ": body-font

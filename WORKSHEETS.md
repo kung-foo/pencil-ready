@@ -331,6 +331,179 @@ fraction-simplification-problem((20, 6), mode: "worked") // 3 1/3
 No operator or locale-specific symbol — the fraction bar and `=` are
 universal.
 
+## Fraction Addition and Subtraction
+
+Two kinds, `fraction-add` and `fraction-subtract`, sharing one
+generator (`fraction_add.rs`) and one component. Add or subtract two
+proper fractions and write the answer in simplest form (reduced;
+improper results as mixed numbers).
+
+```
+1   1   3   2
+─ + ─ = ─ + ─        rewrite over the common denominator
+2   3   6   6
+        5
+      = ─            combine the numerators
+        6
+```
+
+### Parameters
+
+- `denominators: list[u32]` — allowed denominators of both operands
+  (2–20). Default `2,3,4,5,6,8,10,12`.
+- `relation: same | multiple | unrelated | any` — how the two
+  denominators relate, which is what sets the difficulty. Default `any`.
+  - **same** — `3/8 + 1/8`: combine the numerators.
+  - **multiple** — `1/2 + 1/4`: one denominator divides the other, so
+    only one fraction is rewritten.
+  - **unrelated** — `2/3 + 3/4`: neither divides the other; both are
+    rewritten over a new common denominator.
+
+Levels 1–4 are same, multiple, unrelated, then all of them mixed.
+
+### Constraints
+
+- Operands are proper fractions in lowest terms.
+- The common denominator is at most 36 (`MAX_COMMON_DENOMINATOR`), which
+  keeps the rewritten fractions, and the cell, narrow.
+- Subtraction keeps the first fraction strictly larger, so answers are
+  positive.
+- A configuration with no valid problems (e.g. `relation=same` with only
+  `denominators=2` for subtraction) is rejected with an error.
+
+### Problem generation
+
+1. Enumerate every `(a, b, c, d)` with `b, d ∈ denominators` matching
+   `relation` and the common-denominator cap, `a/b` and `c/d` proper and
+   reduced (and `a/b > c/d` for subtraction).
+2. Shuffle and take `num_problems`; pad via `pad_with_duplicates` if the
+   pool is smaller.
+3. Each problem carries its answer, `(a, b, c, d, whole, num, den)`.
+
+The space is large: 220–1066 distinct problems per level with the
+default denominators.
+
+### Layout component
+
+```typst
+fraction-addition-problem((1, 2, 1, 3, 0, 5, 6), opts: (operator: [#sym.plus]))
+fraction-subtraction-problem((5, 6, 1, 3, 0, 1, 2), mode: "worked",
+  opts: (operator: [#sym.minus], subtract: true))
+```
+
+Built on `equation-rows`. The component derives the steps (rewrite,
+combine, simplify) from the operands and asserts the generator's answer.
+Cells reserve three rows, or two when `relation=same` (no rewrite step);
+unused rows are hidden and carry no `=`. A worked example shows every
+step; the answer key shows only the answer, next to the problem. `+`
+and `−` are the same in every locale.
+
+## Fractions, Decimals and Percents
+
+Kind `fraction-decimal-percent`. One number written three ways, one
+form given and two to fill in:
+
+```
+3                            ___ = ___ = 12.5%
+─ = ____ = ____ %
+4
+```
+
+### Parameters
+
+- `denominators: list[u32]` — allowed denominators. Each must divide
+  1000 (2, 4, 5, 8, 10, 20, 25, 40, 50, 100) so the decimal ends within
+  three places. Default `2,4,5,10,20,25,50`.
+- `improper: bool` — add values between 1 and 2, written as mixed
+  numbers, for denominators up to 10. Default false.
+- `given: any | fraction | decimal | percent` — which form is printed.
+  `any` gives each form on a third of the page. Default `any`.
+
+Levels: tenths and hundredths (`10,100`); halves, quarters and fifths
+(`2,4,5,10,20,25,50`); eighths and fortieths plus values above 1.
+
+### Problem generation
+
+1. Enumerate every fraction `n/d` in lowest terms with `d ∈ denominators`
+   and `n < d` (or `n < 2d` for small `d` when `improper`).
+2. Shuffle and take `num_problems`; pad via `pad_with_duplicates` if the
+   pool is smaller.
+3. Assign the given form (fixed, or cycled 0/1/2 and shuffled for `any`).
+
+Each problem is `(num, den, given, dec, dec_places, pct, pct_places)`:
+decimal and percent are scaled integers (`0.125` = 125, 3 places), so
+typst never formats a float. The component asserts the three agree.
+
+### Layout component
+
+```typst
+fraction-conversion-problem((3, 4, 0, 75, 2, 75, 0))                    // 3/4 given
+fraction-conversion-problem((1, 8, 2, 125, 3, 125, 1), mode: "worked",  // 12.5% given
+  opts: (decimal-sep: ",", percent-suffix: "\u{a0}%"))
+```
+
+One row of three fixed-width slots, so the `=` signs line up down a
+column; two cells across the page (8.9 cm each), five rows by default
+so there is room to work. Fractions are
+display-size to match the decimals. Answer lines stay under the two
+non-given forms in every mode, so a worked example still shows which
+was given. Locale: decimal separator, and Norwegian puts a no-break
+space before `%` (`LocaleStrings::percent_suffix`).
+
+## Percent of a Number
+
+Kind `percent-of`: `20% of 350 = ___` (`20 % av 350` in Norwegian),
+with a whole-number answer, or up to two decimals with `decimals`.
+
+### Parameters
+
+- `percents: list[range]` — percents to use (1–100), values or ranges
+  (`10,50`, `1-99`). Default `10,20,25,50,75`.
+- `max_base: u32` — largest base number (10–1000). Default 400.
+- `decimals: bool` — allow answers with up to two decimal places, so any
+  percent pairs with any base (`37% of 48 = 17.76`). Default false.
+
+Levels: 10% and 50% (bases to 200); 10/20/25/50/75% (to 400); any
+percent `1-99` of a two-digit number, with `decimals`.
+
+Without `decimals`, whole-number answers decide the bases: `base` must
+be a multiple of `100 / gcd(percent, 100)` — 25 for 36%, 100 for 37%.
+Odd percents then only get bases of 100, 200, … and the multiplication
+disappears, which is why level 3 allows decimal answers.
+
+### Problem generation
+
+1. Enumerate every `(percent, base)` with `10 ≤ base ≤ max_base` (and,
+   without `decimals`, `percent × base` a multiple of 100).
+2. Shuffle each percent's bases and the order of the percents, then deal
+   round-robin, so a percent with many valid bases (50%) doesn't crowd
+   out one with few (35%), and a long list (`1-99`) is sampled across
+   its whole range. Shuffle the page; pad if the pool is smaller.
+
+### Layout component
+
+```typst
+percent-of-problem((25, 840, 210, 0))                     // blank
+percent-of-problem((37, 48, 1776, 2), mode: "worked",     // 17,76
+  opts: (percent-suffix: "\u{a0}%", of: "av", decimal-sep: ","))
+```
+
+One line over room for the working: the base times the percent as a
+decimal (37% → 0.37, 50% → 0.5) as a column multiplication — the
+shared `vertical-stack` layout with `decimal-places` and
+`decimal-width: 0.5`, scaled to the line's text size, with
+`answer-space: 0em`. Multiply as whole numbers (partial products), then
+place the point in the product. The half-width point gets a spacer at
+the same position in every row, so digit columns line up through it. A worked
+example prints it; blank cells reserve the space the widest working
+(999 × 0.99) takes, so the room matches what solving needs. 2 columns
+of 3. The expression is right-aligned in a box as wide as the widest
+allowed (`100% of 1000`), so the `=` and answer lines line up down a
+column. The multiply sign follows the locale (`·` in Norwegian). Locale: the percent sign
+(`LocaleStrings::percent_suffix`) and the word "of" / "av"
+(`percent_of`), and the decimal separator. The answer is a scaled
+integer plus its decimal places, like the conversion sheet.
+
 ## Algebra: Two-Step
 
 Solve a two-step linear equation of the form `ax + b = c` for `x`. Teaches

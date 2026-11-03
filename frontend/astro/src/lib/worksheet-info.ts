@@ -26,11 +26,23 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
     },
     {
         id: "fractions",
-        kinds: ["fraction-equiv", "fraction-simplify", "fraction-mult"],
+        kinds: [
+            "fraction-equiv",
+            "fraction-simplify",
+            "fraction-add",
+            "fraction-subtract",
+            "fraction-mult",
+        ],
     },
     {
         id: "decimals",
         kinds: ["decimal-add", "decimal-subtract", "decimal-multiply"],
+    },
+    {
+        id: "percent",
+        // Conversion first: percent as hundredths is the idea the
+        // percent-of sheet builds on.
+        kinds: ["fraction-decimal-percent", "percent-of"],
     },
     {
         id: "statistics",

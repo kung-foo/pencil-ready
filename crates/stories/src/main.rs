@@ -5,10 +5,13 @@
 //! `stories/diff/`. A change to shared typst (e.g. font in shared.typ)
 //! invalidates all baselines — which is the point.
 //!
+//! `diff` also rebuilds `stories/unapproved/`: the current render of every
+//! story that is new or changed, and nothing else — the review list.
+//!
 //! Workflow:
 //!   cargo run -p pencil-ready-stories -- generate    # regenerate stories/current/
 //!   cargo run -p pencil-ready-stories -- diff        # compare current vs baseline
-//!   cargo run -p pencil-ready-stories -- approve     # promote current to baseline
+//!   cargo run -p pencil-ready-stories -- approve     # promote stories/unapproved/ to baseline
 
 use std::path::{Path, PathBuf};
 
@@ -28,13 +31,19 @@ struct Cli {
 enum Command {
     /// Regenerate PNGs for every story file into stories/current/
     Generate,
-    /// Diff stories/current/ against stories/baseline/ (writes stories/diff/)
+    /// Diff stories/current/ against stories/baseline/ (writes stories/diff/
+    /// and rebuilds stories/unapproved/ with the new and changed renders)
     Diff,
-    /// Generate + diff in one step. Exits non-zero on any change.
+    /// Generate + diff + lint in one step. Exits non-zero on any change
+    /// or any lint failure.
     Check,
-    /// Promote stories/current/ to stories/baseline/
+    /// Flag ink outside (or on) each story's red debug box, for every
+    /// story (`check` only lints new and changed ones).
+    Lint,
+    /// Promote stories/unapproved/ to stories/baseline/
     Approve {
-        /// Specific story name (without .typ). If omitted, approves all changed.
+        /// Specific story name (without .typ). If omitted, approves every
+        /// story in stories/unapproved/.
         story: Option<String>,
     },
     /// Directional pixel-diff two arbitrary PNGs; write the diff image to <out>.
@@ -101,6 +110,14 @@ fn cmd_diff(root: &Path) -> Result<bool> {
     let baseline_dir = root.join("stories/baseline");
     let diff_dir = root.join("stories/diff");
     std::fs::create_dir_all(&diff_dir)?;
+    // Rebuilt every run, so it only ever holds what still needs review.
+    let unapproved_dir = root.join("stories/unapproved");
+    let _ = std::fs::remove_dir_all(&unapproved_dir);
+    std::fs::create_dir_all(&unapproved_dir)?;
+    let unapprove = |name: &str, current: &Path| -> Result<()> {
+        std::fs::copy(current, unapproved_dir.join(format!("{name}.png")))?;
+        Ok(())
+    };
 
     let mut any_changed = false;
 
@@ -116,6 +133,7 @@ fn cmd_diff(root: &Path) -> Result<bool> {
         }
         if !baseline.exists() {
             println!("+ {name}: NEW (no baseline yet)");
+            unapprove(name, &current)?;
             any_changed = true;
             continue;
         }
@@ -132,6 +150,7 @@ fn cmd_diff(root: &Path) -> Result<bool> {
                     "✗ {name}: {removed} removed, {added} added pixels → {}",
                     diff.display()
                 );
+                unapprove(name, &current)?;
                 any_changed = true;
             }
         }
@@ -144,16 +163,33 @@ fn cmd_approve(root: &Path, story: Option<&str>) -> Result<()> {
     let stories = list_stories(root)?;
     let current_dir = root.join("stories/current");
     let baseline_dir = root.join("stories/baseline");
+    let unapproved_dir = root.join("stories/unapproved");
     std::fs::create_dir_all(&baseline_dir)?;
 
-    let names: Vec<&str> = match story {
+    let names: Vec<String> = match story {
         Some(s) => {
             if !stories.iter().any(|(n, _)| n == s) {
                 bail!("unknown story: {s}");
             }
-            vec![s]
+            vec![s.to_string()]
         }
-        None => stories.iter().map(|(n, _)| n.as_str()).collect(),
+        // Only what `diff` flagged as new or changed.
+        None => {
+            let mut names: Vec<String> = std::fs::read_dir(&unapproved_dir)
+                .map(|rd| {
+                    rd.filter_map(|e| e.ok())
+                        .filter_map(|e| {
+                            e.file_name().to_str()?.strip_suffix(".png").map(str::to_string)
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            names.sort();
+            if names.is_empty() {
+                println!("nothing to approve (stories/unapproved/ is empty; run `check` first)");
+            }
+            names
+        }
     };
 
     for name in &names {
@@ -163,9 +199,145 @@ fn cmd_approve(root: &Path, story: Option<&str>) -> Result<()> {
             bail!("no current PNG for {name} (run `generate` first)");
         }
         std::fs::copy(&current, &baseline)?;
+        let _ = std::fs::remove_file(unapproved_dir.join(format!("{name}.png")));
         println!("approved {name}");
     }
     Ok(())
+}
+
+/// Ink that escapes a story's debug box: pixels of text or lines lying
+/// outside every outermost red box, or touching one's border. A
+/// component's bounding rect must contain what it draws (SPEC.md →
+/// Layout rules → Bounding box); this catches a denominator hanging
+/// below the box or working drawn beside it. Returns the number of such
+/// pixels and their bounding rectangle, or `None` when the story draws
+/// no red box.
+fn bbox_lint(path: &Path) -> Result<Option<(usize, (u32, u32, u32, u32))>> {
+    let img = image::open(path).context("read png")?.to_rgba8();
+    let (w, h) = img.dimensions();
+    let px = |x: u32, y: u32| img.get_pixel(x, y).0;
+    // The debug stroke is `red` (#ff4136) and its anti-aliased edge.
+    let is_red = |p: [u8; 4]| p[0] > 180 && p[0] as i32 - p[1] as i32 > 60 && p[0] as i32 - p[2] as i32 > 60;
+    // Ink: dark in every channel, so neither red nor blue debug strokes.
+    let is_ink = |p: [u8; 4]| p[3] > 0 && p[0] < 170 && p[1] < 170 && p[2] < 170;
+
+    // Red boxes: bounding rects of 8-connected red regions.
+    let mut seen = vec![false; (w * h) as usize];
+    let mut boxes: Vec<(u32, u32, u32, u32)> = Vec::new();
+    for y in 0..h {
+        for x in 0..w {
+            if seen[(y * w + x) as usize] || !is_red(px(x, y)) {
+                continue;
+            }
+            let (mut x0, mut y0, mut x1, mut y1, mut n) = (x, y, x, y, 0usize);
+            let mut stack = vec![(x, y)];
+            seen[(y * w + x) as usize] = true;
+            while let Some((cx, cy)) = stack.pop() {
+                n += 1;
+                (x0, y0, x1, y1) = (x0.min(cx), y0.min(cy), x1.max(cx), y1.max(cy));
+                for dy in -1i32..=1 {
+                    for dx in -1i32..=1 {
+                        let (nx, ny) = (cx as i32 + dx, cy as i32 + dy);
+                        if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 {
+                            continue;
+                        }
+                        let i = (ny as u32 * w + nx as u32) as usize;
+                        if !seen[i] && is_red(px(nx as u32, ny as u32)) {
+                            seen[i] = true;
+                            stack.push((nx as u32, ny as u32));
+                        }
+                    }
+                }
+            }
+            // Ignore specks; a box outline is long.
+            if n > 50 {
+                boxes.push((x0, y0, x1, y1));
+            }
+        }
+    }
+    if boxes.is_empty() {
+        return Ok(None);
+    }
+    let inside = |a: &(u32, u32, u32, u32), b: &(u32, u32, u32, u32)| {
+        a != b && a.0 >= b.0 && a.1 >= b.1 && a.2 <= b.2 && a.3 <= b.3
+    };
+    let outer: Vec<_> = boxes.iter().filter(|a| !boxes.iter().any(|b| inside(a, b))).copied().collect();
+
+    // Border (1pt at 300 ppi ≈ 4 px) plus a pixel of anti-aliasing: ink
+    // this close to an edge is touching it.
+    let m = 6;
+    // Judge connected pieces of ink, not single pixels: a rule (a line
+    // at most `thin` px thick) may run to the box edge by design — the
+    // answer line of a column sum spans the box — so it only fails if it
+    // leaves the box. Anything else (a glyph, a fraction bar's digits)
+    // must sit clear of the border.
+    let thin = 8;
+    let mut ink_seen = vec![false; (w * h) as usize];
+    let mut count = 0;
+    let mut ext = (u32::MAX, u32::MAX, 0, 0);
+    for y in 0..h {
+        for x in 0..w {
+            if ink_seen[(y * w + x) as usize] || !is_ink(px(x, y)) {
+                continue;
+            }
+            let (mut x0, mut y0, mut x1, mut y1, mut n) = (x, y, x, y, 0usize);
+            let mut stack = vec![(x, y)];
+            ink_seen[(y * w + x) as usize] = true;
+            while let Some((cx, cy)) = stack.pop() {
+                n += 1;
+                (x0, y0, x1, y1) = (x0.min(cx), y0.min(cy), x1.max(cx), y1.max(cy));
+                for dy in -1i32..=1 {
+                    for dx in -1i32..=1 {
+                        let (nx, ny) = (cx as i32 + dx, cy as i32 + dy);
+                        if nx < 0 || ny < 0 || nx >= w as i32 || ny >= h as i32 {
+                            continue;
+                        }
+                        let i = (ny as u32 * w + nx as u32) as usize;
+                        if !ink_seen[i] && is_ink(px(nx as u32, ny as u32)) {
+                            ink_seen[i] = true;
+                            stack.push((nx as u32, ny as u32));
+                        }
+                    }
+                }
+            }
+            let clear = outer.iter().any(|&(bx0, by0, bx1, by1)| {
+                x0 > bx0 + m && x1 + m < bx1 && y0 > by0 + m && y1 + m < by1
+            });
+            let rule = (y1 - y0 < thin || x1 - x0 < thin)
+                && outer.iter().any(|&(bx0, by0, bx1, by1)| {
+                    x0 >= bx0 && x1 <= bx1 && y0 >= by0 && y1 <= by1
+                });
+            if !clear && !rule {
+                count += n;
+                ext = (ext.0.min(x0), ext.1.min(y0), ext.2.max(x1), ext.3.max(y1));
+            }
+        }
+    }
+    Ok(Some((count, ext)))
+}
+
+/// Lint current renders; prints failures, returns whether any. With
+/// `only_unapproved`, just the stories in stories/unapproved/ (new or
+/// changed), so `check` can gate what's up for approval without failing
+/// on older stories that predate the lint.
+fn cmd_lint(root: &Path, only_unapproved: bool) -> Result<bool> {
+    let mut any = false;
+    for (name, _) in list_stories(root)? {
+        let current = root.join("stories/current").join(format!("{name}.png"));
+        if !current.exists() {
+            continue;
+        }
+        if only_unapproved && !root.join("stories/unapproved").join(format!("{name}.png")).exists() {
+            continue;
+        }
+        if let Some((n, (x0, y0, x1, y1))) = bbox_lint(&current)? {
+            if n > 0 {
+                println!("! {name}: {n} ink pixels outside or on the red box (x {x0}-{x1}, y {y0}-{y1})");
+                any = true;
+            }
+        }
+    }
+    Ok(any)
 }
 
 /// Directional diff with canvas-size awareness.
@@ -298,7 +470,13 @@ fn main() -> Result<()> {
         Command::Check => {
             cmd_generate(&root)?;
             let changed = cmd_diff(&root)?;
-            if changed {
+            let lint = cmd_lint(&root, true)?;
+            if changed || lint {
+                std::process::exit(1);
+            }
+        }
+        Command::Lint => {
+            if cmd_lint(&root, false)? {
                 std::process::exit(1);
             }
         }
