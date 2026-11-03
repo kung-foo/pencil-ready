@@ -1406,9 +1406,9 @@ impl PercentOfSpecific {
     }
 }
 
-/// Percent-of problems that fill one page: 2 columns of 4, each with
-/// room under it for the written multiplication.
-const PERCENT_OF_PROBLEMS: u32 = 8;
+/// Percent-of problems that fill one page: 2 columns of 3, each with
+/// room under it for the working (column multiplication, then ÷ 100).
+const PERCENT_OF_PROBLEMS: u32 = 6;
 
 /// Percent of a number
 ///

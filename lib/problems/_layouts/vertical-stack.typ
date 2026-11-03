@@ -23,6 +23,9 @@
 //     to make the answer read as if hand-written by the student.
 //   answer-color: color for the final answer text. Default: none = inherit
 //     (black). Pass e.g. rgb("#4a4a4a") for a graphite-pencil look.
+//   answer-space: writing room reserved below the line. Default auto =
+//     `answer-rows` lines. Pass 0em when embedding a worked stack in a
+//     larger layout (percent-of) that places its own content below.
 //
 // `mode` = "blank" | "worked" | "answer-only". "answer-only" skips worked
 // steps (partial products) and renders just the final answer — used by
@@ -34,6 +37,7 @@
   let pad-width = opts.at("pad-width", default: 0)
   let answer-font = opts.at("answer-font", default: none)
   let answer-color = opts.at("answer-color", default: none)
+  let answer-space-opt = opts.at("answer-space", default: auto)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -55,7 +59,7 @@
   let rest = operands.slice(1)
 
   let carry-space = problem-carry-space
-  let answer-space = problem-line-height * answer-rows
+  let answer-space = if answer-space-opt == auto { problem-line-height * answer-rows } else { answer-space-opt }
 
   let content = box(
     width: width,

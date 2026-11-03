@@ -540,9 +540,9 @@ impl WorksheetType {
             WorksheetType::FractionDecimalPercent { .. } => (8.9, 2.2),
 
             // Percent of: one line, the expression boxed to the widest
-            // allowed, over room for a written multiplication
-            // (`percent-of-widest` in cell-sizes.toml).
-            WorksheetType::PercentOf { .. } => (8.4, 5.1),
+            // allowed, over room for the working (column multiplication
+            // and ÷ 100; `percent-of-widest` in cell-sizes.toml).
+            WorksheetType::PercentOf { .. } => (8.4, 6.7),
 
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).

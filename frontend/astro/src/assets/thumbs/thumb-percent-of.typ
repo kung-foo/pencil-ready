@@ -10,7 +10,7 @@
   mode: "worked",
   opts: (
     align: center + horizon,
-    "work-height": 0em,
+    work: false,
     ..thumb-answer-style,
   ),
 ))

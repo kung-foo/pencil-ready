@@ -228,9 +228,9 @@ measured_height_cm = 2.141
 id = "percent-of-widest"
 label = "percent of (99 % av 999 = 989,01)"
 width_cm = 8.4
-height_cm = 5.1
+height_cm = 6.7
 measured_width_cm = 8.315
-measured_height_cm = 5.062
+measured_height_cm = 6.651
 
 [[cell]]
 id = "algebra-two-step-small-form0"

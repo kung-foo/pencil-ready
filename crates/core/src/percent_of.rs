@@ -19,9 +19,11 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
     Ok(Sheet {
         worksheet: params.worksheet.clone(),
         problems: generate_problems(params),
+        // The working (column multiplication, then ÷ 100) uses the
+        // locale's signs: × and ÷, or · and : in Norwegian.
         opts: ComponentOpts {
-            operator: String::new(),
-            divide_operator: String::new(),
+            operator: params.locale.multiply_symbol().to_string(),
+            divide_operator: params.locale.divide_symbol().to_string(),
             width_cm: 0.0,
             answer_rows: 0,
             pad_width: 0,
