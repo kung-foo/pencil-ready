@@ -86,9 +86,6 @@
         answer-rows: if digits > 1 { digits + 1 } else { 1 },
         decimal-places: (0, places, places),
         decimal-sep: sep,
-        // Half-width point: room around it, and every row gets the same
-        // spacer so the digits stay in their columns.
-        decimal-width: 0.5,
         // The stack's own blank writing room is replaced by this
         // layout's: the room below is reserved for the whole working.
         answer-space: 0em,
@@ -130,12 +127,14 @@
   // The expression sits right-aligned in a box as wide as the widest one
   // the generator allows (`100% of 1000`), so the `=` and answer lines
   // line up down a column.
-  let content = context box(stroke: debug-box, inset: (top: 0.2em, bottom: 0.3em, x: 0.2em), grid(
+  let content = context box(inset: (top: 0.2em, bottom: 0.3em, x: 0.2em), grid(
     columns: (measure(expr(100, 1000)).width, auto, auto),
     column-gutter: 0.3em,
     align: (right + horizon, horizon, horizon),
     expr(pct, base), sym.eq, slot,
   ))
   let body = if show-work { stack(dir: ttb, spacing: 0.2em, content, pad(left: 1em, work-room)) } else { content }
-  align(cell-align, pad(left: 0.3cm, right: 0.3cm, body))
+  // The debug box wraps the whole cell, working included, so it shows
+  // the real bounding rect.
+  align(cell-align, pad(left: 0.3cm, right: 0.3cm, box(stroke: debug-box, inset: 0.2em, body)))
 }

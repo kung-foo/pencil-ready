@@ -33,6 +33,9 @@
   row-gutter: 1.3em,
   symmetric: true,
   rhs-align: left + horizon,
+  // Room below the last row. 0.4em suits a last row of plain text; a
+  // last row ending in a fraction needs more for the denominator.
+  bottom-inset: 0.4em,
   debug: false,
 ) = {
   context {
@@ -90,7 +93,7 @@
     // single-line fractions.
     box(
       stroke: if debug { 1pt + red } else { none },
-      inset: (top: 0.5em, bottom: 0.4em, x: 0.2em),
+      inset: (top: 0.5em, bottom: bottom-inset, x: 0.2em),
       grid(
         columns: (col1-w, eq-w, col3-w),
         column-gutter: 0.3em,

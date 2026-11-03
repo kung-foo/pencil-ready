@@ -542,7 +542,7 @@ impl WorksheetType {
             // Percent of: one line, the expression boxed to the widest
             // allowed, over room for the working (a decimal column
             // multiplication; `percent-of-widest` in cell-sizes.toml).
-            WorksheetType::PercentOf { .. } => (8.4, 6.1),
+            WorksheetType::PercentOf { .. } => (8.6, 6.3),
 
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).
@@ -777,7 +777,7 @@ pub(crate) fn fraction_add_rows(relation: DenominatorRelation) -> u32 {
 /// Fraction add / subtract cell height in cm for `rows` rows
 /// (`fraction-addition-same-den` / `-worst` in cell-sizes.toml).
 fn fraction_add_cell_h(rows: u32) -> f32 {
-    if rows == 2 { 2.7 } else { 4.0 }
+    if rows == 2 { 2.7 } else { 3.9 }
 }
 
 pub(crate) fn vertical_stack_width(max_digits: u32) -> f32 {

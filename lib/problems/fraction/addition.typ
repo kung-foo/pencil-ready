@@ -152,6 +152,11 @@
     col-width: col-width,
     symmetric: symmetric,
     rhs-align: rhs-align,
+    // The last row usually ends in a fraction; leave room for its
+    // denominator inside the box. Rows are fraction-tall, so a tighter
+    // gap between them still reads clearly and pays for that room.
+    bottom-inset: 0.7em,
+    row-gutter: 1.1em,
     debug: debug,
   )
 }

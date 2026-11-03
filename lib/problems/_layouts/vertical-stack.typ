@@ -32,7 +32,8 @@
 //     none.
 //   decimal-sep: the mark, "." (default) or ",".
 //   decimal-width: width of the point as a fraction of a digit column.
-//     0 (default) hangs it in the gap between two columns. Above 0, every
+//     Default 0.5. 0 hangs it in the gap between two columns (tighter,
+//     but the mark crowds the digits). Above 0, every
 //     row — operands, partial products, product — gets a spacer of that
 //     width at the product's point position (`dp` digits from the right),
 //     so the columns stay aligned through the point; only rows with a
@@ -56,7 +57,7 @@
   let answer-space-opt = opts.at("answer-space", default: auto)
   let dps = opts.at("decimal-places", default: none)
   let decimal-sep = opts.at("decimal-sep", default: ".")
-  let decimal-width = opts.at("decimal-width", default: 0)
+  let decimal-width = opts.at("decimal-width", default: 0.5)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
