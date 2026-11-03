@@ -175,6 +175,17 @@ export const en = {
             { label: "Different denominators", example: "3/4 − 2/3" },
             { label: "Mixed review", example: "5/6 − 3/8" },
         ],
+        "fraction-decimal-percent": [
+            { label: "Tenths and hundredths", example: "7/100 = 0.07 = 7%" },
+            {
+                label: "Halves, quarters and fifths",
+                example: "3/4 = 0.75 = 75%",
+            },
+            {
+                label: "Eighths, and numbers above 1",
+                example: "1 3/8 = 1.375 = 137.5%",
+            },
+        ],
         "decimal-add": [
             { label: "Tenths", example: "12.5 + 34.7" },
             { label: "Hundredths", example: "12.34 + 56.78" },

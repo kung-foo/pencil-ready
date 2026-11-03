@@ -44,6 +44,7 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         WorksheetType::FractionMultiply { .. } => 6.0,
         WorksheetType::FractionSimplify { .. } => 5.0,
         WorksheetType::FractionAdd { .. } | WorksheetType::FractionSubtract { .. } => 5.5,
+        WorksheetType::FractionDecimalPercent { .. } => 8.9,
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
         WorksheetType::AlgebraOneStep { .. } => 6.0,
         WorksheetType::AlgebraSquareRoot { .. } => 6.0,
@@ -200,6 +201,11 @@ fn opts_body(
         // and `=` are universal. `:` interpolates into `(:)` which is
         // typst's empty-dict literal (as opposed to `()`, an empty array).
         WorksheetType::FractionSimplify { .. } => ":".to_string(),
+        WorksheetType::FractionDecimalPercent { .. } => format!(
+            "decimal-sep: {sep}, percent-suffix: {pct}",
+            sep = typst_string_literal(strings.decimal_sep),
+            pct = typst_string_literal(strings.percent_suffix),
+        ),
         WorksheetType::FractionAdd { relation, .. }
         | WorksheetType::FractionSubtract { relation, .. } => format!(
             "operator: {operator_arg}, subtract: {s}, rows: {r}",
@@ -553,6 +559,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/fraction/simplification.typ": fraction-simplification-problem
 #import "/lib/problems/fraction/addition.typ": fraction-addition-problem
 #import "/lib/problems/fraction/subtraction.typ": fraction-subtraction-problem
+#import "/lib/problems/fraction/conversion.typ": fraction-conversion-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/algebra/square-root.typ": algebra-square-root-problem

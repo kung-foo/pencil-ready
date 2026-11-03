@@ -398,6 +398,57 @@ unused rows are hidden and carry no `=`. A worked example shows every
 step; the answer key shows only the answer, next to the problem. `+`
 and `−` are the same in every locale.
 
+## Fractions, Decimals and Percents
+
+Kind `fraction-decimal-percent`. One number written three ways, one
+form given and two to fill in:
+
+```
+3                            ___ = ___ = 12.5%
+─ = ____ = ____ %
+4
+```
+
+### Parameters
+
+- `denominators: list[u32]` — allowed denominators. Each must divide
+  1000 (2, 4, 5, 8, 10, 20, 25, 40, 50, 100) so the decimal ends within
+  three places. Default `2,4,5,10,20,25,50`.
+- `improper: bool` — add values between 1 and 2, written as mixed
+  numbers, for denominators up to 10. Default false.
+- `given: any | fraction | decimal | percent` — which form is printed.
+  `any` gives each form on a third of the page. Default `any`.
+
+Levels: tenths and hundredths (`10,100`); halves, quarters and fifths
+(`2,4,5,10,20,25,50`); eighths and fortieths plus values above 1.
+
+### Problem generation
+
+1. Enumerate every fraction `n/d` in lowest terms with `d ∈ denominators`
+   and `n < d` (or `n < 2d` for small `d` when `improper`).
+2. Shuffle and take `num_problems`; pad via `pad_with_duplicates` if the
+   pool is smaller.
+3. Assign the given form (fixed, or cycled 0/1/2 and shuffled for `any`).
+
+Each problem is `(num, den, given, dec, dec_places, pct, pct_places)`:
+decimal and percent are scaled integers (`0.125` = 125, 3 places), so
+typst never formats a float. The component asserts the three agree.
+
+### Layout component
+
+```typst
+fraction-conversion-problem((3, 4, 0, 75, 2, 75, 0))                    // 3/4 given
+fraction-conversion-problem((1, 8, 2, 125, 3, 125, 1), mode: "worked",  // 12.5% given
+  opts: (decimal-sep: ",", percent-suffix: "\u{a0}%"))
+```
+
+One row of three fixed-width slots, so the `=` signs line up down a
+column; two cells across the page (8.9 cm each). Fractions are
+display-size to match the decimals. Answer lines stay under the two
+non-given forms in every mode, so a worked example still shows which
+was given. Locale: decimal separator, and Norwegian puts a no-break
+space before `%` (`LocaleStrings::percent_suffix`).
+
 ## Algebra: Two-Step
 
 Solve a two-step linear equation of the form `ax + b = c` for `x`. Teaches

@@ -32,6 +32,8 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
             "fraction-add",
             "fraction-subtract",
             "fraction-mult",
+            // Last: bridges into the decimals section below.
+            "fraction-decimal-percent",
         ],
     },
     {

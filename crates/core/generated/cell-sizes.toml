@@ -217,6 +217,14 @@ measured_width_cm = 5.406
 measured_height_cm = 2.604
 
 [[cell]]
+id = "fraction-conversion-widest"
+label = "fraction/decimal/percent (2 39/40 = 2,975 = 297,5 %)"
+width_cm = 8.9
+height_cm = 2.2
+measured_width_cm = 8.869
+measured_height_cm = 2.141
+
+[[cell]]
 id = "algebra-two-step-small-form0"
 label = "algebra two-step (small, form 0)"
 width_cm = 7.3

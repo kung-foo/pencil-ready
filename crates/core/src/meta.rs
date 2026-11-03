@@ -62,6 +62,9 @@ fn instructions_en(ws: &WorksheetType) -> Option<&'static str> {
         WorksheetType::FractionAdd { .. } => {
             Some("Add the fractions. Write each answer in simplest form.")
         }
+        WorksheetType::FractionDecimalPercent { .. } => {
+            Some("Fill in the blanks so each line shows one number as a fraction, a decimal and a percent.")
+        }
         WorksheetType::FractionSubtract { .. } => {
             Some("Subtract the fractions. Write each answer in simplest form.")
         }
@@ -117,6 +120,9 @@ fn instructions_nb(ws: &WorksheetType) -> Option<&'static str> {
         WorksheetType::FractionAdd { .. } => {
             Some("Legg sammen brøkene. Skriv svaret på enklest mulig form.")
         }
+        WorksheetType::FractionDecimalPercent { .. } => {
+            Some("Fyll inn slik at hver linje viser samme tall som brøk, desimaltall og prosent.")
+        }
         WorksheetType::FractionSubtract { .. } => {
             Some("Trekk fra brøkene. Skriv svaret på enklest mulig form.")
         }
@@ -157,6 +163,7 @@ fn title_nb(ws: &WorksheetType) -> &'static str {
         WorksheetType::FractionMultiply { .. } => "Brøk ganger heltall",
         WorksheetType::FractionSimplify { .. } => "Forkorting av brøk",
         WorksheetType::FractionAdd { .. } => "Addisjon med brøk",
+        WorksheetType::FractionDecimalPercent { .. } => "Brøk, desimaltall og prosent",
         WorksheetType::FractionSubtract { .. } => "Subtraksjon med brøk",
         WorksheetType::AlgebraTwoStep { .. } => "Likninger i to steg",
         WorksheetType::AlgebraOneStep { .. } => "Likninger i ett steg",
@@ -224,6 +231,10 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::FractionMultiply { .. }, Form::Slug) => "fraction-multiplication",
         (WorksheetType::FractionSimplify { .. }, Form::Title) => "Fraction simplification",
         (WorksheetType::FractionSimplify { .. }, Form::Slug) => "fraction-simplification",
+        (WorksheetType::FractionDecimalPercent { .. }, Form::Title) => {
+            "Fractions, decimals and percents"
+        }
+        (WorksheetType::FractionDecimalPercent { .. }, Form::Slug) => "fractions-decimals-percents",
         (WorksheetType::FractionAdd { .. }, Form::Title) => "Fraction addition",
         (WorksheetType::FractionAdd { .. }, Form::Slug) => "fraction-addition",
         (WorksheetType::FractionSubtract { .. }, Form::Title) => "Fraction subtraction",

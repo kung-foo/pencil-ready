@@ -42,6 +42,7 @@ export const WORKSHEET_KINDS = [
     "fraction-equiv",
     "fraction-add",
     "fraction-subtract",
+    "fraction-decimal-percent",
     "algebra-one-step",
     "algebra-two-step",
     "algebra-square-root",
@@ -132,6 +133,11 @@ export type KindConfig =
       }
     | {
           kind: "fraction-subtract";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "fraction-decimal-percent";
           /** Concept-level preset id (see `lib/levels.ts`). */
           level?: string;
       }
@@ -286,6 +292,7 @@ export function parseConfig(
             };
         case "fraction-add":
         case "fraction-subtract":
+        case "fraction-decimal-percent":
             return { ...shared, kind, level: s("level") };
         case "algebra-two-step":
             return { ...shared, kind, level: s("level") };

@@ -24,7 +24,7 @@ use axum::{
 };
 use clap::Parser;
 use pencil_ready_core::{
-    BorrowMode, CarryMode, DenominatorRelation, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot,
+    BorrowMode, CarryMode, ConversionGiven, DenominatorRelation, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot,
     OutputFormat,
     Paper,
     WorksheetParams, WorksheetType, generate, long_division_default_cols,
@@ -1310,6 +1310,64 @@ async fn handle_fraction_subtract(
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+struct FractionDecimalPercentSpecific {
+    /// Allowed denominators, comma-separated; each must divide 1000
+    /// (2, 4, 5, 8, 10, 20, 25, 40, 50, 100). Default `2,4,5,10,20,25,50`.
+    #[serde(default)]
+    #[param(value_type = String, example = "2,4,5,10,20,25,50")]
+    denominators: Option<String>,
+    /// Include values above 1 (below 3), as mixed numbers. Default false.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    improper: Option<bool>,
+    /// Which form is printed. Default `any`.
+    #[serde(default)]
+    given: Option<ConversionGiven>,
+}
+
+impl FractionDecimalPercentSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let denominators = match self.denominators {
+            Some(s) => parse_u32_csv(&s, "denominators")?,
+            None => vec![2, 4, 5, 10, 20, 25, 50],
+        };
+        Ok(shared.fold(
+            WorksheetType::FractionDecimalPercent {
+                denominators,
+                improper: self.improper.unwrap_or(false),
+                given: self.given.unwrap_or_default(),
+            },
+            // A full page: 2 columns of 9.
+            18,
+            2,
+        ))
+    }
+}
+
+/// Fractions, decimals and percents
+///
+/// One number written three ways (`3/4 = 0.75 = 75%`): one form is printed, the student writes the other two.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/fraction-decimal-percent",
+    operation_id = "fraction_decimal_percent",
+    params(SharedParams, FractionDecimalPercentSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_fraction_decimal_percent(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FractionDecimalPercentSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "fraction-decimal-percent", p.build(shared), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct FractionEquivSpecific {
     /// Allowed denominators of the base fraction, comma-separated.
     /// Default `2,3,4,5,6,8,10`.
@@ -1920,7 +1978,7 @@ struct InvalidParams(String);
     components(
         schemas(
             CarryMode, BorrowMode, Locale, DivisionStyle, OutputFormat, Paper, MissingSlot,
-            DenominatorRelation,
+            DenominatorRelation, ConversionGiven,
             WorksheetBytes,
         ),
         responses(WorksheetFile, InvalidParams),
@@ -2013,6 +2071,7 @@ async fn main() {
         .routes(routes!(handle_fraction_equiv))
         .routes(routes!(handle_fraction_add))
         .routes(routes!(handle_fraction_subtract))
+        .routes(routes!(handle_fraction_decimal_percent))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .routes(routes!(handle_algebra_square_root))
@@ -2185,6 +2244,7 @@ mod tests {
             "fraction-equiv",
             "fraction-add",
             "fraction-subtract",
+            "fraction-decimal-percent",
             "algebra-two-step",
             "algebra-one-step",
             "algebra-square-root",
@@ -2221,6 +2281,7 @@ mod tests {
                 "fraction-mult" => build!(FractionMultSpecific),
                 "fraction-simplify" => build!(FractionSimplifySpecific),
                 "fraction-equiv" => build!(FractionEquivSpecific),
+                "fraction-decimal-percent" => build!(FractionDecimalPercentSpecific),
                 "fraction-add" => Query::<FractionAddSpecific>::try_from_uri(&uri)
                     .unwrap()
                     .0

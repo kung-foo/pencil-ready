@@ -34,6 +34,8 @@ pub struct LocaleStrings {
     pub remainder_prefix: &'static str,
     /// Lead-in for the mean worksheet's answer slot (`mean = ___`).
     pub mean_label: &'static str,
+    /// Text after a percentage: `75%` in English, `75 %` in Norwegian.
+    pub percent_suffix: &'static str,
 }
 
 const EN: LocaleStrings = LocaleStrings {
@@ -49,6 +51,7 @@ const EN: LocaleStrings = LocaleStrings {
     decimal_sep: ".",
     remainder_prefix: "r=",
     mean_label: "mean",
+    percent_suffix: "%",
 };
 
 const NB: LocaleStrings = LocaleStrings {
@@ -68,6 +71,8 @@ const NB: LocaleStrings = LocaleStrings {
     // "gjennomsnitt" is too wide for the slot under the addition stack;
     // "snitt" is the everyday short form.
     mean_label: "snitt",
+    // No-break space: the sign must never wrap away from its number.
+    percent_suffix: "\u{a0}%",
 };
 
 impl Locale {

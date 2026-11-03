@@ -164,6 +164,17 @@ export const nb: UiStrings = {
             { label: "Ulike nevnere", example: "3/4 − 2/3" },
             { label: "Blandet repetisjon", example: "5/6 − 3/8" },
         ],
+        "fraction-decimal-percent": [
+            { label: "Tideler og hundredeler", example: "7/100 = 0,07 = 7 %" },
+            {
+                label: "Halve, fjerdedeler og femtedeler",
+                example: "3/4 = 0,75 = 75 %",
+            },
+            {
+                label: "Åttendedeler, og tall over 1",
+                example: "1 3/8 = 1,375 = 137,5 %",
+            },
+        ],
         "decimal-add": [
             { label: "Tideler", example: "12,5 + 34,7" },
             { label: "Hundredeler", example: "12,34 + 56,78" },

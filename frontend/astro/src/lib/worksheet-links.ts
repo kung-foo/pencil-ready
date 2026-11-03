@@ -45,6 +45,10 @@ const ALIASES_EN: ReadonlyArray<Alias> = [
     { phrase: "fraction addition", kind: "fraction-add" },
     { phrase: "subtracting fractions", kind: "fraction-subtract" },
     { phrase: "fraction subtraction", kind: "fraction-subtract" },
+    {
+        phrase: "fractions, decimals and percents",
+        kind: "fraction-decimal-percent",
+    },
     // Times tables are what the drills exist for.
     { phrase: "times tables", kind: "mult-drill" },
     { phrase: "times table", kind: "mult-drill" },
@@ -83,6 +87,10 @@ const ALIASES_NB: ReadonlyArray<Alias> = [
     { phrase: "likeverdige brøker", kind: "fraction-equiv" },
     { phrase: "addisjon med brøk", kind: "fraction-add" },
     { phrase: "subtraksjon med brøk", kind: "fraction-subtract" },
+    {
+        phrase: "brøk, desimaltall og prosent",
+        kind: "fraction-decimal-percent",
+    },
     { phrase: "gangetabellen", kind: "mult-drill" },
     { phrase: "likninger i ett steg", kind: "algebra-one-step" },
     { phrase: "likninger i to steg", kind: "algebra-two-step" },
