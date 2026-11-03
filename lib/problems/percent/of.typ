@@ -1,20 +1,22 @@
 // Percent of a number: `20% of 350 = ___` (`20 % av 350` in Norwegian).
 //
 // One line — the expression, `=`, and an answer slot — over room for the
-// working: the column multiplication `base × percent` (with partial
-// products, from the shared `vertical-stack` layout), then dividing by
-// 100. A worked example prints that working; blank cells reserve the
-// space it takes, so the room matches what solving needs.
+// working: the base times the percent written as a decimal, as a column
+// multiplication (the shared `vertical-stack` layout with decimal
+// places): multiply as whole numbers, partial products and all, then
+// place the point in the product. A worked example prints that working;
+// blank cells reserve the space it takes, so the room matches what
+// solving needs.
 //
 //   37% of 48 = 17.76
 //
-//      48
-//    × 37
-//    ────
-//     336
-//    1440
-//    ────
-//    1776        1776 ÷ 100 = 17.76
+//       48
+//   × 0.37
+//   ──────
+//      336
+//     1440
+//   ──────
+//    17.76
 
 #import "/lib/problems/shared.typ": problem-text-size-horizontal, problem-text-size
 #import "/lib/problems/_layouts/vertical-stack.typ": vertical-stack-problem
@@ -26,8 +28,8 @@
 //     Default "%".
 //   of: the word between percent and base ("of", "av"). Default "of".
 //   decimal-sep: "." or ",". Default ".".
-//   operator / div-operator: multiply and divide signs for the working,
-//     per locale. Default `[#sym.times]` / `[#sym.div]`.
+//   operator: multiply sign for the working, per locale. Default
+//     `[#sym.times]`.
 //   answer-font / answer-color: solved-answer styling. Default: inherit.
 //   work: reserve (and, when worked, print) the working. Default true;
 //     pass false for thumbnails.
@@ -43,7 +45,6 @@
   let answer-color = opts.at("answer-color", default: none)
   let show-work = opts.at("work", default: true)
   let mul-op = opts.at("operator", default: [#sym.times])
-  let div-op = opts.at("div-operator", default: [#sym.div])
   let cell-align = opts.at("align", default: left + top)
   let solved = mode != "blank"
 
@@ -65,19 +66,26 @@
   }
   let answer-str = fmt(answer, places)
 
-  // The working: `base × pct` as a column multiplication (partial
-  // products when the percent has two digits), then `÷ 100`.
-  let working(p, b, a-str, mode) = {
-    let digits = str(p).len()
-    let rows = if digits > 1 { digits + 1 } else { 1 }
+  // The working: `base × percent-as-decimal` (37% → 0.37, 50% → 0.5,
+  // 5% → 0.05) as a column multiplication — partial products when the
+  // decimal has two digits — with the point placed in the product.
+  let working(p, b, mode) = {
+    let (m, places) = (p, 2)
+    while places > 0 and calc.rem(m, 10) == 0 {
+      m = calc.quo(m, 10)
+      places -= 1
+    }
+    let digits = str(m).len()
     let product = vertical-stack-problem(
-      (b, p, p * b),
+      (b, m, m * b),
       mode: mode,
       opts: (
         operator: mul-op,
         width: 3.8em,
         // One row per partial product plus their sum.
-        answer-rows: rows,
+        answer-rows: if digits > 1 { digits + 1 } else { 1 },
+        decimal-places: (0, places, places),
+        decimal-sep: sep,
         // The stack's own blank writing room is replaced by this
         // layout's: the room below is reserved for the whole working.
         answer-space: 0em,
@@ -87,18 +95,16 @@
     )
     // vertical-stack sets its own (column-arithmetic) text size; scale
     // it to this problem's size so the working matches the line above.
-    let product = scale(problem-text-size-horizontal / problem-text-size * 100%, reflow: true, origin: left + top, product)
-    let shift = [#str(p * b) #div-op 100 = #a-str]
-    stack(dir: ttb, spacing: 0.3em, product, shift)
+    scale(problem-text-size-horizontal / problem-text-size * 100%, reflow: true, origin: left + top, product)
   }
-  // Room for the widest working the generator allows (99 × 999, two
+  // Room for the widest working the generator allows (999 × 0.99, two
   // partial products), so every cell is the same size.
   let work-room = context {
-    let worst = measure(working(99, 999, "989" + sep + "01", "worked"))
+    let worst = measure(working(99, 999, "worked"))
     box(
       width: worst.width,
       height: worst.height,
-      if solved and mode != "answer-only" { working(pct, base, answer-str, "worked") },
+      if solved and mode != "answer-only" { working(pct, base, "worked") },
     )
   }
 

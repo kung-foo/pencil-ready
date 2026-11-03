@@ -203,8 +203,7 @@ fn opts_body(
         // typst's empty-dict literal (as opposed to `()`, an empty array).
         WorksheetType::FractionSimplify { .. } => ":".to_string(),
         WorksheetType::PercentOf { .. } => format!(
-            "operator: {operator_arg}, div-operator: [#{div}], percent-suffix: {pct}, of: {of}, decimal-sep: {sep}",
-            div = opts.divide_operator,
+            "operator: {operator_arg}, percent-suffix: {pct}, of: {of}, decimal-sep: {sep}",
             sep = typst_string_literal(strings.decimal_sep),
             pct = typst_string_literal(strings.percent_suffix),
             of = typst_string_literal(strings.percent_of),
