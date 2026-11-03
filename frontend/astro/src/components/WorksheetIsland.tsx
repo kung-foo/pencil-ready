@@ -54,23 +54,14 @@ function applyFirstVisitDefaults(
             return { ...cfg, squares: true, roots: true };
         }
     }
-    // Kinds that use the level system: seed with the first level when
-    // none is in the URL, so the API URL expands to a concrete preset
-    // rather than relying on server fallback defaults.
-    const levelKinds: WorksheetKind[] = [
-        "add",
-        "subtract",
-        "decimal-add",
-        "decimal-subtract",
-        "decimal-multiply",
-        "algebra-one-step",
-        "algebra-two-step",
-        "long-divide",
-        "order-of-ops",
-        "mean",
-    ];
-    if (levelKinds.includes(cfg.kind) && !search.has("level")) {
-        return { ...cfg, level: defaultLevel(cfg.kind) };
+    // Kinds that use the level system (any kind in levels.json): seed
+    // with the first level when none is in the URL, so the API URL
+    // expands to a concrete preset rather than relying on server
+    // fallback defaults.
+    const level = defaultLevel(cfg.kind);
+    if (level && !search.has("level")) {
+        // Only level kinds have levels, so `level` is a valid key here.
+        return { ...cfg, level } as WorksheetConfig;
     }
     return cfg;
 }
