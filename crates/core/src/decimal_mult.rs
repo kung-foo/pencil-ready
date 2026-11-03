@@ -39,6 +39,7 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
 
     // Per-slot dp: top, bottom, answer (= top + bottom).
     let dp_list = vec![top_dp, bot_dp, top_dp + bot_dp];
+    let answer_rows = answer_rows(mult_max, bot_dp);
 
     Ok(Sheet {
         worksheet: params.worksheet.clone(),
@@ -47,7 +48,7 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             operator,
             divide_operator: String::new(),
             width_cm: document::box_width_cm(&params.worksheet, max_digits),
-            answer_rows: 1,
+            answer_rows,
             pad_width: 0,
             implicit: false,
             variable: "x".to_string(),
@@ -55,6 +56,15 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
             reserve_remainder: false,
         },
     })
+}
+
+/// Rows of working below the line: one for a one-digit multiplier, else
+/// a partial product per multiplier digit plus their sum (as for whole
+/// multiplication). The digit count is the widest multiplier the
+/// params allow, so every cell on a page is the same height.
+pub(crate) fn answer_rows(mult_max: u32, bot_dp: u32) -> u32 {
+    let digits = document::digit_count(mult_max.max(1)) + bot_dp;
+    if digits <= 1 { 1 } else { digits + 1 }
 }
 
 fn generate_problems(
