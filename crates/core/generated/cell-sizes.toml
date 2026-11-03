@@ -226,11 +226,11 @@ measured_height_cm = 2.141
 
 [[cell]]
 id = "percent-of-widest"
-label = "percent of (75 % av 1000 = 750)"
-width_cm = 8.0
-height_cm = 1.7
-measured_width_cm = 7.934
-measured_height_cm = 1.633
+label = "percent of (99 % av 999 = 989,01)"
+width_cm = 8.4
+height_cm = 5.1
+measured_width_cm = 8.315
+measured_height_cm = 5.062
 
 [[cell]]
 id = "algebra-two-step-small-form0"

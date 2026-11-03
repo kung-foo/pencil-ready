@@ -2,4 +2,4 @@
 #set page(width: auto, height: auto, margin: 0.3cm)
 
 // Blank: 25% of 840
-#percent-of-problem((25, 840, 210), debug: true)
+#percent-of-problem((25, 840, 210, 0), debug: true)

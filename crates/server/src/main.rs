@@ -1370,25 +1370,35 @@ async fn handle_fraction_decimal_percent(
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct PercentOfSpecific {
-    /// Percents to use (1-100), comma-separated. Default `10,20,25,50,75`.
+    /// Percents to use (1-100): values or ranges, comma-separated
+    /// (e.g. `10,50` or `1-99`). Default `10,20,25,50,75`.
     #[serde(default)]
     #[param(value_type = String, example = "10,20,25,50,75")]
     percents: Option<String>,
     /// Largest base number, 10-1000. Default 400.
     #[serde(default)]
     max_base: Option<u32>,
+    /// Allow answers with up to two decimal places (`37% of 48 =
+    /// 17.76`), so any percent pairs with any base. Default false
+    /// (whole-number answers only).
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    decimals: Option<bool>,
 }
 
 impl PercentOfSpecific {
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
         let percents = match self.percents {
-            Some(s) => parse_u32_csv(&s, "percents")?,
+            Some(s) => parse_digits_csv(&s, "percents")?
+                .into_iter()
+                .flat_map(|r| r.min..=r.max)
+                .collect(),
             None => vec![10, 20, 25, 50, 75],
         };
         Ok(shared.fold(
             WorksheetType::PercentOf {
                 percents,
                 max_base: self.max_base.unwrap_or(400),
+                decimals: self.decimals.unwrap_or(false),
             },
             PERCENT_OF_PROBLEMS,
             2,
@@ -1396,12 +1406,13 @@ impl PercentOfSpecific {
     }
 }
 
-/// Percent-of problems that fill one page: 2 columns of 12.
-const PERCENT_OF_PROBLEMS: u32 = 24;
+/// Percent-of problems that fill one page: 2 columns of 4, each with
+/// room under it for the written multiplication.
+const PERCENT_OF_PROBLEMS: u32 = 8;
 
 /// Percent of a number
 ///
-/// `20% of 350 = ___`, always with a whole-number answer.
+/// `20% of 350 = ___`: whole-number answers, or up to two decimals with `decimals=true`.
 #[utoipa::path(
     get,
     path = "/api/worksheets/percent-of",

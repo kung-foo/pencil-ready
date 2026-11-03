@@ -73,7 +73,7 @@ pub const FIXTURES: &[Fixture] = &[
     // Widest values the generator allows, Norwegian notation (" %").
     Fixture { id: "fraction-conversion-widest", label: "fraction/decimal/percent (2 39/40 = 2,975 = 297,5 %)", snippet: r#"fraction-conversion-problem((119, 40, 0, 2975, 3, 2975, 1), mode: "worked", opts: (decimal-sep: ",", percent-suffix: "\u{a0}%"))"# },
     // --- percent of a number ---
-    Fixture { id: "percent-of-widest", label: "percent of (75 % av 1000 = 750)", snippet: r#"percent-of-problem((75, 1000, 750), mode: "worked", opts: (percent-suffix: "\u{a0}%", of: "av"))"# },
+    Fixture { id: "percent-of-widest", label: "percent of (99 % av 999 = 989,01)", snippet: r#"percent-of-problem((99, 999, 98901, 2), mode: "worked", opts: (percent-suffix: "\u{a0}%", of: "av", decimal-sep: ","))"# },
 
     // --- algebra two-step ---
     Fixture { id: "algebra-two-step-small-form0", label: "algebra two-step (small, form 0)", snippet: r#"algebra-two-step-problem((4, 5, 4, 21, 0),    opts: (operator: [#sym.dot.op]))"# },

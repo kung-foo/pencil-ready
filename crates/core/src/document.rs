@@ -45,7 +45,7 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         WorksheetType::FractionSimplify { .. } => 5.0,
         WorksheetType::FractionAdd { .. } | WorksheetType::FractionSubtract { .. } => 5.5,
         WorksheetType::FractionDecimalPercent { .. } => 8.9,
-        WorksheetType::PercentOf { .. } => 8.0,
+        WorksheetType::PercentOf { .. } => 8.4,
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
         WorksheetType::AlgebraOneStep { .. } => 6.0,
         WorksheetType::AlgebraSquareRoot { .. } => 6.0,
@@ -203,7 +203,8 @@ fn opts_body(
         // typst's empty-dict literal (as opposed to `()`, an empty array).
         WorksheetType::FractionSimplify { .. } => ":".to_string(),
         WorksheetType::PercentOf { .. } => format!(
-            "percent-suffix: {pct}, of: {of}",
+            "percent-suffix: {pct}, of: {of}, decimal-sep: {sep}",
+            sep = typst_string_literal(strings.decimal_sep),
             pct = typst_string_literal(strings.percent_suffix),
             of = typst_string_literal(strings.percent_of),
         ),

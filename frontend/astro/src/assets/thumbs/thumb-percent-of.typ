@@ -6,10 +6,11 @@
 #show: thumb-page.with(width: 200pt)
 
 #align(center + horizon, percent-of-problem(
-  (25, 84, 21),
+  (25, 84, 21, 0),
   mode: "worked",
   opts: (
     align: center + horizon,
+    "work-height": 0em,
     ..thumb-answer-style,
   ),
 ))

@@ -134,10 +134,11 @@
             }
         },
         {
-            "note": "Percents that need the 1% or 5% step (35% = 25% + 10%); only bases with a whole-number answer appear, so the awkward percents get fewer, rounder bases.",
+            "note": "Any percent of a two-digit number, with up to two decimals in the answer: a two-digit by two-digit multiplication, then dividing by 100 by moving the decimal point. Whole-number answers would force odd percents (37%) onto bases of 100, 200, … and the multiplication disappears.",
             "params": {
-                "percents": "5,15,30,35,40,45,60,65,70,80,90",
-                "max_base": 1000
+                "percents": "1-99",
+                "max_base": 99,
+                "decimals": true
             }
         }
     ],

@@ -179,7 +179,10 @@ export const nb: UiStrings = {
         "percent-of": [
             { label: "10 % og 50 %", example: "10 % av 240 = 24" },
             { label: "20 %, 25 % og 75 %", example: "25 % av 84 = 21" },
-            { label: "Andre prosenter", example: "35 % av 240 = 84" },
+            {
+                label: "Alle prosenter, svar med desimaler",
+                example: "37 % av 48 = 17,76",
+            },
         ],
         "decimal-add": [
             { label: "Tideler", example: "12,5 + 34,7" },

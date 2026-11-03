@@ -453,38 +453,49 @@ space before `%` (`LocaleStrings::percent_suffix`).
 ## Percent of a Number
 
 Kind `percent-of`: `20% of 350 = ___` (`20 % av 350` in Norwegian),
-always with a whole-number answer.
+with a whole-number answer, or up to two decimals with `decimals`.
 
 ### Parameters
 
-- `percents: list[u32]` — percents to use (1–100). Default
-  `10,20,25,50,75`.
+- `percents: list[range]` — percents to use (1–100), values or ranges
+  (`10,50`, `1-99`). Default `10,20,25,50,75`.
 - `max_base: u32` — largest base number (10–1000). Default 400.
+- `decimals: bool` — allow answers with up to two decimal places, so any
+  percent pairs with any base (`37% of 48 = 17.76`). Default false.
 
-Levels: 10% and 50% (bases to 200); 10/20/25/50/75% (to 400); other
-percents such as 35% or 65% (to 1000).
+Levels: 10% and 50% (bases to 200); 10/20/25/50/75% (to 400); any
+percent `1-99` of a two-digit number, with `decimals`.
+
+Without `decimals`, whole-number answers decide the bases: `base` must
+be a multiple of `100 / gcd(percent, 100)` — 25 for 36%, 100 for 37%.
+Odd percents then only get bases of 100, 200, … and the multiplication
+disappears, which is why level 3 allows decimal answers.
 
 ### Problem generation
 
-1. Enumerate every `(percent, base)` with `10 ≤ base ≤ max_base` and
-   `percent × base` a multiple of 100.
-2. Shuffle each percent's bases, then deal round-robin across percents,
-   so a percent with many valid bases (50%) doesn't crowd out one with
-   few (35%). Shuffle the page; pad if the pool is smaller.
+1. Enumerate every `(percent, base)` with `10 ≤ base ≤ max_base` (and,
+   without `decimals`, `percent × base` a multiple of 100).
+2. Shuffle each percent's bases and the order of the percents, then deal
+   round-robin, so a percent with many valid bases (50%) doesn't crowd
+   out one with few (35%), and a long list (`1-99`) is sampled across
+   its whole range. Shuffle the page; pad if the pool is smaller.
 
 ### Layout component
 
 ```typst
-percent-of-problem((25, 840, 210))                        // blank
-percent-of-problem((20, 350, 70), mode: "worked",
-  opts: (percent-suffix: "\u{a0}%", of: "av"))           // Norwegian
+percent-of-problem((25, 840, 210, 0))                     // blank
+percent-of-problem((37, 48, 1776, 2), mode: "worked",     // 17,76
+  opts: (percent-suffix: "\u{a0}%", of: "av", decimal-sep: ","))
 ```
 
-One line. The expression is right-aligned in a box as wide as the
-widest allowed (`100% of 1000`), so the `=` and answer lines line up
-down a column; two cells across the page. Locale: the percent sign
+One line over blank room for the written multiplication
+(`work-height`, 5.4em ≈ five handwritten lines), top-aligned in the
+cell; 2 columns of 4. The expression is right-aligned in a box as wide
+as the widest allowed (`100% of 1000`), so the `=` and answer lines
+line up down a column. Locale: the percent sign
 (`LocaleStrings::percent_suffix`) and the word "of" / "av"
-(`percent_of`).
+(`percent_of`), and the decimal separator. The answer is a scaled
+integer plus its decimal places, like the conversion sheet.
 
 ## Algebra: Two-Step
 

@@ -268,6 +268,9 @@ pub enum WorksheetType {
         percents: Vec<u32>,
         /// Largest base (10-1000).
         max_base: u32,
+        /// Allow answers with up to two decimal places, so any percent
+        /// pairs with any base. Otherwise answers are whole numbers.
+        decimals: bool,
     },
     FractionSimplify {
         /// Allowed denominators of the printed fraction.
@@ -537,8 +540,9 @@ impl WorksheetType {
             WorksheetType::FractionDecimalPercent { .. } => (8.9, 2.2),
 
             // Percent of: one line, the expression boxed to the widest
-            // allowed (`percent-of-widest` in cell-sizes.toml).
-            WorksheetType::PercentOf { .. } => (8.0, 1.7),
+            // allowed, over room for a written multiplication
+            // (`percent-of-widest` in cell-sizes.toml).
+            WorksheetType::PercentOf { .. } => (8.4, 5.1),
 
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).
@@ -1671,7 +1675,11 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 );
             }
         }
-        WorksheetType::PercentOf { percents, max_base } => {
+        WorksheetType::PercentOf {
+            percents,
+            max_base,
+            decimals,
+        } => {
             if percents.is_empty() {
                 bail!("percents must have at least one value");
             }
@@ -1683,7 +1691,7 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             if *max_base < 10 || *max_base > 1000 {
                 bail!("max-base must be 10-1000, got {max_base}");
             }
-            if percent_of::candidates(percents, *max_base).is_empty() {
+            if percent_of::candidates(percents, *max_base, *decimals).is_empty() {
                 bail!("no base up to {max_base} gives a whole-number answer for these percents");
             }
         }

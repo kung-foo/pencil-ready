@@ -190,7 +190,10 @@ export const en = {
         "percent-of": [
             { label: "10% and 50%", example: "10% of 240 = 24" },
             { label: "20%, 25% and 75%", example: "25% of 84 = 21" },
-            { label: "Other percents", example: "35% of 240 = 84" },
+            {
+                label: "Any percent, decimal answers",
+                example: "37% of 48 = 17.76",
+            },
         ],
         "decimal-add": [
             { label: "Tenths", example: "12.5 + 34.7" },
