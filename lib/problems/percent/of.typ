@@ -86,6 +86,9 @@
         answer-rows: if digits > 1 { digits + 1 } else { 1 },
         decimal-places: (0, places, places),
         decimal-sep: sep,
+        // Half-width point: room around it, and every row gets the same
+        // spacer so the digits stay in their columns.
+        decimal-width: 0.5,
         // The stack's own blank writing room is replaced by this
         // layout's: the room below is reserved for the whole working.
         answer-space: 0em,

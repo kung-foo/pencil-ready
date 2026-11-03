@@ -490,9 +490,11 @@ percent-of-problem((37, 48, 1776, 2), mode: "worked",     // 17,76
 
 One line over room for the working: the base times the percent as a
 decimal (37% → 0.37, 50% → 0.5) as a column multiplication — the
-shared `vertical-stack` layout with `decimal-places`, scaled to the
-line's text size, with `answer-space: 0em`. Multiply as whole numbers
-(partial products), then place the point in the product. A worked
+shared `vertical-stack` layout with `decimal-places` and
+`decimal-width: 0.5`, scaled to the line's text size, with
+`answer-space: 0em`. Multiply as whole numbers (partial products), then
+place the point in the product. The half-width point gets a spacer at
+the same position in every row, so digit columns line up through it. A worked
 example prints it; blank cells reserve the space the widest working
 (999 × 0.99) takes, so the room matches what solving needs. 2 columns
 of 3. The expression is right-aligned in a box as wide as the widest

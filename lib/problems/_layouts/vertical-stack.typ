@@ -31,6 +31,14 @@
 //     numbers, as in the written method) line up under them. Default
 //     none.
 //   decimal-sep: the mark, "." (default) or ",".
+//   decimal-width: width of the point as a fraction of a digit column.
+//     0 (default) hangs it in the gap between two columns. Above 0, every
+//     row — operands, partial products, product — gets a spacer of that
+//     width at the product's point position (`dp` digits from the right),
+//     so the columns stay aligned through the point; only rows with a
+//     point at that position draw the mark. Operands' points must sit at
+//     the product's position (true when the other operand is a whole
+//     number, e.g. 48 × 0.37).
 //   answer-space: writing room reserved below the line. Default auto =
 //     `answer-rows` lines. Pass 0em when embedding a worked stack in a
 //     larger layout (percent-of) that places its own content below.
@@ -48,6 +56,7 @@
   let answer-space-opt = opts.at("answer-space", default: auto)
   let dps = opts.at("decimal-places", default: none)
   let decimal-sep = opts.at("decimal-sep", default: ".")
+  let decimal-width = opts.at("decimal-width", default: 0)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -81,8 +90,21 @@
   let sep-text = text(tracking: 0pt, decimal-sep)
   let mark = box(width: problem-tracking, place(bottom + center, sep-text))
   let grid-mark = box(width: 0pt, place(bottom + center, dx: problem-tracking / 2, sep-text))
+  // Widened point: a spacer of `decimal-width` digit columns (Fira Code
+  // digits advance 0.6em, plus tracking) at the product's point position,
+  // `spacer-pos` digits from the right, in every row.
+  let spacer-w = decimal-width * (0.6em + problem-tracking)
+  let spacer-pos = if decimal-width > 0 and dps != none { dps.last() } else { 0 }
   // A number as content: plain text, or digits with the mark at `dp`.
-  let num(n, dp) = if dp == 0 {
+  let num(n, dp) = if spacer-pos > 0 {
+    assert(dp == 0 or dp == spacer-pos, message: "vertical-stack: with decimal-width, operand points must sit at the product's position")
+    let s = if dp > 0 { digits-of(n, dp) } else { fmt(n) }
+    let len = s.clusters().len()
+    let cut = calc.max(0, len - spacer-pos)
+    // The spacer's box also restores the tracking the split drops.
+    let spacer = box(width: problem-tracking + spacer-w, if dp > 0 { place(bottom + center, sep-text) })
+    text(s.slice(0, cut)) + spacer + text(s.slice(cut))
+  } else if dp == 0 {
     text(fmt(n))
   } else {
     let s = digits-of(n, dp)
@@ -182,21 +204,36 @@
             // rather than `148` in the tens column with an empty ones
             // column). That makes the column-by-column addition of the
             // final sum more explicit for a student learning the method.
+            // With a widened point, every grid row gets the spacer column
+            // at the point position, so digits stay in their columns.
+            let widened = spacer-pos > 0
+            let at-spacer = max-cols - spacer-pos
+            let with-spacer(row, spacer-cell) = if widened {
+              row.slice(0, at-spacer) + (spacer-cell,) + row.slice(at-spacer)
+            } else {
+              row
+            }
             let cells = ()
             for (i, d) in b-digits.enumerate() {
               let partial-full = a * d * calc.pow(10, i)
-              for c in row-cells(partial-full, 0) { cells.push(c) }
+              for c in with-spacer(row-cells(partial-full, 0), []) { cells.push(c) }
             }
             // Thin summation stroke spanning the full product width.
-            for _ in range(max-cols) {
-              cells.push(line(length: 100%, stroke: 0.5pt))
+            for c in with-spacer(range(max-cols).map(_ => line(length: 100%, stroke: 0.5pt)), line(length: 100%, stroke: 0.5pt)) {
+              cells.push(c)
             }
             // Final product row, with the decimal mark after the digit
             // before the point.
             let pivot = max-cols - product-dp
-            for (i, d) in product-str.clusters().enumerate() {
-              cells.push(align(right, if product-dp > 0 and i == pivot - 1 { text(d) + grid-mark } else { text(d) }))
-            }
+            let product-cells = product-str.clusters().enumerate().map(((i, d)) => {
+              align(right, if not widened and product-dp > 0 and i == pivot - 1 { text(d) + grid-mark } else { text(d) })
+            })
+            // The spacer's whitespace is its width plus the next cell's
+            // left tracking gap; centre the mark across both.
+            // Same (top) alignment as the digit cells, so it sits on
+            // their baseline.
+            let product-mark = align(center, move(dx: problem-tracking / 2, sep-text))
+            for c in with-spacer(product-cells, product-mark) { cells.push(c) }
 
             // Row heights: partials + final at 1em each, thin stroke row
             // between the last partial and the final product.
@@ -210,7 +247,7 @@
             row-heights.push(work-row-height)
 
             align(right, grid(
-              columns: (digit-pitch,) * max-cols,
+              columns: with-spacer((digit-pitch,) * max-cols, spacer-w),
               rows: row-heights,
               row-gutter: 0pt,
               ..cells,
