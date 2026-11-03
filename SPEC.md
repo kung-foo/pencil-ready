@@ -404,7 +404,20 @@ automatically invalidates every baseline — which is the point.
 
 Make targets: `make stories-gen`, `stories-diff`, `stories-check`
 (regenerate + diff in one, non-zero exit on change), `stories-approve`
-(promote current to baseline). Iterating on a thumb? `make thumb-pngs`
+(promote what's in `stories/unapproved/` to baseline). Every diff run
+rebuilds `stories/unapproved/` with the current render of each new or
+changed story and nothing else, so it's the review list; the matching
+diff images stay in `stories/diff/`.
+
+**Bounding-box lint.** `make stories-lint` flags ink outside or touching
+each story's outermost red debug box (connected pieces of ink, so a
+rule that runs to the box edge by design, like a column sum's answer
+line, passes as long as it stays inside). `stories-check` runs it on
+the new and changed stories only, so nothing that escapes its box can
+be approved; `stories-lint` covers every story, including older ones
+that predate it. `make stories-approve
+STORY=<name>` (or `cargo run -p pencil-ready-stories -- approve
+<name>`) promotes a single story. Iterating on a thumb? `make thumb-pngs`
 rasterizes each homepage thumb SVG to `output/thumbs/<kind>.png`
 without round-tripping through the Astro build.
 

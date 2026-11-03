@@ -1,4 +1,4 @@
-.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs site-size indexnow
+.PHONY: build release clean clean-output test run stories-gen stories-diff stories-check stories-lint stories-approve frontend-build server-release serve deps-refresh thumbs thumb-pngs site-size indexnow
 
 build:
 	cargo build
@@ -35,8 +35,15 @@ stories-diff:
 stories-check:
 	cargo run -p pencil-ready-stories -- check
 
+# Every story with ink outside or on its red debug box (check only lints
+# new and changed stories).
+stories-lint:
+	cargo run -p pencil-ready-stories -- lint
+
+# Promotes everything in stories/unapproved/ (new or changed since the
+# last check), or one story with STORY=<name>.
 stories-approve:
-	cargo run -p pencil-ready-stories -- approve
+	cargo run -p pencil-ready-stories -- approve $(STORY)
 
 # --- Homepage thumbnails ---
 #
