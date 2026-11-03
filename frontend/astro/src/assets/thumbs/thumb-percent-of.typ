@@ -3,7 +3,7 @@
 #import "/lib/thumb-page.typ": thumb-page, thumb-answer-style
 #import "/lib/problems/percent/of.typ": percent-of-problem
 
-#show: thumb-page.with(width: 200pt)
+#show: thumb-page.with(width: 260pt)
 
 #align(center + horizon, percent-of-problem(
   (25, 84, 21, 0),

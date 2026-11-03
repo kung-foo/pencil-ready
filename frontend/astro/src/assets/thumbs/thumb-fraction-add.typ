@@ -15,6 +15,7 @@
     operator: [#sym.plus],
     rows: 2,
     symmetric: false,
+    row-gutter: 1.8em,
     ..thumb-answer-style,
   ),
 ))

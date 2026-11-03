@@ -36,6 +36,8 @@
 //   answer-font / answer-color: solved-answer styling, as in
 //     fraction-multiplication. Default: inherit.
 //   col-width / symmetric / rhs-align: forwarded to `equation-rows`.
+//   row-gutter: gap between rows, default 1.1em. Thumbnails, whose
+//     handwritten answers are larger, pass more.
 //
 // `mode` = "blank" | "worked" | "answer-only". "blank" prints the
 // problem and its `=`; "worked" shows every step; "answer-only" puts the
@@ -49,6 +51,7 @@
   let col-width = opts.at("col-width", default: auto)
   let symmetric = opts.at("symmetric", default: true)
   let rhs-align = opts.at("rhs-align", default: left + horizon)
+  let row-gutter = opts.at("row-gutter", default: 1.1em)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -156,7 +159,7 @@
     // denominator inside the box. Rows are fraction-tall, so a tighter
     // gap between them still reads clearly and pays for that room.
     bottom-inset: 0.7em,
-    row-gutter: 1.1em,
+    row-gutter: row-gutter,
     debug: debug,
   )
 }
