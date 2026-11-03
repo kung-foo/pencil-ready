@@ -72,6 +72,9 @@ pub const FIXTURES: &[Fixture] = &[
     // --- fraction ↔ decimal ↔ percent ---
     // Widest values the generator allows, Norwegian notation (" %").
     Fixture { id: "fraction-conversion-widest", label: "fraction/decimal/percent (2 39/40 = 2,975 = 297,5 %)", snippet: r#"fraction-conversion-problem((119, 40, 0, 2975, 3, 2975, 1), mode: "worked", opts: (decimal-sep: ",", percent-suffix: "\u{a0}%"))"# },
+    // --- decimal multiplication (vertical-stack, widened points) ---
+    Fixture { id: "decimal-multiply-d1x1-blank", label: "decimal multiply 2.5 × 3 (blank)", snippet: r#"decimal-multiply-problem((25, 3, 75), opts: (operator: [#sym.times], width: 2.8cm, decimal-places: (1, 0, 1), answer-rows: 1))"# },
+    Fixture { id: "decimal-multiply-d2x2-blank", label: "decimal multiply 9.9 × 9.9 (blank)", snippet: r#"decimal-multiply-problem((99, 99, 9801), opts: (operator: [#sym.times], width: 3.6cm, decimal-places: (1, 1, 2), answer-rows: 3))"# },
     // --- percent of a number ---
     Fixture { id: "percent-of-widest", label: "percent of (99 % av 999 = 989,01)", snippet: r#"percent-of-problem((99, 999, 98901, 2), mode: "worked", opts: (operator: [#sym.dot.op], percent-suffix: "\u{a0}%", of: "av", decimal-sep: ","))"# },
 
@@ -101,6 +104,7 @@ pub fn preamble() -> &'static str {
 #import "/lib/problems/fraction/addition.typ": fraction-addition-problem
 #import "/lib/problems/fraction/conversion.typ": fraction-conversion-problem
 #import "/lib/problems/percent/of.typ": percent-of-problem
+#import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/shared.typ": body-font

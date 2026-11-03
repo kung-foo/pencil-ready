@@ -225,6 +225,22 @@ measured_width_cm = 8.869
 measured_height_cm = 2.141
 
 [[cell]]
+id = "decimal-multiply-d1x1-blank"
+label = "decimal multiply 2.5 × 3 (blank)"
+width_cm = 3.1
+height_cm = 3.5
+measured_width_cm = 3.100
+measured_height_cm = 3.453
+
+[[cell]]
+id = "decimal-multiply-d2x2-blank"
+label = "decimal multiply 9.9 × 9.9 (blank)"
+width_cm = 3.9
+height_cm = 5.5
+measured_width_cm = 3.900
+measured_height_cm = 5.471
+
+[[cell]]
 id = "percent-of-widest"
 label = "percent of (99 % av 999 = 989,01)"
 width_cm = 8.6

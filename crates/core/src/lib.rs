@@ -588,10 +588,24 @@ impl WorksheetType {
             // Decimal worksheets: `max_digits` is the encoded digit
             // count (integer + dp), so visible-glyph count is
             // max_digits + 1 (the decimal point). Single answer-row.
-            WorksheetType::DecimalAdd { .. }
-            | WorksheetType::DecimalSubtract { .. }
-            | WorksheetType::DecimalMultiply { .. } => {
+            WorksheetType::DecimalAdd { .. } | WorksheetType::DecimalSubtract { .. } => {
                 (decimal_stack_width(max_digits + 1), 3.5)
+            }
+            // Decimal multiply: vertical-stack with a row per partial
+            // product for a multi-digit multiplier, so it grows like
+            // whole multiplication.
+            WorksheetType::DecimalMultiply {
+                multiplier_max,
+                bottom_decimal_places,
+                ..
+            } => {
+                let height = match decimal_mult::answer_rows(*multiplier_max, *bottom_decimal_places) {
+                    1 => 3.5,
+                    2..=3 => 5.5,
+                    4 => 6.5,
+                    _ => 7.5,
+                };
+                (decimal_stack_width(max_digits + 1), height)
             }
 
             // Order of operations — horizontal single-line. Width

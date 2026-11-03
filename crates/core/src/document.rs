@@ -163,6 +163,13 @@ fn opts_body(
         WorksheetType::DecimalAdd { .. }
         | WorksheetType::DecimalSubtract { .. }
         | WorksheetType::DecimalMultiply { .. } => {
+            // Decimal multiply renders with vertical-stack, which reads
+            // answer-rows (partial products for a multi-digit multiplier).
+            let rows = if matches!(worksheet, WorksheetType::DecimalMultiply { .. }) {
+                format!(", answer-rows: {}", opts.answer_rows)
+            } else {
+                String::new()
+            };
             let dp_inner = opts
                 .decimal_places
                 .iter()
@@ -173,7 +180,7 @@ fn opts_body(
             // when there's a single entry; harmless for longer arrays.
             format!(
                 "operator: {operator_arg}, width: {w}cm, decimal-places: ({dp},), \
-                 decimal-sep: \"{sep}\"",
+                 decimal-sep: \"{sep}\"{rows}",
                 w = opts.width_cm,
                 dp = dp_inner,
                 sep = strings.decimal_sep,
