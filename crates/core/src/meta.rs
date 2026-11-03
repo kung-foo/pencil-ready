@@ -65,6 +65,7 @@ fn instructions_en(ws: &WorksheetType) -> Option<&'static str> {
         WorksheetType::FractionDecimalPercent { .. } => {
             Some("Fill in the blanks so each line shows one number as a fraction, a decimal and a percent.")
         }
+        WorksheetType::PercentOf { .. } => Some("Find each percent of the number."),
         WorksheetType::FractionSubtract { .. } => {
             Some("Subtract the fractions. Write each answer in simplest form.")
         }
@@ -123,6 +124,7 @@ fn instructions_nb(ws: &WorksheetType) -> Option<&'static str> {
         WorksheetType::FractionDecimalPercent { .. } => {
             Some("Fyll inn slik at hver linje viser samme tall som brøk, desimaltall og prosent.")
         }
+        WorksheetType::PercentOf { .. } => Some("Regn ut hvor mye prosenten er av tallet."),
         WorksheetType::FractionSubtract { .. } => {
             Some("Trekk fra brøkene. Skriv svaret på enklest mulig form.")
         }
@@ -164,6 +166,7 @@ fn title_nb(ws: &WorksheetType) -> &'static str {
         WorksheetType::FractionSimplify { .. } => "Forkorting av brøk",
         WorksheetType::FractionAdd { .. } => "Addisjon med brøk",
         WorksheetType::FractionDecimalPercent { .. } => "Brøk, desimaltall og prosent",
+        WorksheetType::PercentOf { .. } => "Prosent av et tall",
         WorksheetType::FractionSubtract { .. } => "Subtraksjon med brøk",
         WorksheetType::AlgebraTwoStep { .. } => "Likninger i to steg",
         WorksheetType::AlgebraOneStep { .. } => "Likninger i ett steg",
@@ -235,6 +238,8 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
             "Fractions, decimals and percents"
         }
         (WorksheetType::FractionDecimalPercent { .. }, Form::Slug) => "fractions-decimals-percents",
+        (WorksheetType::PercentOf { .. }, Form::Title) => "Percent of a number",
+        (WorksheetType::PercentOf { .. }, Form::Slug) => "percent-of-a-number",
         (WorksheetType::FractionAdd { .. }, Form::Title) => "Fraction addition",
         (WorksheetType::FractionAdd { .. }, Form::Slug) => "fraction-addition",
         (WorksheetType::FractionSubtract { .. }, Form::Title) => "Fraction subtraction",

@@ -1336,8 +1336,9 @@ impl FractionDecimalPercentSpecific {
                 improper: self.improper.unwrap_or(false),
                 given: self.given.unwrap_or_default(),
             },
-            // A full page: 2 columns of 9.
-            18,
+            // 2 columns of 5: the rows get extra space for working out
+            // the conversions (the page would hold 9).
+            10,
             2,
         ))
     }
@@ -1364,6 +1365,61 @@ async fn handle_fraction_decimal_percent(
     headers: HeaderMap,
 ) -> Response {
     render(&s, "fraction-decimal-percent", p.build(shared), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct PercentOfSpecific {
+    /// Percents to use (1-100), comma-separated. Default `10,20,25,50,75`.
+    #[serde(default)]
+    #[param(value_type = String, example = "10,20,25,50,75")]
+    percents: Option<String>,
+    /// Largest base number, 10-1000. Default 400.
+    #[serde(default)]
+    max_base: Option<u32>,
+}
+
+impl PercentOfSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let percents = match self.percents {
+            Some(s) => parse_u32_csv(&s, "percents")?,
+            None => vec![10, 20, 25, 50, 75],
+        };
+        Ok(shared.fold(
+            WorksheetType::PercentOf {
+                percents,
+                max_base: self.max_base.unwrap_or(400),
+            },
+            PERCENT_OF_PROBLEMS,
+            2,
+        ))
+    }
+}
+
+/// Percent-of problems that fill one page: 2 columns of 12.
+const PERCENT_OF_PROBLEMS: u32 = 24;
+
+/// Percent of a number
+///
+/// `20% of 350 = ___`, always with a whole-number answer.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/percent-of",
+    operation_id = "percent_of",
+    params(SharedParams, PercentOfSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_percent_of(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<PercentOfSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "percent-of", p.build(shared), &headers)
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -2072,6 +2128,7 @@ async fn main() {
         .routes(routes!(handle_fraction_add))
         .routes(routes!(handle_fraction_subtract))
         .routes(routes!(handle_fraction_decimal_percent))
+        .routes(routes!(handle_percent_of))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .routes(routes!(handle_algebra_square_root))
@@ -2245,6 +2302,7 @@ mod tests {
             "fraction-add",
             "fraction-subtract",
             "fraction-decimal-percent",
+            "percent-of",
             "algebra-two-step",
             "algebra-one-step",
             "algebra-square-root",
@@ -2282,6 +2340,7 @@ mod tests {
                 "fraction-simplify" => build!(FractionSimplifySpecific),
                 "fraction-equiv" => build!(FractionEquivSpecific),
                 "fraction-decimal-percent" => build!(FractionDecimalPercentSpecific),
+                "percent-of" => build!(PercentOfSpecific),
                 "fraction-add" => Query::<FractionAddSpecific>::try_from_uri(&uri)
                     .unwrap()
                     .0

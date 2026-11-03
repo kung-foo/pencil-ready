@@ -443,11 +443,48 @@ fraction-conversion-problem((1, 8, 2, 125, 3, 125, 1), mode: "worked",  // 12.5%
 ```
 
 One row of three fixed-width slots, so the `=` signs line up down a
-column; two cells across the page (8.9 cm each). Fractions are
+column; two cells across the page (8.9 cm each), five rows by default
+so there is room to work. Fractions are
 display-size to match the decimals. Answer lines stay under the two
 non-given forms in every mode, so a worked example still shows which
 was given. Locale: decimal separator, and Norwegian puts a no-break
 space before `%` (`LocaleStrings::percent_suffix`).
+
+## Percent of a Number
+
+Kind `percent-of`: `20% of 350 = ___` (`20 % av 350` in Norwegian),
+always with a whole-number answer.
+
+### Parameters
+
+- `percents: list[u32]` — percents to use (1–100). Default
+  `10,20,25,50,75`.
+- `max_base: u32` — largest base number (10–1000). Default 400.
+
+Levels: 10% and 50% (bases to 200); 10/20/25/50/75% (to 400); other
+percents such as 35% or 65% (to 1000).
+
+### Problem generation
+
+1. Enumerate every `(percent, base)` with `10 ≤ base ≤ max_base` and
+   `percent × base` a multiple of 100.
+2. Shuffle each percent's bases, then deal round-robin across percents,
+   so a percent with many valid bases (50%) doesn't crowd out one with
+   few (35%). Shuffle the page; pad if the pool is smaller.
+
+### Layout component
+
+```typst
+percent-of-problem((25, 840, 210))                        // blank
+percent-of-problem((20, 350, 70), mode: "worked",
+  opts: (percent-suffix: "\u{a0}%", of: "av"))           // Norwegian
+```
+
+One line. The expression is right-aligned in a box as wide as the
+widest allowed (`100% of 1000`), so the `=` and answer lines line up
+down a column; two cells across the page. Locale: the percent sign
+(`LocaleStrings::percent_suffix`) and the word "of" / "av"
+(`percent_of`).
 
 ## Algebra: Two-Step
 

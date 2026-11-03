@@ -49,6 +49,7 @@ const ALIASES_EN: ReadonlyArray<Alias> = [
         phrase: "fractions, decimals and percents",
         kind: "fraction-decimal-percent",
     },
+    { phrase: "percent of a number", kind: "percent-of" },
     // Times tables are what the drills exist for.
     { phrase: "times tables", kind: "mult-drill" },
     { phrase: "times table", kind: "mult-drill" },
@@ -91,6 +92,7 @@ const ALIASES_NB: ReadonlyArray<Alias> = [
         phrase: "brøk, desimaltall og prosent",
         kind: "fraction-decimal-percent",
     },
+    { phrase: "prosent av et tall", kind: "percent-of" },
     { phrase: "gangetabellen", kind: "mult-drill" },
     { phrase: "likninger i ett steg", kind: "algebra-one-step" },
     { phrase: "likninger i to steg", kind: "algebra-two-step" },

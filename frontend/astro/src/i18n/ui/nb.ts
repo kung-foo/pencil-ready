@@ -38,6 +38,7 @@ export const nb: UiStrings = {
             longForm: "Oppstilling",
             fractions: "Brøk",
             decimals: "Desimaltall",
+            percent: "Prosent",
             statistics: "Statistikk",
             preAlgebra: "Algebra",
         },
@@ -174,6 +175,11 @@ export const nb: UiStrings = {
                 label: "Åttendedeler, og tall over 1",
                 example: "1 3/8 = 1,375 = 137,5 %",
             },
+        ],
+        "percent-of": [
+            { label: "10 % og 50 %", example: "10 % av 240 = 24" },
+            { label: "20 %, 25 % og 75 %", example: "25 % av 84 = 21" },
+            { label: "Andre prosenter", example: "35 % av 240 = 84" },
         ],
         "decimal-add": [
             { label: "Tideler", example: "12,5 + 34,7" },

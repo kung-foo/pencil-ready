@@ -36,6 +36,8 @@ pub struct LocaleStrings {
     pub mean_label: &'static str,
     /// Text after a percentage: `75%` in English, `75 %` in Norwegian.
     pub percent_suffix: &'static str,
+    /// The word in "20% of 350".
+    pub percent_of: &'static str,
 }
 
 const EN: LocaleStrings = LocaleStrings {
@@ -52,6 +54,7 @@ const EN: LocaleStrings = LocaleStrings {
     remainder_prefix: "r=",
     mean_label: "mean",
     percent_suffix: "%",
+    percent_of: "of",
 };
 
 const NB: LocaleStrings = LocaleStrings {
@@ -73,6 +76,7 @@ const NB: LocaleStrings = LocaleStrings {
     mean_label: "snitt",
     // No-break space: the sign must never wrap away from its number.
     percent_suffix: "\u{a0}%",
+    percent_of: "av",
 };
 
 impl Locale {

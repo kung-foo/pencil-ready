@@ -23,6 +23,7 @@ mod mean;
 mod mult_drill;
 mod multiply;
 mod order_of_ops;
+mod percent_of;
 mod rng;
 mod subtract;
 
@@ -261,6 +262,13 @@ pub enum WorksheetType {
         improper: bool,
         given: ConversionGiven,
     },
+    /// `20% of 350 = ___`, whole-number answers. See `percent_of.rs`.
+    PercentOf {
+        /// Percents to use (1-100).
+        percents: Vec<u32>,
+        /// Largest base (10-1000).
+        max_base: u32,
+    },
     FractionSimplify {
         /// Allowed denominators of the printed fraction.
         denominators: Vec<u32>,
@@ -432,6 +440,7 @@ impl WorksheetType {
             WorksheetType::FractionSimplify { .. } => "fraction-simplification-problem",
             WorksheetType::FractionAdd { .. } => "fraction-addition-problem",
             WorksheetType::FractionDecimalPercent { .. } => "fraction-conversion-problem",
+            WorksheetType::PercentOf { .. } => "percent-of-problem",
             WorksheetType::FractionSubtract { .. } => "fraction-subtraction-problem",
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
             WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
@@ -526,6 +535,10 @@ impl WorksheetType {
             // Fraction ↔ decimal ↔ percent: one row of three fixed-width
             // slots (`fraction-conversion-widest` in cell-sizes.toml).
             WorksheetType::FractionDecimalPercent { .. } => (8.9, 2.2),
+
+            // Percent of: one line, the expression boxed to the widest
+            // allowed (`percent-of-widest` in cell-sizes.toml).
+            WorksheetType::PercentOf { .. } => (8.0, 1.7),
 
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).
@@ -649,6 +662,7 @@ impl WorksheetType {
             }
             // Fixed slots; the widest denominator is 100.
             WorksheetType::FractionDecimalPercent { .. } => 3,
+            WorksheetType::PercentOf { max_base, .. } => document::digit_count(*max_base),
             // Fraction-mult's width is driven by the whole-number LHS.
             WorksheetType::FractionMultiply { max_whole, .. } => document::digit_count(*max_whole),
             // Simplify's width is capped by max_numerator (the widest
@@ -1314,6 +1328,7 @@ impl Document {
                 fraction_add::generate(params)?
             }
             WorksheetType::FractionDecimalPercent { .. } => fraction_convert::generate(params)?,
+            WorksheetType::PercentOf { .. } => percent_of::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
             WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
             WorksheetType::FractionEquiv { .. } => fraction_equiv::generate(params)?,
@@ -1654,6 +1669,22 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                     format!("{relation:?}").to_lowercase(),
                     fraction_add::MAX_COMMON_DENOMINATOR
                 );
+            }
+        }
+        WorksheetType::PercentOf { percents, max_base } => {
+            if percents.is_empty() {
+                bail!("percents must have at least one value");
+            }
+            for &p in percents {
+                if p == 0 || p > 100 {
+                    bail!("percent must be 1-100, got {p}");
+                }
+            }
+            if *max_base < 10 || *max_base > 1000 {
+                bail!("max-base must be 10-1000, got {max_base}");
+            }
+            if percent_of::candidates(percents, *max_base).is_empty() {
+                bail!("no base up to {max_base} gives a whole-number answer for these percents");
             }
         }
         WorksheetType::FractionDecimalPercent { denominators, .. } => {

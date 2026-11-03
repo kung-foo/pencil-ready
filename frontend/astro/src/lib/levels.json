@@ -118,6 +118,29 @@
             }
         }
     ],
+    "percent-of": [
+        {
+            "note": "10% and 50% are the anchors: divide by 10, halve. Bases up to 200 keep the arithmetic mental.",
+            "params": {
+                "percents": "10,50",
+                "max_base": 200
+            }
+        },
+        {
+            "note": "20% is two tens, 25% a quarter, 75% three quarters, built from the level 1 anchors.",
+            "params": {
+                "percents": "10,20,25,50,75",
+                "max_base": 400
+            }
+        },
+        {
+            "note": "Percents that need the 1% or 5% step (35% = 25% + 10%); only bases with a whole-number answer appear, so the awkward percents get fewer, rounder bases.",
+            "params": {
+                "percents": "5,15,30,35,40,45,60,65,70,80,90",
+                "max_base": 1000
+            }
+        }
+    ],
     "decimal-add": [
         {
             "params": {

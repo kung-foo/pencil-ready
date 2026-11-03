@@ -41,6 +41,7 @@ export const en = {
             longForm: "Long-form",
             fractions: "Fractions",
             decimals: "Decimals",
+            percent: "Percent",
             statistics: "Statistics",
             preAlgebra: "Pre-algebra",
         },
@@ -185,6 +186,11 @@ export const en = {
                 label: "Eighths, and numbers above 1",
                 example: "1 3/8 = 1.375 = 137.5%",
             },
+        ],
+        "percent-of": [
+            { label: "10% and 50%", example: "10% of 240 = 24" },
+            { label: "20%, 25% and 75%", example: "25% of 84 = 21" },
+            { label: "Other percents", example: "35% of 240 = 84" },
         ],
         "decimal-add": [
             { label: "Tenths", example: "12.5 + 34.7" },

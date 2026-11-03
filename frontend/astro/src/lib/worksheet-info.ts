@@ -32,13 +32,17 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
             "fraction-add",
             "fraction-subtract",
             "fraction-mult",
-            // Last: bridges into the decimals section below.
-            "fraction-decimal-percent",
         ],
     },
     {
         id: "decimals",
         kinds: ["decimal-add", "decimal-subtract", "decimal-multiply"],
+    },
+    {
+        id: "percent",
+        // Conversion first: percent as hundredths is the idea the
+        // percent-of sheet builds on.
+        kinds: ["fraction-decimal-percent", "percent-of"],
     },
     {
         id: "statistics",
