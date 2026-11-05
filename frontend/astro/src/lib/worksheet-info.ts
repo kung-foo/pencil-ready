@@ -28,6 +28,9 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
         id: "fractions",
         kinds: [
             "fraction-equiv",
+            // GCF right before simplifying: dividing by it is how a
+            // fraction is simplified in one step.
+            "gcf",
             "fraction-simplify",
             "fraction-add",
             "fraction-subtract",

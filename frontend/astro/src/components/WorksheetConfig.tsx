@@ -740,6 +740,30 @@ function KindSpecific({
             );
         }
 
+        case "gcf": {
+            const levels = levelsFor(cfg.kind) ?? [];
+            const current = cfg.level ?? defaultLevel(cfg.kind);
+            return (
+                <div className="space-y-4">
+                    <LevelPicker
+                        levels={levels}
+                        copy={levelStrings.gcf}
+                        ui={ui}
+                        value={current}
+                        onChange={(v) => patch("level", v)}
+                    />
+                    <FieldGroup label={ui.workingOut}>
+                        <OpToggle
+                            id="gcf-slots"
+                            label={ui.factorBlanks}
+                            checked={cfg.slots ?? false}
+                            onChange={(v) => patch("slots", v)}
+                        />
+                    </FieldGroup>
+                </div>
+            );
+        }
+
         case "mean": {
             const levels = levelsFor(cfg.kind) ?? [];
             const current = cfg.level ?? defaultLevel(cfg.kind);

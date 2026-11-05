@@ -38,6 +38,9 @@ pub struct LocaleStrings {
     pub percent_suffix: &'static str,
     /// The word in "20% of 350".
     pub percent_of: &'static str,
+    /// Greatest common factor: `GCF(12, 18)`, `SFF(12, 18)` (største
+    /// felles faktor) in Norwegian.
+    pub gcf_label: &'static str,
 }
 
 const EN: LocaleStrings = LocaleStrings {
@@ -55,6 +58,7 @@ const EN: LocaleStrings = LocaleStrings {
     mean_label: "mean",
     percent_suffix: "%",
     percent_of: "of",
+    gcf_label: "GCF",
 };
 
 const NB: LocaleStrings = LocaleStrings {
@@ -77,6 +81,7 @@ const NB: LocaleStrings = LocaleStrings {
     // No-break space: the sign must never wrap away from its number.
     percent_suffix: "\u{a0}%",
     percent_of: "av",
+    gcf_label: "SFF",
 };
 
 impl Locale {

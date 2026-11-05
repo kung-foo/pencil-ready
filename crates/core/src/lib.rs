@@ -24,6 +24,7 @@ mod mult_drill;
 mod multiply;
 mod order_of_ops;
 mod percent_of;
+mod gcf;
 mod rng;
 mod subtract;
 
@@ -272,6 +273,16 @@ pub enum WorksheetType {
         /// pairs with any base. Otherwise answers are whole numbers.
         decimals: bool,
     },
+    /// `GCF(12, 18) = ___` with room to list factors. See `gcf.rs`.
+    Gcf {
+        /// Largest number in a pair (10-100).
+        max_number: u32,
+        /// Mix in pairs whose GCF is 1.
+        coprime: bool,
+        /// A blank per factor instead of one line per number, so the
+        /// student knows how many factors to find.
+        slots: bool,
+    },
     FractionSimplify {
         /// Allowed denominators of the printed fraction.
         denominators: Vec<u32>,
@@ -444,6 +455,7 @@ impl WorksheetType {
             WorksheetType::FractionAdd { .. } => "fraction-addition-problem",
             WorksheetType::FractionDecimalPercent { .. } => "fraction-conversion-problem",
             WorksheetType::PercentOf { .. } => "percent-of-problem",
+            WorksheetType::Gcf { .. } => "gcf-problem",
             WorksheetType::FractionSubtract { .. } => "fraction-subtraction-problem",
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
             WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
@@ -543,6 +555,11 @@ impl WorksheetType {
             // allowed, over room for the working (a decimal column
             // multiplication; `percent-of-widest` in cell-sizes.toml).
             WorksheetType::PercentOf { .. } => (8.6, 6.3),
+
+            // GCF: the problem line over two factor lines as long as the
+            // longest list the generator allows (`gcf-widest` in
+            // cell-sizes.toml). One column.
+            WorksheetType::Gcf { .. } => (GCF_CELL_W, GCF_CELL_H),
 
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).
@@ -681,6 +698,7 @@ impl WorksheetType {
             // Fixed slots; the widest denominator is 100.
             WorksheetType::FractionDecimalPercent { .. } => 3,
             WorksheetType::PercentOf { max_base, .. } => document::digit_count(*max_base),
+            WorksheetType::Gcf { max_number, .. } => document::digit_count(*max_number),
             // Fraction-mult's width is driven by the whole-number LHS.
             WorksheetType::FractionMultiply { max_whole, .. } => document::digit_count(*max_whole),
             // Simplify's width is capped by max_numerator (the widest
@@ -781,6 +799,10 @@ impl WorksheetType {
 /// Fraction add / subtract cell width in cm, from the
 /// `fraction-addition-worst` fixture in cell-sizes.toml.
 const FRACTION_ADD_CELL_W: f32 = 5.5;
+
+/// GCF cell (`gcf-widest` in cell-sizes.toml).
+const GCF_CELL_W: f32 = 17.6;
+const GCF_CELL_H: f32 = 3.8;
 
 /// Rows a fraction add / subtract cell reserves: same-denominator
 /// problems never need the rewrite step.
@@ -1347,6 +1369,7 @@ impl Document {
             }
             WorksheetType::FractionDecimalPercent { .. } => fraction_convert::generate(params)?,
             WorksheetType::PercentOf { .. } => percent_of::generate(params)?,
+            WorksheetType::Gcf { .. } => gcf::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
             WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
             WorksheetType::FractionEquiv { .. } => fraction_equiv::generate(params)?,
@@ -1707,6 +1730,11 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             }
             if percent_of::candidates(percents, *max_base, *decimals).is_empty() {
                 bail!("no base up to {max_base} gives a whole-number answer for these percents");
+            }
+        }
+        WorksheetType::Gcf { max_number, .. } => {
+            if *max_number < 10 || *max_number > 100 {
+                bail!("max-number must be 10-100, got {max_number}");
             }
         }
         WorksheetType::FractionDecimalPercent { denominators, .. } => {
