@@ -39,6 +39,7 @@ export const en = {
             arithmetic: "Arithmetic",
             drills: "Fact drills",
             longForm: "Long-form",
+            factors: "Factors and multiples",
             fractions: "Fractions",
             decimals: "Decimals",
             percent: "Percent",

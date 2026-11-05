@@ -1,6 +1,6 @@
 ---
 title: "Greatest common factor"
-summary: "Find the greatest common factor of two numbers by listing their factors: the step that simplifies a fraction in one go."
+summary: "Find the greatest common factor of two numbers by listing each one's factors and circling the ones they share."
 prerequisites:
   - "Times-table fluency, for finding factors."
   - "Division with remainder, to test whether a number divides evenly."
@@ -8,5 +8,5 @@ prerequisites:
 learning:
   - "List every factor of a number, in order, without missing any."
   - "Circle the factors two numbers share and pick the greatest."
-  - "Get ready for simplifying fractions: dividing the numerator and denominator by their GCF gives simplest form, and a GCF of 1 means it already is."
+  - "Spot when two numbers share no factor but 1, and use the GCF later for simplifying fractions."
 ---

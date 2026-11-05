@@ -1,6 +1,6 @@
 ---
 title: "Største felles faktor"
-summary: "Finn største felles faktor (SFF) til to tall ved å skrive opp faktorene deres: steget som forkorter en brøk på én gang."
+summary: "Finn største felles faktor (SFF) til to tall ved å skrive opp faktorene til hvert av dem og ringe rundt de felles."
 prerequisites:
   - "Gangetabellen, for å finne faktorer."
   - "Divisjon med rest, for å se om et tall går opp."
@@ -8,5 +8,5 @@ prerequisites:
 learning:
   - "Skrive opp alle faktorene til et tall, i rekkefølge, uten å hoppe over noen."
   - "Ringe rundt faktorene to tall har felles og velge den største."
-  - "Forberede forkorting av brøk: deler du teller og nevner på SFF, blir brøken enklest mulig, og er SFF 1, er den det allerede."
+  - "Se når to tall bare har 1 felles, og bruke SFF senere til forkorting av brøk."
 ---

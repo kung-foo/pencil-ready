@@ -36,6 +36,7 @@ export const nb: UiStrings = {
             arithmetic: "Regning",
             drills: "Pugg",
             longForm: "Oppstilling",
+            factors: "Faktorer og multipler",
             fractions: "Brøk",
             decimals: "Desimaltall",
             percent: "Prosent",
