@@ -39,6 +39,7 @@ export const en = {
             arithmetic: "Arithmetic",
             drills: "Fact drills",
             longForm: "Long-form",
+            factors: "Factors and multiples",
             fractions: "Fractions",
             decimals: "Decimals",
             percent: "Percent",
@@ -131,6 +132,7 @@ export const en = {
         allowWhole: "Allow whole-number answers",
         workingOut: "Working out",
         printStack: "Print the addition stack",
+        factorBlanks: "A blank for each factor",
         families: "Families",
         squares: "Squares (x²)",
         roots: "Square roots (√x)",
@@ -193,6 +195,14 @@ export const en = {
             {
                 label: "Any percent, decimal answers",
                 example: "37% of 48 = 17.76",
+            },
+        ],
+        gcf: [
+            { label: "Numbers up to 30", example: "GCF(12, 18) = 6" },
+            { label: "Numbers up to 60", example: "GCF(24, 40) = 8" },
+            {
+                label: "Up to 100, some already simplest",
+                example: "GCF(8, 15) = 1",
             },
         ],
         "decimal-add": [

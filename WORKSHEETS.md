@@ -267,6 +267,56 @@ The equation is rendered in math mode with Fira Math pinned as the math
 font — the default math font inherits the outer text's letter-spacing and
 breaks multi-digit numerators/denominators (e.g. "10") into "1 0".
 
+## Greatest Common Factor
+
+Kind `gcf`: `GCF(12, 18) = ___` (`SFF(12, 18)`, største felles faktor,
+in Norwegian), with a line per number to list its factors. Practice for
+simplifying fractions: dividing a fraction's numerator and denominator
+by their GCF simplifies it in one step.
+
+### Parameters
+
+- `max_number: u32` — largest number in a pair (10–100). Default 30.
+- `coprime: bool` — mix in pairs whose GCF is 1 (a fraction already in
+  simplest form). Default false.
+- `slots: bool` — a blank per factor (`6: __ __ __ __`) instead of
+  one line per number, so the student knows how many factors to find.
+  A toggle beside the level picker, independent of the level. Default
+  false.
+
+Levels: numbers up to 30; up to 60; up to 100 with `coprime`.
+
+### Problem generation
+
+1. Enumerate every pair `a < b` with `4 ≤ a`, `b ≤ max_number` and
+   `GCF ≤ 12` (and `GCF > 1` unless `coprime`), grouped by GCF. The
+   smaller number comes first, like a numerator.
+2. Shuffle each group and the order of the groups, then deal
+   round-robin, so the answers vary instead of being mostly 2. The cap
+   at 12 keeps answers within the times tables; above it a pair is
+   almost always a number and its double (`GCF(37, 74)`). Shuffle the
+   page; pad if the pool is smaller.
+
+### Layout component
+
+```typst
+gcf-problem((12, 18, 6))                                  // blank
+gcf-problem((60, 96, 12), mode: "worked", opts: (label: "SFF"))
+```
+
+The problem line, then a line per number labelled `12:`. A worked
+example lists each number's factors (at a smaller size) and rings the
+common ones other than 1; the largest ring is the answer, and with no
+rings the GCF is 1. The component lists the factors itself and asserts
+the generator's answer. The lines are as long as the longest list
+allowed (96: twelve factors, all ringed), so every cell is the same
+size: one column of 5. The expression is boxed to its widest form
+(`GCF(100, 100)`), so the `=` lines up down the page. `line-width`
+shortens the lines (thumbnails). With `slots`, each number's blanks
+share the same line, up to a handwriting-sized cap (2.2em), so the cell
+is the same size either way. Locale: the label
+(`LocaleStrings::gcf_label`, `GCF` / `SFF`).
+
 ## Fraction Simplification
 
 Rewrite each fraction in its simplest form. Covers three answer

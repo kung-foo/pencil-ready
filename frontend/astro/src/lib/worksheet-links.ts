@@ -50,6 +50,9 @@ const ALIASES_EN: ReadonlyArray<Alias> = [
         kind: "fraction-decimal-percent",
     },
     { phrase: "percent of a number", kind: "percent-of" },
+    { phrase: "simplifying fractions", kind: "fraction-simplify" },
+    { phrase: "greatest common divisor", kind: "gcf" },
+    { phrase: "greatest common factor", kind: "gcf" },
     // Times tables are what the drills exist for.
     { phrase: "times tables", kind: "mult-drill" },
     { phrase: "times table", kind: "mult-drill" },
@@ -93,6 +96,8 @@ const ALIASES_NB: ReadonlyArray<Alias> = [
         kind: "fraction-decimal-percent",
     },
     { phrase: "prosent av et tall", kind: "percent-of" },
+    { phrase: "forkorting av brøk", kind: "fraction-simplify" },
+    { phrase: "største felles faktor", kind: "gcf" },
     { phrase: "gangetabellen", kind: "mult-drill" },
     { phrase: "likninger i ett steg", kind: "algebra-one-step" },
     { phrase: "likninger i to steg", kind: "algebra-two-step" },

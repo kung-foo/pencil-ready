@@ -1435,6 +1435,65 @@ async fn handle_percent_of(
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+struct GcfSpecific {
+    /// Largest number in a pair, 10-100. Default 30.
+    #[serde(default)]
+    max_number: Option<u32>,
+    /// Mix in pairs whose GCF is 1 (a fraction already in simplest
+    /// form). Default false.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    coprime: Option<bool>,
+    /// A blank per factor (`6: __ __ __ __`) instead of one line per
+    /// number, so the student knows how many factors to find. Default
+    /// false.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    slots: Option<bool>,
+}
+
+impl GcfSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::Gcf {
+                max_number: self.max_number.unwrap_or(30),
+                coprime: self.coprime.unwrap_or(false),
+                slots: self.slots.unwrap_or(false),
+            },
+            GCF_PROBLEMS,
+            1,
+        ))
+    }
+}
+
+/// GCF problems that fill one page: one column of 5, each with lines
+/// to list both numbers' factors.
+const GCF_PROBLEMS: u32 = 5;
+
+/// Greatest common factor
+///
+/// `GCF(12, 18) = ___`, with a line under it per number to list its
+/// factors (`SFF` in Norwegian). Practice for simplifying fractions.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/gcf",
+    operation_id = "gcf",
+    params(SharedParams, GcfSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_gcf(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<GcfSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "gcf", p.build(shared), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct FractionEquivSpecific {
     /// Allowed denominators of the base fraction, comma-separated.
     /// Default `2,3,4,5,6,8,10`.
@@ -2140,6 +2199,7 @@ async fn main() {
         .routes(routes!(handle_fraction_subtract))
         .routes(routes!(handle_fraction_decimal_percent))
         .routes(routes!(handle_percent_of))
+        .routes(routes!(handle_gcf))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .routes(routes!(handle_algebra_square_root))
@@ -2314,6 +2374,7 @@ mod tests {
             "fraction-subtract",
             "fraction-decimal-percent",
             "percent-of",
+            "gcf",
             "algebra-two-step",
             "algebra-one-step",
             "algebra-square-root",
@@ -2352,6 +2413,7 @@ mod tests {
                 "fraction-equiv" => build!(FractionEquivSpecific),
                 "fraction-decimal-percent" => build!(FractionDecimalPercentSpecific),
                 "percent-of" => build!(PercentOfSpecific),
+                "gcf" => build!(GcfSpecific),
                 "fraction-add" => Query::<FractionAddSpecific>::try_from_uri(&uri)
                     .unwrap()
                     .0
