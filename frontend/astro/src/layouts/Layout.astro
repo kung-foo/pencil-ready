@@ -112,6 +112,11 @@ const umami = {
     enabled: !import.meta.env.DEV,
     websiteId: "d47a9f9a-d800-408b-82f5-172a39ab9072",
     hostUrl: "/umami",
+    // Only the production host sends events: a local `make serve` (or
+    // the fly.dev hostname) is a production build too, and Umami drops
+    // pageviews and `umami.track` calls from any other hostname. `www.`
+    // 301s to the apex, so it never renders a page.
+    domains: "pencilready.com",
 };
 ---
 
@@ -270,6 +275,7 @@ const umami = {
                     s.src = `${hostUrl}/script.js`;
                     s.dataset.websiteId = websiteId;
                     s.dataset.hostUrl = hostUrl;
+                    s.dataset.domains = domains;
                     s.dataset.doNotTrack = "true";
                     s.dataset.performance = "true";
                     document.head.appendChild(s);
