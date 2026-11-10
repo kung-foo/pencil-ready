@@ -7,6 +7,6 @@ prerequisites:
   - "Gangetabellen."
 learning:
   - "Tegne et faktortre og ringe rundt primtallet på enden av hver gren."
-  - "Skrive tallet som produktet av primtallene, minst først: $24 = 2 · 2 · 2 · 3$."
+  - "Skrive tallet som produktet av primtallene, de minste først: $24 = 2 · 2 · 2 · 3$."
   - "Se at man ender med de samme primtallene uansett hvordan man deler først."
 ---

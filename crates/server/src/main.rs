@@ -1511,6 +1511,12 @@ struct FactorPairsSpecific {
 impl FactorPairsSpecific {
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
         let max_number = self.max_number.unwrap_or(30);
+        // The default problem count walks every number up to
+        // `max_number`, so check the range here, before that, rather
+        // than leave it to `validate_worksheet_params`.
+        if !(10..=100).contains(&max_number) {
+            return Err(anyhow!("max-number must be 10-100, got {max_number}"));
+        }
         let primes = self.primes.unwrap_or(false);
         Ok(shared.fold(
             WorksheetType::FactorPairs {
