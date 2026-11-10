@@ -296,6 +296,12 @@
     isolation: isolate;
     overflow: hidden;
 }
+/* The header is stippled too, and this unlayered rule's
+   position: relative beats the sticky rule in @layer base. Re-assert
+   sticky (still a containing block for the absolute canvas). */
+[data-theme="graph-paper"] body > header.stippled {
+    position: sticky;
+}
 .stippled > canvas.stipple-canvas {
     position: absolute;
     inset: 0;
