@@ -200,16 +200,16 @@
         background:
             linear-gradient(
                 180deg,
-                color-mix(in srgb, var(--background) 88%, transparent),
-                color-mix(in srgb, var(--background) 78%, transparent)
+                color-mix(in srgb, var(--background) 40%, transparent),
+                color-mix(in srgb, var(--background) 25%, transparent)
             ),
             linear-gradient(
                 90deg,
                 color-mix(in srgb, var(--primary) 6%, transparent),
                 color-mix(in srgb, var(--primary) 2%, transparent)
             );
-        backdrop-filter: saturate(1.4) blur(8px);
-        -webkit-backdrop-filter: saturate(1.4) blur(8px);
+        backdrop-filter: saturate(1.4) blur(6px);
+        -webkit-backdrop-filter: saturate(1.4) blur(6px);
     }
 
     [data-theme="graph-paper"] body > header {
