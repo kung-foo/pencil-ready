@@ -2,7 +2,7 @@ output/
 out/
 target/
 tools/
-examples/
+/examples/
 
 # Claude sandbox artifacts
 .bash_profile
