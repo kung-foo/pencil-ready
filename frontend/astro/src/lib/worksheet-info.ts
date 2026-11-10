@@ -25,6 +25,13 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
         kinds: ["long-divide"],
     },
     {
+        // Right before fractions: the GCF simplifies a fraction in one
+        // step (and a least common multiple, later, gives a common
+        // denominator). Factoring on its own belongs here too.
+        id: "factors",
+        kinds: ["gcf"],
+    },
+    {
         id: "fractions",
         kinds: [
             "fraction-equiv",

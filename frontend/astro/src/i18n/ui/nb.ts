@@ -36,6 +36,7 @@ export const nb: UiStrings = {
             arithmetic: "Regning",
             drills: "Pugg",
             longForm: "Oppstilling",
+            factors: "Faktorer og multipler",
             fractions: "Brøk",
             decimals: "Desimaltall",
             percent: "Prosent",
@@ -125,6 +126,7 @@ export const nb: UiStrings = {
         allowWhole: "Tillat hele tall som svar",
         workingOut: "Utregning",
         printStack: "Skriv ut oppstillingen for addisjon",
+        factorBlanks: "En strek for hver faktor",
         families: "Oppgavetyper",
         squares: "Kvadrattall (x²)",
         roots: "Kvadratrøtter (√x)",
@@ -182,6 +184,14 @@ export const nb: UiStrings = {
             {
                 label: "Alle prosenter, svar med desimaler",
                 example: "37 % av 48 = 17,76",
+            },
+        ],
+        gcf: [
+            { label: "Tall opp til 30", example: "SFF(12, 18) = 6" },
+            { label: "Tall opp til 60", example: "SFF(24, 40) = 8" },
+            {
+                label: "Opp til 100, noen allerede enklest",
+                example: "SFF(8, 15) = 1",
             },
         ],
         "decimal-add": [

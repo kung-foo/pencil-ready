@@ -142,6 +142,27 @@
             }
         }
     ],
+    "gcf": [
+        {
+            "note": "Numbers up to 30: short factor lists, every pair shares a factor.",
+            "params": {
+                "max_number": 30
+            }
+        },
+        {
+            "note": "Numbers up to 60: lists of up to twelve factors (60).",
+            "params": {
+                "max_number": 60
+            }
+        },
+        {
+            "note": "Numbers up to 100, with some pairs whose only common factor is 1, the way a fraction can already be in simplest form.",
+            "params": {
+                "max_number": 100,
+                "coprime": true
+            }
+        }
+    ],
     "decimal-add": [
         {
             "params": {

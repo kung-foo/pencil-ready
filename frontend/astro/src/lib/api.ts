@@ -44,6 +44,7 @@ export const WORKSHEET_KINDS = [
     "fraction-subtract",
     "fraction-decimal-percent",
     "percent-of",
+    "gcf",
     "algebra-one-step",
     "algebra-two-step",
     "algebra-square-root",
@@ -146,6 +147,15 @@ export type KindConfig =
           kind: "percent-of";
           /** Concept-level preset id (see `lib/levels.ts`). */
           level?: string;
+      }
+    | {
+          kind: "gcf";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+          /** A blank per factor instead of one line per number. Independent
+           * of the level: it's a hint (how many factors to find), not a
+           * change to which numbers appear. */
+          slots?: boolean;
       }
     | {
           kind: "algebra-two-step";
@@ -301,6 +311,8 @@ export function parseConfig(
         case "fraction-decimal-percent":
         case "percent-of":
             return { ...shared, kind, level: s("level") };
+        case "gcf":
+            return { ...shared, kind, level: s("level"), slots: b("slots") };
         case "algebra-two-step":
             return { ...shared, kind, level: s("level") };
         case "algebra-one-step":
