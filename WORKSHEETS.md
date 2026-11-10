@@ -306,8 +306,8 @@ gcf-problem((60, 96, 12), mode: "worked", opts: (label: "SFF"))
 
 The problem line, then a line per number labelled `12:`. A worked
 example lists each number's factors (at a smaller size) and rings the
-common ones other than 1; the largest ring is the answer, and with no
-rings the GCF is 1. The component lists the factors itself and asserts
+common ones, 1 included; the largest ring is the answer, so a pair
+whose only ring is 1 has GCF 1. The component lists the factors itself and asserts
 the generator's answer. The lines are as long as the longest list
 allowed (96: twelve factors, all ringed), so every cell is the same
 size: one column of 5. The expression is boxed to its widest form

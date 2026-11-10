@@ -243,9 +243,9 @@ measured_height_cm = 5.471
 [[cell]]
 id = "gcf-widest"
 label = "GCF (SFF(60, 96) = 12, worked)"
-width_cm = 17.6
+width_cm = 17.7
 height_cm = 3.8
-measured_width_cm = 17.512
+measured_width_cm = 17.692
 measured_height_cm = 3.793
 
 [[cell]]

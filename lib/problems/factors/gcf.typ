@@ -5,11 +5,11 @@
 // the pairs look like a numerator and a denominator.
 //
 //   GCF(12, 18) = 6
-//   12: 1, (2), (3), 4, (6), 12
-//   18: 1, (2), (3), (6), 9, 18
+//   12: (1), (2), (3), 4, (6), 12
+//   18: (1), (2), (3), (6), 9, 18
 //
-// 1 is a factor of everything, so it is listed but not ringed; a pair
-// with no other common factor has GCF 1.
+// 1 is ringed too, as the instruction asks for every common factor; a
+// pair whose only ring is 1 has GCF 1.
 
 #import "/lib/problems/shared.typ": problem-font, problem-text-size-horizontal, problem-features
 
@@ -72,8 +72,8 @@
     context box(width: measure(expr(100, 100)).width, expr(a, b)), sym.eq, slot,
   ))
 
-  // A factor list, common factors (other than 1) ringed, at a smaller
-  // size so the longest list fits the line.
+  // A factor list, common factors ringed, at a smaller size so the
+  // longest list fits the line.
   let ring(body) = box(
     stroke: 0.6pt + color,
     radius: 50%,
@@ -85,7 +85,7 @@
   // every factor when measuring the worst case.
   let mark(d, ringed) = {
     let s = handwritten(str(d))
-    if d != 1 and d in ringed { ring(s) } else { s }
+    if d in ringed { ring(s) } else { s }
   }
   let list-of(n, ringed) = text(size: 0.8em, factors(n).map(d => mark(d, ringed)).join(handwritten[, ]))
   // One blank per factor, `w` wide, with the factor written on it when
@@ -117,6 +117,7 @@
         // Split the line among this number's factors (twelve at
         // most), but no wider than a comfortable blank.
         let k = factors(n).len()
+        assert(w.to-absolute() >= (k - 1) * sep-w.to-absolute(), message: "gcf: line-width is shorter than the slot gutters")
         let slot-w = calc.min((2.2em).to-absolute(), (w - (k - 1) * sep-w.to-absolute()) / k)
         box(width: w, height: 1.4em, align(left + bottom, slot-row(n, slot-w)))
       } else {
@@ -133,5 +134,5 @@
   let body = if show-work {
     stack(dir: ttb, spacing: 0.1em, problem, factor-line(a), factor-line(b))
   } else { problem }
-  align(cell-align, pad(x: 0.3cm, box(stroke: debug-box, inset: 0.2em, body)))
+  align(cell-align, pad(x: 0.47em, box(stroke: debug-box, inset: 0.2em, body)))
 }

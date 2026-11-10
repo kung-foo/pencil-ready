@@ -801,7 +801,7 @@ impl WorksheetType {
 const FRACTION_ADD_CELL_W: f32 = 5.5;
 
 /// GCF cell (`gcf-widest` in cell-sizes.toml).
-const GCF_CELL_W: f32 = 17.6;
+const GCF_CELL_W: f32 = 17.7;
 const GCF_CELL_H: f32 = 3.8;
 
 /// Rows a fraction add / subtract cell reserves: same-denominator

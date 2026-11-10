@@ -46,7 +46,7 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         WorksheetType::FractionAdd { .. } | WorksheetType::FractionSubtract { .. } => 5.5,
         WorksheetType::FractionDecimalPercent { .. } => 8.9,
         WorksheetType::PercentOf { .. } => 8.6,
-        WorksheetType::Gcf { .. } => 17.6,
+        WorksheetType::Gcf { .. } => 17.7,
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
         WorksheetType::AlgebraOneStep { .. } => 6.0,
         WorksheetType::AlgebraSquareRoot { .. } => 6.0,
