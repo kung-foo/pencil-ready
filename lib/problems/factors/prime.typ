@@ -118,5 +118,5 @@
     )
   }
   let body = if show-work { stack(dir: ttb, spacing: 0.6em, problem, align(center, room)) } else { problem }
-  align(cell-align, pad(x: 0.3cm, box(stroke: debug-box, inset: 0.2em, body)))
+  align(cell-align, pad(x: 0.47em, box(stroke: debug-box, inset: 0.2em, body)))
 }

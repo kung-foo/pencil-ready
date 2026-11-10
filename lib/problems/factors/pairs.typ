@@ -85,5 +85,5 @@
       ..cells,
     ),
   )
-  align(cell-align, pad(x: 0.15cm, box(stroke: debug-box, inset: 0.2em, body)))
+  align(cell-align, pad(x: 0.23em, box(stroke: debug-box, inset: 0.2em, body)))
 }
