@@ -133,6 +133,7 @@ export const en = {
         workingOut: "Working out",
         printStack: "Print the addition stack",
         factorBlanks: "A blank for each factor",
+        exactPairRows: "Only as many rows as pairs",
         families: "Families",
         squares: "Squares (x²)",
         roots: "Square roots (√x)",
@@ -196,6 +197,19 @@ export const en = {
                 label: "Any percent, decimal answers",
                 example: "37% of 48 = 17.76",
             },
+        ],
+        "factor-pairs": [
+            { label: "Numbers 10 to 30", example: "24 = 1 × 24 = 2 × 12 …" },
+            { label: "Numbers 20 to 60", example: "48 = 1 × 48 = 2 × 24 …" },
+            {
+                label: "Numbers 33 to 100, with primes",
+                example: "37 = 1 × 37",
+            },
+        ],
+        "prime-factors": [
+            { label: "Numbers 10 to 30", example: "24 = 2 × 2 × 2 × 3" },
+            { label: "Numbers 20 to 60", example: "45 = 3 × 3 × 5" },
+            { label: "Numbers 33 to 100", example: "96 = 2 × 2 × 2 × 2 × 2 × 3" },
         ],
         gcf: [
             { label: "Numbers up to 30", example: "GCF(12, 18) = 6" },

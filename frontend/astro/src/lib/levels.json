@@ -142,6 +142,47 @@
             }
         }
     ],
+    "factor-pairs": [
+        {
+            "note": "Numbers 10-30 (the top two thirds of the range): up to four pairs (24, 30).",
+            "params": {
+                "max_number": 30
+            }
+        },
+        {
+            "note": "Numbers 20-60: up to six pairs (60).",
+            "params": {
+                "max_number": 60
+            }
+        },
+        {
+            "note": "Numbers 33-100, with primes mixed in: a prime has only the pair 1 x p.",
+            "params": {
+                "max_number": 100,
+                "primes": true
+            }
+        }
+    ],
+    "prime-factors": [
+        {
+            "note": "Composites 10-30: two or three primes, a tree of two levels.",
+            "params": {
+                "max_number": 30
+            }
+        },
+        {
+            "note": "Composites 20-60.",
+            "params": {
+                "max_number": 60
+            }
+        },
+        {
+            "note": "Composites 33-100, up to six primes (64, 96).",
+            "params": {
+                "max_number": 100
+            }
+        }
+    ],
     "gcf": [
         {
             "note": "Numbers up to 30: short factor lists, every pair shares a factor.",

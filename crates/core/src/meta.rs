@@ -69,6 +69,12 @@ fn instructions_en(ws: &WorksheetType) -> Option<&'static str> {
         WorksheetType::Gcf { .. } => {
             Some("List the factors of each number, circle the common ones, and write the greatest.")
         }
+        WorksheetType::FactorPairs { .. } => {
+            Some("Find every pair of numbers that multiply to make each number. Start with 1.")
+        }
+        WorksheetType::PrimeFactors { .. } => {
+            Some("Draw a factor tree until every branch ends in a prime. Write the number as a product of primes.")
+        }
         WorksheetType::FractionSubtract { .. } => {
             Some("Subtract the fractions. Write each answer in simplest form.")
         }
@@ -131,6 +137,12 @@ fn instructions_nb(ws: &WorksheetType) -> Option<&'static str> {
         WorksheetType::Gcf { .. } => {
             Some("Skriv opp faktorene til hvert tall, ring rundt de felles, og skriv den største.")
         }
+        WorksheetType::FactorPairs { .. } => {
+            Some("Finn alle tallpar som ganget blir tallet. Begynn med 1.")
+        }
+        WorksheetType::PrimeFactors { .. } => {
+            Some("Tegn et faktortre til hver gren ender i et primtall. Skriv tallet som et produkt av primtall.")
+        }
         WorksheetType::FractionSubtract { .. } => {
             Some("Trekk fra brøkene. Skriv svaret på enklest mulig form.")
         }
@@ -174,6 +186,8 @@ fn title_nb(ws: &WorksheetType) -> &'static str {
         WorksheetType::FractionDecimalPercent { .. } => "Brøk, desimaltall og prosent",
         WorksheetType::PercentOf { .. } => "Prosent av et tall",
         WorksheetType::Gcf { .. } => "Største felles faktor",
+        WorksheetType::FactorPairs { .. } => "Faktorpar",
+        WorksheetType::PrimeFactors { .. } => "Primtallsfaktorisering",
         WorksheetType::FractionSubtract { .. } => "Subtraksjon med brøk",
         WorksheetType::AlgebraTwoStep { .. } => "Likninger i to steg",
         WorksheetType::AlgebraOneStep { .. } => "Likninger i ett steg",
@@ -249,6 +263,10 @@ fn base_name(ws: &WorksheetType, form: Form) -> &'static str {
         (WorksheetType::PercentOf { .. }, Form::Slug) => "percent-of-a-number",
         (WorksheetType::Gcf { .. }, Form::Title) => "Greatest common factor",
         (WorksheetType::Gcf { .. }, Form::Slug) => "greatest-common-factor",
+        (WorksheetType::FactorPairs { .. }, Form::Title) => "Factor pairs",
+        (WorksheetType::FactorPairs { .. }, Form::Slug) => "factor-pairs",
+        (WorksheetType::PrimeFactors { .. }, Form::Title) => "Prime factorization",
+        (WorksheetType::PrimeFactors { .. }, Form::Slug) => "prime-factorization",
         (WorksheetType::FractionAdd { .. }, Form::Title) => "Fraction addition",
         (WorksheetType::FractionAdd { .. }, Form::Slug) => "fraction-addition",
         (WorksheetType::FractionSubtract { .. }, Form::Title) => "Fraction subtraction",

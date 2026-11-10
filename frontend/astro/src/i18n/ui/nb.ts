@@ -127,6 +127,7 @@ export const nb: UiStrings = {
         workingOut: "Utregning",
         printStack: "Skriv ut oppstillingen for addisjon",
         factorBlanks: "En strek for hver faktor",
+        exactPairRows: "Bare så mange rader som det er par",
         families: "Oppgavetyper",
         squares: "Kvadrattall (x²)",
         roots: "Kvadratrøtter (√x)",
@@ -185,6 +186,19 @@ export const nb: UiStrings = {
                 label: "Alle prosenter, svar med desimaler",
                 example: "37 % av 48 = 17,76",
             },
+        ],
+        "factor-pairs": [
+            { label: "Tall fra 10 til 30", example: "24 = 1 · 24 = 2 · 12 …" },
+            { label: "Tall fra 20 til 60", example: "48 = 1 · 48 = 2 · 24 …" },
+            {
+                label: "Tall fra 33 til 100, med primtall",
+                example: "37 = 1 · 37",
+            },
+        ],
+        "prime-factors": [
+            { label: "Tall fra 10 til 30", example: "24 = 2 · 2 · 2 · 3" },
+            { label: "Tall fra 20 til 60", example: "45 = 3 · 3 · 5" },
+            { label: "Tall fra 33 til 100", example: "96 = 2 · 2 · 2 · 2 · 2 · 3" },
         ],
         gcf: [
             { label: "Tall opp til 30", example: "SFF(12, 18) = 6" },

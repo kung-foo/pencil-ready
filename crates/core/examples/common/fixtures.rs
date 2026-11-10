@@ -77,6 +77,12 @@ pub const FIXTURES: &[Fixture] = &[
     Fixture { id: "decimal-multiply-d2x2-blank", label: "decimal multiply 9.9 × 9.9 (blank)", snippet: r#"decimal-multiply-problem((99, 99, 9801), opts: (operator: [#sym.times], width: 3.6cm, decimal-places: (1, 1, 2), answer-rows: 3))"# },
     // --- greatest common divisor (factor lists sized to the longest allowed) ---
     Fixture { id: "gcf-widest", label: "GCF (SFF(60, 96) = 12, worked)", snippet: r#"gcf-problem((60, 96, 12), mode: "worked", opts: (label: "SFF"))"# },
+    // --- factor pairs (height grows with the reserved pair rows) ---
+    Fixture { id: "factor-pairs-rows2", label: "factor pairs, 2 rows (9, worked)", snippet: r#"factor-pairs-problem((9,), mode: "worked", opts: (operator: [#sym.dot.op], rows: 2))"# },
+    Fixture { id: "factor-pairs-rows4", label: "factor pairs, 4 rows (24, worked)", snippet: r#"factor-pairs-problem((24,), mode: "worked", opts: (operator: [#sym.dot.op], rows: 4))"# },
+    Fixture { id: "factor-pairs-rows6", label: "factor pairs, 6 rows (100, worked)", snippet: r#"factor-pairs-problem((100,), mode: "worked", opts: (operator: [#sym.dot.op], rows: 6))"# },
+    // --- prime factorization (room for the biggest tree, 64 / 96) ---
+    Fixture { id: "prime-factors-widest", label: "prime factors (96 = 2·2·2·2·2·3, worked)", snippet: r#"prime-factors-problem((96,), mode: "worked", opts: (operator: [#sym.dot.op]))"# },
     // --- percent of a number ---
     Fixture { id: "percent-of-widest", label: "percent of (99 % av 999 = 989,01)", snippet: r#"percent-of-problem((99, 999, 98901, 2), mode: "worked", opts: (operator: [#sym.dot.op], percent-suffix: "\u{a0}%", of: "av", decimal-sep: ","))"# },
 
@@ -107,6 +113,8 @@ pub fn preamble() -> &'static str {
 #import "/lib/problems/fraction/conversion.typ": fraction-conversion-problem
 #import "/lib/problems/percent/of.typ": percent-of-problem
 #import "/lib/problems/factors/gcf.typ": gcf-problem
+#import "/lib/problems/factors/pairs.typ": factor-pairs-problem
+#import "/lib/problems/factors/prime.typ": prime-factors-problem
 #import "/lib/problems/decimal/multiply.typ": decimal-multiply-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem

@@ -27,9 +27,10 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
     {
         // Right before fractions: the GCF simplifies a fraction in one
         // step (and a least common multiple, later, gives a common
-        // denominator). Factoring on its own belongs here too.
+        // denominator). Factor pairs first: listing factors is what the
+        // GCF sheet does twice; prime factors build on factor pairs.
         id: "factors",
-        kinds: ["gcf"],
+        kinds: ["factor-pairs", "gcf", "prime-factors"],
     },
     {
         id: "fractions",

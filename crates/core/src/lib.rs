@@ -25,6 +25,8 @@ mod multiply;
 mod order_of_ops;
 mod percent_of;
 mod gcf;
+mod factor_pairs;
+mod prime_factors;
 mod rng;
 mod subtract;
 
@@ -273,6 +275,20 @@ pub enum WorksheetType {
         /// pairs with any base. Otherwise answers are whole numbers.
         decimals: bool,
     },
+    /// Every factor of a number, as factor pairs. See `factor_pairs.rs`.
+    FactorPairs {
+        /// Largest number (10-100); numbers come from its top two thirds.
+        max_number: u32,
+        /// Include primes (one pair, `1 × p`).
+        primes: bool,
+        /// Show only as many pair rows as each number has, as a hint.
+        exact_rows: bool,
+    },
+    /// Prime factorization with a factor tree. See `prime_factors.rs`.
+    PrimeFactors {
+        /// Largest number (10-100); composites from its top two thirds.
+        max_number: u32,
+    },
     /// `GCF(12, 18) = ___` with room to list factors. See `gcf.rs`.
     Gcf {
         /// Largest number in a pair (10-100).
@@ -456,6 +472,8 @@ impl WorksheetType {
             WorksheetType::FractionDecimalPercent { .. } => "fraction-conversion-problem",
             WorksheetType::PercentOf { .. } => "percent-of-problem",
             WorksheetType::Gcf { .. } => "gcf-problem",
+            WorksheetType::FactorPairs { .. } => "factor-pairs-problem",
+            WorksheetType::PrimeFactors { .. } => "prime-factors-problem",
             WorksheetType::FractionSubtract { .. } => "fraction-subtraction-problem",
             WorksheetType::AlgebraTwoStep { .. } => "algebra-two-step-problem",
             WorksheetType::AlgebraOneStep { .. } => "algebra-one-step-problem",
@@ -560,6 +578,17 @@ impl WorksheetType {
             // longest list the generator allows (`gcf-widest` in
             // cell-sizes.toml). One column.
             WorksheetType::Gcf { .. } => (GCF_CELL_W, GCF_CELL_H),
+
+            // Factor pairs: the number over a row per pair, as many rows
+            // as the range's number with the most pairs needs
+            // (`factor-pairs-rows*` in cell-sizes.toml).
+            WorksheetType::FactorPairs { max_number, primes, .. } => {
+                factor_pairs_cell(factor_pairs::rows(*max_number, *primes))
+            }
+
+            // Prime factors: the answer line over room for the biggest
+            // tree (`prime-factors-widest` in cell-sizes.toml).
+            WorksheetType::PrimeFactors { .. } => (8.3, 6.5),
 
             // Algebra two-step — width grows with coefficient / constant
             // magnitude (more digits in the LHS expression).
@@ -699,6 +728,8 @@ impl WorksheetType {
             WorksheetType::FractionDecimalPercent { .. } => 3,
             WorksheetType::PercentOf { max_base, .. } => document::digit_count(*max_base),
             WorksheetType::Gcf { max_number, .. } => document::digit_count(*max_number),
+            WorksheetType::FactorPairs { max_number, .. }
+            | WorksheetType::PrimeFactors { max_number } => document::digit_count(*max_number),
             // Fraction-mult's width is driven by the whole-number LHS.
             WorksheetType::FractionMultiply { max_whole, .. } => document::digit_count(*max_whole),
             // Simplify's width is capped by max_numerator (the widest
@@ -799,6 +830,20 @@ impl WorksheetType {
 /// Fraction add / subtract cell width in cm, from the
 /// `fraction-addition-worst` fixture in cell-sizes.toml.
 const FRACTION_ADD_CELL_W: f32 = 5.5;
+
+/// Factor-pairs cell for `rows` pair rows: the number, then 0.85cm per
+/// row (`factor-pairs-rows2/4/6` in cell-sizes.toml: 2.9, 4.6, 6.3).
+fn factor_pairs_cell(rows: u32) -> (f32, f32) {
+    (4.4, 1.2 + 0.85 * rows as f32)
+}
+
+/// Default problem count for factor pairs: four columns of as many rows
+/// as one page holds on every paper, given the level's pair rows.
+pub fn factor_pairs_default_problems(max_number: u32, primes: bool) -> u32 {
+    let (_, h) = factor_pairs_cell(factor_pairs::rows(max_number, primes));
+    let (_, area_h) = common_content_area_cm(HEADER_HEIGHT_CM);
+    4 * ((area_h / h).floor() as u32).max(1)
+}
 
 /// GCF cell (`gcf-widest` in cell-sizes.toml).
 const GCF_CELL_W: f32 = 17.7;
@@ -1370,6 +1415,8 @@ impl Document {
             WorksheetType::FractionDecimalPercent { .. } => fraction_convert::generate(params)?,
             WorksheetType::PercentOf { .. } => percent_of::generate(params)?,
             WorksheetType::Gcf { .. } => gcf::generate(params)?,
+            WorksheetType::FactorPairs { .. } => factor_pairs::generate(params)?,
+            WorksheetType::PrimeFactors { .. } => prime_factors::generate(params)?,
             WorksheetType::AlgebraTwoStep { .. } => algebra_two_step::generate(params)?,
             WorksheetType::AlgebraOneStep { .. } => algebra_one_step::generate(params)?,
             WorksheetType::FractionEquiv { .. } => fraction_equiv::generate(params)?,
@@ -1730,6 +1777,12 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             }
             if percent_of::candidates(percents, *max_base, *decimals).is_empty() {
                 bail!("no base up to {max_base} gives a whole-number answer for these percents");
+            }
+        }
+        WorksheetType::FactorPairs { max_number, .. }
+        | WorksheetType::PrimeFactors { max_number } => {
+            if *max_number < 10 || *max_number > 100 {
+                bail!("max-number must be 10-100, got {max_number}");
             }
         }
         WorksheetType::Gcf { max_number, .. } => {

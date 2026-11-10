@@ -720,6 +720,7 @@ function KindSpecific({
         case "fraction-subtract":
         case "fraction-decimal-percent":
         case "percent-of":
+        case "prime-factors":
         case "long-divide":
         case "algebra-two-step":
         case "algebra-one-step":
@@ -737,6 +738,30 @@ function KindSpecific({
                     value={current}
                     onChange={(v) => patch("level", v)}
                 />
+            );
+        }
+
+        case "factor-pairs": {
+            const levels = levelsFor(cfg.kind) ?? [];
+            const current = cfg.level ?? defaultLevel(cfg.kind);
+            return (
+                <div className="space-y-4">
+                    <LevelPicker
+                        levels={levels}
+                        copy={levelStrings["factor-pairs"]}
+                        ui={ui}
+                        value={current}
+                        onChange={(v) => patch("level", v)}
+                    />
+                    <FieldGroup label={ui.workingOut}>
+                        <OpToggle
+                            id="factor-pairs-exact"
+                            label={ui.exactPairRows}
+                            checked={cfg.exact_rows ?? false}
+                            onChange={(v) => patch("exact_rows", v)}
+                        />
+                    </FieldGroup>
+                </div>
             );
         }
 

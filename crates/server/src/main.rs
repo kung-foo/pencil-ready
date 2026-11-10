@@ -27,7 +27,7 @@ use pencil_ready_core::{
     BorrowMode, CarryMode, ConversionGiven, DenominatorRelation, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot,
     OutputFormat,
     Paper,
-    WorksheetParams, WorksheetType, generate, long_division_default_cols,
+    WorksheetParams, WorksheetType, factor_pairs_default_problems, generate, long_division_default_cols,
     long_division_default_problems,
 };
 use serde::Deserialize;
@@ -1494,6 +1494,113 @@ async fn handle_gcf(
 
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+struct FactorPairsSpecific {
+    /// Largest number, 10-100. Numbers come from its top two thirds
+    /// (10-30 for 30). Default 30.
+    #[serde(default)]
+    max_number: Option<u32>,
+    /// Include primes, which have one pair (`1 × p`). Default false.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    primes: Option<bool>,
+    /// Show only as many pair rows as each number has, as a hint for
+    /// how many to find. Default false (every cell shows the same rows).
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    exact_rows: Option<bool>,
+}
+
+impl FactorPairsSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        let max_number = self.max_number.unwrap_or(30);
+        let primes = self.primes.unwrap_or(false);
+        Ok(shared.fold(
+            WorksheetType::FactorPairs {
+                max_number,
+                primes,
+                exact_rows: self.exact_rows.unwrap_or(false),
+            },
+            // Four columns, as many rows as fit: the cell grows with the
+            // most pairs a number in the range has.
+            factor_pairs_default_problems(max_number, primes),
+            4,
+        ))
+    }
+}
+
+/// Factor pairs
+///
+/// Every factor of a number, as factor pairs (`1 × 24`, `2 × 12`, …),
+/// with a row per pair under the number.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/factor-pairs",
+    operation_id = "factor_pairs",
+    params(SharedParams, FactorPairsSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_factor_pairs(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<FactorPairsSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "factor-pairs", p.build(shared), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct PrimeFactorsSpecific {
+    /// Largest number, 10-100. Composite numbers come from its top two
+    /// thirds (10-30 for 30). Default 30.
+    #[serde(default)]
+    max_number: Option<u32>,
+}
+
+impl PrimeFactorsSpecific {
+    fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
+        Ok(shared.fold(
+            WorksheetType::PrimeFactors {
+                max_number: self.max_number.unwrap_or(30),
+            },
+            PRIME_FACTORS_PROBLEMS,
+            2,
+        ))
+    }
+}
+
+/// Prime-factorization problems that fill one page: 2 columns of 3, each
+/// with room for a factor tree.
+const PRIME_FACTORS_PROBLEMS: u32 = 6;
+
+/// Prime factorization
+///
+/// `24 = ___`: write the number as a product of primes, with room under
+/// it for a factor tree.
+#[utoipa::path(
+    get,
+    path = "/api/worksheets/prime-factors",
+    operation_id = "prime_factors",
+    params(SharedParams, PrimeFactorsSpecific),
+    responses(
+        (status = 200, response = WorksheetFile),
+        (status = 400, response = InvalidParams),
+    ),
+    tag = "worksheets",
+)]
+async fn handle_prime_factors(
+    State(s): State<Arc<AppState>>,
+    Query(shared): Query<SharedParams>,
+    Query(p): Query<PrimeFactorsSpecific>,
+    headers: HeaderMap,
+) -> Response {
+    render(&s, "prime-factors", p.build(shared), &headers)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 struct FractionEquivSpecific {
     /// Allowed denominators of the base fraction, comma-separated.
     /// Default `2,3,4,5,6,8,10`.
@@ -2200,6 +2307,8 @@ async fn main() {
         .routes(routes!(handle_fraction_decimal_percent))
         .routes(routes!(handle_percent_of))
         .routes(routes!(handle_gcf))
+        .routes(routes!(handle_factor_pairs))
+        .routes(routes!(handle_prime_factors))
         .routes(routes!(handle_algebra_two_step))
         .routes(routes!(handle_algebra_one_step))
         .routes(routes!(handle_algebra_square_root))
@@ -2375,6 +2484,8 @@ mod tests {
             "fraction-decimal-percent",
             "percent-of",
             "gcf",
+            "factor-pairs",
+            "prime-factors",
             "algebra-two-step",
             "algebra-one-step",
             "algebra-square-root",
@@ -2414,6 +2525,8 @@ mod tests {
                 "fraction-decimal-percent" => build!(FractionDecimalPercentSpecific),
                 "percent-of" => build!(PercentOfSpecific),
                 "gcf" => build!(GcfSpecific),
+                "factor-pairs" => build!(FactorPairsSpecific),
+                "prime-factors" => build!(PrimeFactorsSpecific),
                 "fraction-add" => Query::<FractionAddSpecific>::try_from_uri(&uri)
                     .unwrap()
                     .0
