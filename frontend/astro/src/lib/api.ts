@@ -45,6 +45,8 @@ export const WORKSHEET_KINDS = [
     "fraction-decimal-percent",
     "percent-of",
     "gcf",
+    "factor-pairs",
+    "prime-factors",
     "algebra-one-step",
     "algebra-two-step",
     "algebra-square-root",
@@ -145,6 +147,19 @@ export type KindConfig =
       }
     | {
           kind: "percent-of";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+      }
+    | {
+          kind: "factor-pairs";
+          /** Concept-level preset id (see `lib/levels.ts`). */
+          level?: string;
+          /** Show only as many pair rows as each number has. A hint,
+           * independent of the level. */
+          exact_rows?: boolean;
+      }
+    | {
+          kind: "prime-factors";
           /** Concept-level preset id (see `lib/levels.ts`). */
           level?: string;
       }
@@ -310,7 +325,15 @@ export function parseConfig(
         case "fraction-subtract":
         case "fraction-decimal-percent":
         case "percent-of":
+        case "prime-factors":
             return { ...shared, kind, level: s("level") };
+        case "factor-pairs":
+            return {
+                ...shared,
+                kind,
+                level: s("level"),
+                exact_rows: b("exact_rows"),
+            };
         case "gcf":
             return { ...shared, kind, level: s("level"), slots: b("slots") };
         case "algebra-two-step":

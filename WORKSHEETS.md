@@ -267,6 +267,79 @@ The equation is rendered in math mode with Fira Math pinned as the math
 font — the default math font inherits the outer text's letter-spacing and
 breaks multi-digit numerators/denominators (e.g. "10") into "1 0".
 
+## Factor Pairs
+
+Kind `factor-pairs`: every factor of a number, as pairs that multiply to
+make it (`1 × 24`, `2 × 12`, `3 × 8`, `4 × 6`), trying 1, 2, 3, … until
+the pairs meet.
+
+### Parameters
+
+- `max_number: u32` — largest number (10–100). Numbers come from its
+  top two thirds (10–30 for 30), so each level practises its own size
+  of number. Default 30.
+- `primes: bool` — include primes (one pair, `1 × p`). Default false.
+- `exact_rows: bool` — show only as many pair rows as each number has,
+  as a hint for how many to find; the rest of the cell stays blank, so
+  it's the same size. A toggle beside the level picker. Default false.
+
+Levels: 10–30; 20–60; 33–100 with primes.
+
+### Problem generation
+
+Shuffle the candidates (composites in the range, plus primes with
+`primes`) and take a page's worth; pad if the pool is smaller. The cell
+reserves a row per pair for the candidate with the most pairs
+(`factor_pairs::rows`: 4 up to 30, 6 up to 60 or 100), so every cell is
+the same size and blank rows don't give away the count.
+
+### Layout component
+
+```typst
+factor-pairs-problem((24,), opts: (rows: 4))                  // blank
+factor-pairs-problem((36,), mode: "worked", opts: (operator: [#sym.dot.op]))
+```
+
+The number, then `rows` rows of `__ × __`. Solved modes fill in the
+pairs (they are the answer); rows past the last pair are hidden. A
+square ends on a pair with itself (`6 × 6`). Cell 4.4 cm wide, 1.2 cm
+plus 0.85 cm per row: four columns, as many rows as fit
+(`factor_pairs_default_problems`). The multiply sign follows the
+locale. Problems are one-number arrays, emitted as `(24,)`.
+
+## Prime Factorization
+
+Kind `prime-factors`: `24 = ___`, written as a product of primes,
+smallest first (`2 · 2 · 2 · 3`), with room under it for a factor tree.
+
+### Parameters
+
+- `max_number: u32` — largest number (10–100). Composites come from its
+  top two thirds. Default 30.
+
+Levels: 10–30; 20–60; 33–100.
+
+### Problem generation
+
+Shuffle the composites in the range and take a page's worth; pad if the
+pool is smaller.
+
+### Layout component
+
+```typst
+prime-factors-problem((24,))                                  // blank
+prime-factors-problem((96,), mode: "worked", opts: (operator: [#sym.dot.op]))
+```
+
+The problem line over room for the biggest tree allowed (64's six
+leaves, 96's depth), so blank cells leave the student room for their
+own tree. The worked tree splits each number into its closest factor
+pair (24 → 4 · 6), so it stays balanced and short, and circles the
+primes; the component builds the tree and answer itself. "answer-only"
+writes just the answer. Cell 8.3 × 6.5 cm: 2 columns of 3. The number
+is right-aligned in room for three digits so the `=` lines align. The
+multiply sign follows the locale.
+
 ## Greatest Common Factor
 
 Kind `gcf`: `GCF(12, 18) = ___` (`SFF(12, 18)`, største felles faktor,

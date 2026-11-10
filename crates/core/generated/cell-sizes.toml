@@ -249,6 +249,38 @@ measured_width_cm = 17.692
 measured_height_cm = 3.793
 
 [[cell]]
+id = "factor-pairs-rows2"
+label = "factor pairs, 2 rows (9, worked)"
+width_cm = 4.4
+height_cm = 2.9
+measured_width_cm = 4.313
+measured_height_cm = 2.812
+
+[[cell]]
+id = "factor-pairs-rows4"
+label = "factor pairs, 4 rows (24, worked)"
+width_cm = 4.4
+height_cm = 4.6
+measured_width_cm = 4.313
+measured_height_cm = 4.527
+
+[[cell]]
+id = "factor-pairs-rows6"
+label = "factor pairs, 6 rows (100, worked)"
+width_cm = 4.4
+height_cm = 6.3
+measured_width_cm = 4.313
+measured_height_cm = 6.241
+
+[[cell]]
+id = "prime-factors-widest"
+label = "prime factors (96 = 2·2·2·2·2·3, worked)"
+width_cm = 8.3
+height_cm = 6.5
+measured_width_cm = 8.258
+measured_height_cm = 6.412
+
+[[cell]]
 id = "percent-of-widest"
 label = "percent of (99 % av 999 = 989,01)"
 width_cm = 8.6

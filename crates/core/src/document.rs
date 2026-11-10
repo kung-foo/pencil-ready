@@ -47,6 +47,8 @@ pub(crate) fn box_width_cm(worksheet: &WorksheetType, max_digits: u32) -> f64 {
         WorksheetType::FractionDecimalPercent { .. } => 8.9,
         WorksheetType::PercentOf { .. } => 8.6,
         WorksheetType::Gcf { .. } => 17.7,
+        WorksheetType::FactorPairs { .. } => 4.4,
+        WorksheetType::PrimeFactors { .. } => 8.3,
         WorksheetType::AlgebraTwoStep { .. } => 6.0,
         WorksheetType::AlgebraOneStep { .. } => 6.0,
         WorksheetType::AlgebraSquareRoot { .. } => 6.0,
@@ -216,6 +218,11 @@ fn opts_body(
             pct = typst_string_literal(strings.percent_suffix),
             of = typst_string_literal(strings.percent_of),
         ),
+        WorksheetType::FactorPairs { exact_rows, .. } => format!(
+            "operator: {operator_arg}, rows: {}, exact-rows: {exact_rows}",
+            opts.answer_rows
+        ),
+        WorksheetType::PrimeFactors { .. } => format!("operator: {operator_arg}"),
         WorksheetType::Gcf { slots, .. } => format!(
             "label: {}, slots: {slots}",
             typst_string_literal(strings.gcf_label)
@@ -446,7 +453,9 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
                     .map(|n| n.to_string())
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("({inner})")
+                // Trailing comma: a one-number problem (factor pairs)
+                // must be the array `(24,)`, not the integer `(24)`.
+                format!("({inner},)")
             })
             .collect::<Vec<_>>()
             .join(",\n  ");
@@ -581,6 +590,8 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
 #import "/lib/problems/fraction/conversion.typ": fraction-conversion-problem
 #import "/lib/problems/percent/of.typ": percent-of-problem
 #import "/lib/problems/factors/gcf.typ": gcf-problem
+#import "/lib/problems/factors/pairs.typ": factor-pairs-problem
+#import "/lib/problems/factors/prime.typ": prime-factors-problem
 #import "/lib/problems/algebra/two-step.typ": algebra-two-step-problem
 #import "/lib/problems/algebra/one-step.typ": algebra-one-step-problem
 #import "/lib/problems/algebra/square-root.typ": algebra-square-root-problem
