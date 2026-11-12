@@ -352,6 +352,14 @@
         background: transparent;
     }
 }
+/* Phones: while a sheet is open the page behind it doesn't scroll, and
+   the window's own scrollbar, which browsers draw above everything
+   (popovers included), has nothing to show. */
+@media (max-width: 47.99rem) {
+    html:has(.header-sheet:popover-open) {
+        overflow: hidden;
+    }
+}
 
 /* Pencil divider with fixed-size ends: the eraser, ferrule bands and
    graphite tip keep their pixel widths (2 / 1 / 1 / 1 / 1 columns of
