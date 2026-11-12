@@ -2,7 +2,7 @@
 import Layout from "@/layouts/Layout.astro";
 import Stippled from "@/components/Stippled.astro";
 import WorksheetThumb from "@/components/WorksheetThumb.astro";
-import { WORKSHEET_SECTIONS } from "@/lib/worksheet-info";
+import { WORKSHEET_SECTIONS, sectionAnchor } from "@/lib/worksheet-info";
 import { getWorksheetInfo } from "@/lib/worksheet-content";
 import { MathText } from "@/components/MathText";
 import { t } from "@/i18n";
@@ -48,15 +48,10 @@ const WORKSHEET_INFO = await getWorksheetInfo(locale);
                    a network roundtrip. Below-fold sections pass
                    `lazy` so each thumb becomes <img loading="lazy">. */
                 WORKSHEET_SECTIONS.map((section, sectionIndex) => (
-                    /* Anchor ids stay English in every locale (kebab
-                       of the section key) so /#fractions and
-                       /nb/#fractions both work. scroll-mt clears the
-                       sticky header. */
+                    /* scroll-mt clears the sticky header when a link
+                       (or the header search) jumps to a section. */
                     <section
-                        id={section.id.replace(
-                            /[A-Z]/g,
-                            (c) => `-${c.toLowerCase()}`,
-                        )}
+                        id={sectionAnchor(section.id)}
                         class="scroll-mt-20"
                     >
                         <h2 class="text-xl font-semibold mb-4 pb-1 border-b border-pencil-no-2">

@@ -23,6 +23,14 @@ export const nb: UiStrings = {
     },
     nav: {
         about: "Om",
+        worksheets: "Matteark",
+        menu: "Meny",
+        languageAndPaper: "Språk og papir",
+    },
+    search: {
+        label: "Søk i matteark",
+        placeholder: "Søk i matteark…",
+        noMatches: "Ingen matteark passer",
     },
     footer: {
         madeWith: "laget med",
@@ -76,7 +84,6 @@ export const nb: UiStrings = {
     selector: {
         heading: "Språk",
         buttonLabel: "Språk og papir: norsk",
-        remember: "Vi husker valget ditt på denne enheten.",
         close: "Lukk",
         suggested: "Forslag",
         all: "Alle språk",

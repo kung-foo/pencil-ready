@@ -102,6 +102,10 @@
 
     /* Brand accents — literal colors, not theme-dependent. */
     --color-pencil-no-2: #fdb600;
+    /* The rest of the pixel pencil (PencilRule's SVG uses the same hex). */
+    --color-pencil-eraser: #e88e8a;
+    --color-pencil-ferrule: #3e8948;
+    --color-pencil-graphite: #1a1a1a;
     /* Inline math keys in worksheet help copy (MathText.astro). */
     --color-math-key: #fff6d1;
     --color-math-key-border: #efc84a;
@@ -302,6 +306,79 @@
 [data-theme="graph-paper"] body > header.stippled {
     position: sticky;
 }
+
+/* Header menus (search, language, ☰) are native popovers in the top
+   layer, so the header's overflow and backdrop-filter can't clip them.
+   Phones: a full-width sheet attached under the header. Wide screens: a
+   card under the header, aligned to its button. lib/header-sheet.ts
+   sets --sheet-top (the header's bottom edge, tracked while open) and
+   --sheet-left/--sheet-width; without JS the sheet sits at the top. */
+.header-sheet {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    inset: var(--sheet-top, 0px) 0 auto 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - var(--sheet-top, 0px) - 1rem);
+    overflow-y: auto;
+    background: var(--color-card);
+    color: var(--color-card-foreground);
+    border-radius: 0 0 0.75rem 0.75rem;
+    box-shadow: 0 8px 24px
+        color-mix(in srgb, var(--color-foreground) 18%, transparent);
+}
+/* Dim the page but not the header: it stays readable, and its buttons
+   keep working while a menu is open (tapping ☰ again closes it). */
+.header-sheet::backdrop {
+    top: var(--sheet-top, 0px);
+    background: color-mix(in srgb, var(--color-foreground) 35%, transparent);
+}
+@media (min-width: 48rem) {
+    .header-sheet {
+        inset: calc(var(--sheet-top, 4rem) + 4px) auto auto
+            var(--sheet-left, calc(100vw - var(--sheet-width, 18rem) - 1rem));
+        width: var(--sheet-width, 18rem);
+        max-height: calc(100dvh - var(--sheet-top, 4rem) - 2rem);
+        border-radius: 0.5rem;
+        border: 1px solid var(--color-border);
+        box-shadow:
+            0 4px 16px
+                color-mix(in srgb, var(--color-foreground) 12%, transparent),
+            0 1px 3px
+                color-mix(in srgb, var(--color-foreground) 8%, transparent);
+    }
+    .header-sheet::backdrop {
+        background: transparent;
+    }
+}
+/* Phones: while a sheet is open the page behind it doesn't scroll, and
+   the window's own scrollbar, which browsers draw above everything
+   (popovers included), has nothing to show. */
+@media (max-width: 47.99rem) {
+    html:has(.header-sheet:popover-open) {
+        overflow: hidden;
+    }
+}
+
+/* Pencil divider with fixed-size ends: the eraser, ferrule bands and
+   graphite tip keep their pixel widths (2 / 1 / 1 / 1 / 1 columns of
+   4px, as in the logo) and only the barrel stretches. PencilRule's SVG
+   instead scales the ends with its length. Height comes from the
+   caller, e.g. `h-0.5` for a 2px line. */
+.pencil-line {
+    display: block;
+    background: linear-gradient(
+        90deg,
+        var(--color-pencil-eraser) 0 8px,
+        var(--color-pencil-ferrule) 8px 12px,
+        var(--color-pencil-no-2) 12px 16px,
+        var(--color-pencil-ferrule) 16px 20px,
+        var(--color-pencil-no-2) 20px calc(100% - 4px),
+        var(--color-pencil-graphite) calc(100% - 4px)
+    );
+}
+
 .stippled > canvas.stipple-canvas {
     position: absolute;
     inset: 0;

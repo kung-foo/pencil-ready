@@ -26,6 +26,17 @@ export const en = {
     },
     nav: {
         about: "About",
+        /** Header search button; the label is hidden on narrow screens. */
+        worksheets: "Worksheets",
+        menu: "Menu",
+        /** ☰ menu row that opens the language and paper menu. */
+        languageAndPaper: "Language and paper",
+    },
+    search: {
+        /** Search button `aria-label` and the panel's accessible name. */
+        label: "Search worksheets",
+        placeholder: "Search worksheets…",
+        noMatches: "No matching worksheets",
     },
     footer: {
         madeWith: "made with",
@@ -81,7 +92,6 @@ export const en = {
         heading: "Language",
         /** Button `aria-label`, naming this (the current) language. */
         buttonLabel: "Language and paper: English",
-        remember: "We'll remember your choice on this device.",
         close: "Close",
         suggested: "Suggested",
         all: "All languages",
