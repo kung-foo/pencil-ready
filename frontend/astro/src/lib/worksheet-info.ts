@@ -69,6 +69,15 @@ export const WORKSHEET_SECTIONS: ReadonlyArray<{
     },
 ];
 
+/** The homepage anchor for a section: kebab-case of its key, English in
+ * every locale, so `/#fractions` and `/no/#fractions` both work. Shared
+ * by the homepage and the header search so the two can't drift. */
+export function sectionAnchor(
+    id: (typeof WORKSHEET_SECTIONS)[number]["id"],
+): string {
+    return id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+}
+
 // Coverage check: every worksheet kind must appear in exactly one
 // section. Runs at module load so a missing / duplicated kind fails
 // the Astro build rather than producing an invisibly-broken homepage.
