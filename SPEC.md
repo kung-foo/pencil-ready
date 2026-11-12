@@ -67,6 +67,22 @@ HTML + a single React island per worksheet page.
   full reload.
 - Prefetching: `prefetch: { prefetchAll: true, defaultStrategy: "hover" }`.
 - Sitemap + robots.txt generated at build time via `@astrojs/sitemap`.
+- Header navigation is three buttons. **Worksheets** (search) lists every
+  worksheet by topic and filters as you type on titles in every locale,
+  the alias phrases in `lib/worksheet-links.ts`, and topic names; Ctrl/⌘ K
+  or "/" opens it. The **language** button is the existing language and
+  paper menu. **☰** holds everything that isn't a worksheet (About,
+  language and paper) and shows the same items at every width. Below
+  496px the search button drops its label; below 387px the language
+  button hides and ☰ opens the language menu instead (measured: three
+  44px targets beside the wordmark column fit down to 387px). Every
+  header menu is a native `popover`, because the header is
+  `overflow: hidden` with a `backdrop-filter`, which would clip an
+  ordinary dropdown. All three open under the header (`.header-sheet`
+  in `styles/index.css`, positioned by `lib/header-sheet.ts`): a
+  full-width sheet on phones, a card aligned to its button on wide
+  screens. The dim layer starts below the header, so the header stays
+  usable while a menu is open.
 
 ### Language
 

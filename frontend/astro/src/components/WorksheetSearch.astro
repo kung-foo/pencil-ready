@@ -1,0 +1,415 @@
+---
+/*
+ * Header search: the "Worksheets" button and its panel, the one way into
+ * the content from the header. With nothing typed it lists every
+ * worksheet by topic; typing filters on titles (in every language), the
+ * alias phrases in lib/worksheet-links.ts, and topic names.
+ *
+ * Same native-popover approach as LanguageSelector: the header is a
+ * `.stippled` surface (`overflow: hidden`) with a `backdrop-filter`,
+ * which would clip a dropdown; a popover renders in the top layer.
+ * Every entry is a real link, so the panel works without JS. The script
+ * adds the filter, Ctrl/⌘ K and "/" to open, arrow keys, Enter to follow
+ * the first match, and placement under the button on wide screens.
+ *
+ * Topic headings link to the homepage sections until topics get pages
+ * of their own.
+ */
+import { t } from "@/i18n";
+import { LOCALES, localizePath, type Locale } from "@/i18n/locales";
+import { WORKSHEET_SECTIONS, sectionAnchor } from "@/lib/worksheet-info";
+import { getWorksheetInfo } from "@/lib/worksheet-content";
+import { worksheetAliases } from "@/lib/worksheet-links";
+
+interface Props {
+    locale: Locale;
+}
+
+const { locale } = Astro.props;
+const ui = t(locale);
+const own = await getWorksheetInfo(locale);
+const everyLocale = await Promise.all(
+    LOCALES.map((l) => getWorksheetInfo(l.id)),
+);
+const aliases = worksheetAliases(locale);
+const homePath = localizePath("/", locale);
+const panelId = "worksheet-search";
+
+const groups = WORKSHEET_SECTIONS.map((section) => {
+    const name = ui.home.sections[section.id];
+    return {
+        name,
+        href: `${homePath}#${sectionAnchor(section.id)}`,
+        items: section.kinds.map((kind) => ({
+            title: own[kind].title,
+            href: localizePath(`/worksheets/${kind}/`, locale),
+            // Lowercased haystack for the filter: titles in every
+            // language (a Norwegian parent on the English site can type
+            // "brøk"), aliases, and the topic name.
+            search: [
+                ...new Set([
+                    ...everyLocale.map((info) => info[kind].title),
+                    ...(aliases.get(kind) ?? []),
+                    name,
+                ]),
+            ]
+                .join(" · ")
+                .toLowerCase(),
+        })),
+    };
+});
+---
+
+<div class="worksheet-search" data-worksheet-search>
+    <button
+        type="button"
+        popovertarget={panelId}
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls={panelId}
+        aria-label={ui.search.label}
+        class="search-button inline-flex items-center justify-center gap-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors size-11 cursor-pointer aria-expanded:bg-primary/10 aria-expanded:text-primary"
+        data-search-button
+    >
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="size-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+        >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <span class="search-label text-sm font-medium" aria-hidden="true"
+            >{ui.nav.worksheets}</span
+        >
+    </button>
+
+    <div
+        id={panelId}
+        popover="auto"
+        role="dialog"
+        aria-label={ui.search.label}
+        class="search-panel header-sheet"
+        data-search-panel
+    >
+        <div class="flex items-center gap-2 border-b px-4">
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="size-4 shrink-0 text-muted-foreground"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+            </svg>
+            <input
+                type="search"
+                class="h-12 flex-1 min-w-0 bg-transparent text-base md:text-sm outline-none placeholder:text-muted-foreground"
+                placeholder={ui.search.placeholder}
+                aria-label={ui.search.label}
+                autocomplete="off"
+                spellcheck="false"
+                data-search-input
+            />
+            <button
+                type="button"
+                popovertarget={panelId}
+                popovertargetaction="hide"
+                class="md:hidden inline-flex items-center justify-center size-11 -mr-3 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label={ui.selector.close}
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="size-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="search-results py-2" data-search-results>
+            {
+                groups.map((g) => (
+                    <section class="px-4 py-2" data-search-group>
+                        {/* The pencil fills the rest of the heading line. */}
+                        <div class="flex items-center gap-2">
+                            <a
+                                href={g.href}
+                                class="search-link inline-block shrink-0 rounded text-sm font-semibold text-foreground hover:text-primary"
+                                data-search-link
+                            >
+                                {g.name}
+                            </a>
+                            <span
+                                class="pencil-line h-0.5 flex-1 min-w-0"
+                                aria-hidden="true"
+                            />
+                        </div>
+                        <ul class="mt-1.5 flex flex-wrap gap-1.5 pl-3">
+                            {g.items.map((item) => (
+                                <li data-search-item data-search={item.search}>
+                                    <a
+                                        href={item.href}
+                                        class="search-link inline-block rounded-full border bg-background px-2.5 py-1 text-[0.8rem] text-foreground hover:border-primary"
+                                        data-search-link
+                                    >
+                                        {item.title}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                ))
+            }
+            <p
+                hidden
+                class="px-4 py-3 text-sm text-muted-foreground"
+                data-search-empty
+            >
+                {ui.search.noMatches}
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Narrow screens: a 44px icon button, like the language button.
+       From 496px the button shows its label as a bordered pill: the
+       narrowest width where the header still fits the wordmark column
+       (~223px, set by the tagline), padding, the pill, an 8px gap and
+       the language and menu buttons. Measured with the site's fonts in
+       both locales. Below 768px the nav has no gap of its own (it's
+       tight at 390px), so the pill brings its own space from the globe. */
+    .search-label {
+        display: none;
+    }
+    @media (min-width: 31rem) {
+        .search-button {
+            width: auto;
+            height: 2.25rem;
+            padding: 0 0.75rem;
+            border: 1px solid var(--color-border);
+            background: color-mix(in srgb, var(--color-card) 70%, transparent);
+        }
+        .search-label {
+            display: inline;
+        }
+        .search-button[aria-expanded="true"] {
+            background: color-mix(
+                in srgb,
+                var(--color-primary) 10%,
+                var(--color-card)
+            );
+            border-color: color-mix(
+                in srgb,
+                var(--color-primary) 60%,
+                transparent
+            );
+            color: var(--color-primary);
+        }
+    }
+
+    @media (min-width: 31rem) and (max-width: 47.99rem) {
+        .search-button {
+            margin-right: 0.5rem;
+        }
+    }
+
+    /* Placement and look come from `.header-sheet` (styles/index.css);
+       here the search row stays put while the list scrolls. */
+    .search-panel {
+        overflow: hidden;
+    }
+    .search-panel:popover-open {
+        display: flex;
+        flex-direction: column;
+    }
+    .search-results {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+    /* WebKit/Blink draw their own clear button in search inputs; next to
+       the sheet's close button that reads as two ×s. */
+    [data-search-input]::-webkit-search-cancel-button {
+        appearance: none;
+        display: none;
+    }
+    .search-link:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+</style>
+
+<script>
+    import { anchorUnderHeader } from "@/lib/header-sheet";
+
+    const panelOf = () =>
+        document.querySelector<HTMLElement>("[data-search-panel]");
+
+    // Ctrl/⌘ K anywhere, or "/" outside a text field, opens the panel.
+    // Bound once per page lifetime: `window` survives ClientRouter swaps,
+    // so the handler looks the panel up each time.
+    const w = window as Window & { __searchKeysBound?: boolean };
+    if (!w.__searchKeysBound) {
+        w.__searchKeysBound = true;
+        window.addEventListener("keydown", (e) => {
+            const target = e.target as HTMLElement | null;
+            const typing =
+                !!target &&
+                (target.isContentEditable ||
+                    /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+            const combo =
+                (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k";
+            const slash = e.key === "/" && !typing && !e.metaKey && !e.ctrlKey;
+            if (!combo && !slash) return;
+            const panel = panelOf();
+            if (!panel || typeof panel.showPopover !== "function") return;
+            e.preventDefault();
+            // Focus right away rather than on `toggle` (a task later), so
+            // keys typed straight after the shortcut land in the input.
+            if (!panel.matches(":popover-open")) panel.showPopover();
+            panel
+                .querySelector<HTMLInputElement>("[data-search-input]")
+                ?.focus();
+        });
+    }
+
+    function setup() {
+        const root = document.querySelector<HTMLElement>(
+            "[data-worksheet-search]",
+        );
+        if (!root || root.dataset.bound) return;
+        root.dataset.bound = "1";
+
+        const button = root.querySelector<HTMLButtonElement>(
+            "[data-search-button]",
+        )!;
+        const panel = root.querySelector<HTMLElement>("[data-search-panel]")!;
+        const input = root.querySelector<HTMLInputElement>(
+            "[data-search-input]",
+        )!;
+        const empty = root.querySelector<HTMLElement>("[data-search-empty]")!;
+        const groups = [
+            ...root.querySelectorAll<HTMLElement>("[data-search-group]"),
+        ];
+        if (typeof panel.showPopover !== "function") return;
+
+        const visibleLinks = () =>
+            [
+                ...panel.querySelectorAll<HTMLAnchorElement>(
+                    "[data-search-link]",
+                ),
+            ].filter((a) => a.offsetParent !== null);
+
+        // Every typed word must appear somewhere in the item's haystack.
+        // Lowercase only: å, æ and ø are letters of their own in
+        // Norwegian, not accented a, ae and o.
+        function applyFilter() {
+            const words = input.value.trim().toLowerCase().split(/\s+/);
+            const q = words.join("");
+            let shown = 0;
+            for (const g of groups) {
+                let any = false;
+                for (const li of g.querySelectorAll<HTMLElement>(
+                    "[data-search-item]",
+                )) {
+                    const hay = li.dataset.search ?? "";
+                    const hit = !q || words.every((w) => hay.includes(w));
+                    li.hidden = !hit;
+                    if (hit) any = true;
+                }
+                g.hidden = !any;
+                if (any) shown++;
+            }
+            empty.hidden = shown > 0;
+        }
+        input.addEventListener("input", applyFilter);
+
+        anchorUnderHeader(panel, button, 448);
+        panel.addEventListener("toggle", (e) => {
+            const open = (e as ToggleEvent).newState === "open";
+            button.setAttribute("aria-expanded", String(open));
+            if (open) {
+                input.focus();
+            } else {
+                input.value = "";
+                applyFilter();
+            }
+        });
+
+        // Enter follows the first match. Arrow keys move between the
+        // input and the visible links; Escape closes and returns focus to
+        // the button (light dismiss closes, this makes the focus explicit).
+        panel.addEventListener("keydown", (e) => {
+            const links = visibleLinks();
+            const active = document.activeElement as HTMLElement;
+            const i = links.indexOf(active as HTMLAnchorElement);
+            if (e.key === "Enter" && active === input) {
+                const first = panel.querySelector<HTMLAnchorElement>(
+                    "[data-search-item]:not([hidden]) a",
+                );
+                if (first) {
+                    e.preventDefault();
+                    first.click();
+                }
+            } else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                links[
+                    i === -1 ? 0 : Math.min(i + 1, links.length - 1)
+                ]?.focus();
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (i <= 0) input.focus();
+                else links[i - 1]?.focus();
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                panel.hidePopover();
+                button.focus();
+            }
+        });
+
+        // Picking a result closes the panel right away (a topic link on
+        // the homepage only scrolls, so no page swap would close it) and
+        // records what was typed, to tune matching later.
+        panel.addEventListener("click", (e) => {
+            const a = (e.target as Element).closest<HTMLAnchorElement>(
+                "a[data-search-link]",
+            );
+            if (!a) return;
+            const q = input.value.trim().slice(0, 60);
+            if (q) {
+                window.umami?.track("worksheet-search", {
+                    q,
+                    to: a.pathname,
+                });
+            }
+            panel.hidePopover();
+        });
+    }
+
+    document.addEventListener("astro:page-load", setup);
+    document.addEventListener("astro:before-swap", () => {
+        const panel = panelOf();
+        if (panel?.matches(":popover-open")) panel.hidePopover();
+    });
+    if (document.readyState !== "loading") setup();
+</script>

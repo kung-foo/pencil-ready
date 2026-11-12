@@ -121,6 +121,16 @@ const ALIASES: Record<Locale, ReadonlyArray<Alias>> = {
     no: ALIASES_NB,
 };
 
+/** Every alias phrase per worksheet, so the header search can match
+ * "times tables" or "divisjon med rest" as well as titles. */
+export function worksheetAliases(locale: Locale): Map<WorksheetKind, string[]> {
+    const out = new Map<WorksheetKind, string[]>();
+    for (const { phrase, kind } of ALIASES[locale]) {
+        out.set(kind, [...(out.get(kind) ?? []), phrase]);
+    }
+    return out;
+}
+
 /** Escape a phrase for use in a regex. Aliases are hand-written, but a
  * hyphen or dot slipping in shouldn't silently change the pattern. */
 function escapeRe(s: string): string {

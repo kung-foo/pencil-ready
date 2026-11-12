@@ -1,0 +1,224 @@
+---
+/*
+ * Header ☰ menu: everything that isn't a worksheet. It holds the same
+ * items at every screen width; the header shows shortcuts to some of
+ * them (language) when there's room. About never gets a shortcut.
+ *
+ * "Language and paper" opens the existing language menu rather than
+ * repeating it here. Without JS that happens through `popovertarget`
+ * (nested under this menu); with JS this menu closes first, so the
+ * language menu stands on its own.
+ *
+ * Same native-popover approach as LanguageSelector, for the same reason
+ * (the header clips anything positioned inside it).
+ */
+import PencilRule from "./PencilRule.astro";
+import { t } from "@/i18n";
+import { localeDef, localizePath, type Locale } from "@/i18n/locales";
+
+interface Props {
+    locale: Locale;
+}
+
+const { locale } = Astro.props;
+const ui = t(locale);
+const aboutPath = localizePath("/about/", locale);
+const menuId = "site-menu";
+const itemClass =
+    "flex w-full items-center gap-3 px-4 min-h-14 md:min-h-11 text-left text-sm text-foreground hover:bg-muted focus-visible:bg-muted outline-none cursor-pointer";
+---
+
+<div class="site-menu" data-site-menu>
+    <button
+        type="button"
+        popovertarget={menuId}
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls={menuId}
+        aria-label={ui.nav.menu}
+        class="inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors size-11 md:size-auto md:h-8 md:px-2 cursor-pointer aria-expanded:bg-primary/10 aria-expanded:text-primary"
+        data-site-menu-button
+    >
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="size-5 md:size-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+        >
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <div
+        id={menuId}
+        popover="auto"
+        class="site-menu-panel header-sheet"
+        aria-label={ui.nav.menu}
+        data-site-menu-panel
+    >
+        <PencilRule class="h-0.5 block" />
+        <div class="flex items-center justify-between px-4 pt-3 pb-1">
+            <p
+                class="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground"
+                id={`${menuId}-heading`}
+            >
+                {ui.nav.menu}
+            </p>
+            <button
+                type="button"
+                popovertarget={menuId}
+                popovertargetaction="hide"
+                class="md:hidden inline-flex items-center justify-center size-11 -mr-3 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label={ui.selector.close}
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="size-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <ul role="menu" aria-labelledby={`${menuId}-heading`} class="pb-2">
+            <li role="none">
+                <button
+                    type="button"
+                    role="menuitem"
+                    popovertarget="language-menu"
+                    class={itemClass}
+                    data-site-menu-item
+                    data-open-language
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="size-4 shrink-0 text-muted-foreground"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path
+                            d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"
+                        ></path>
+                        <path d="M2 12h20"></path>
+                    </svg>
+                    <span class="flex-1 font-medium"
+                        >{ui.nav.languageAndPaper}</span
+                    >
+                    <span class="text-xs text-muted-foreground"
+                        >{localeDef(locale).endonym}</span
+                    >
+                </button>
+            </li>
+            <li role="none">
+                <a
+                    role="menuitem"
+                    href={aboutPath}
+                    class={itemClass}
+                    data-site-menu-item
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="size-4 shrink-0 text-muted-foreground"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4M12 8h.01"></path>
+                    </svg>
+                    <span class="font-medium">{ui.nav.about}</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    import { anchorUnderHeader } from "@/lib/header-sheet";
+
+    function setup() {
+        const root = document.querySelector<HTMLElement>("[data-site-menu]");
+        if (!root || root.dataset.bound) return;
+        root.dataset.bound = "1";
+
+        const button = root.querySelector<HTMLButtonElement>(
+            "[data-site-menu-button]",
+        )!;
+        const menu = root.querySelector<HTMLElement>("[data-site-menu-panel]")!;
+        if (typeof menu.showPopover !== "function") return;
+        const items = () => [
+            ...menu.querySelectorAll<HTMLElement>("[data-site-menu-item]"),
+        ];
+
+        anchorUnderHeader(menu, button, 272);
+        menu.addEventListener("toggle", (e) => {
+            const open = (e as ToggleEvent).newState === "open";
+            button.setAttribute("aria-expanded", String(open));
+            if (open) items()[0]?.focus();
+        });
+
+        // Close this menu before the language menu opens, so it isn't
+        // left open underneath (or beside it, on wide screens).
+        menu.querySelector<HTMLButtonElement>(
+            "[data-open-language]",
+        )?.addEventListener("click", (e) => {
+            const language = document.querySelector<HTMLElement>(
+                "[data-language-menu]",
+            );
+            if (!language) return;
+            e.preventDefault();
+            menu.hidePopover();
+            language.showPopover();
+        });
+
+        // Picking About closes the menu right away; arrow keys move
+        // between items; Escape returns focus to the ☰ button.
+        menu.addEventListener("click", (e) => {
+            if ((e.target as Element).closest("a[data-site-menu-item]")) {
+                menu.hidePopover();
+            }
+        });
+        menu.addEventListener("keydown", (e) => {
+            const list = items();
+            const i = list.indexOf(document.activeElement as HTMLElement);
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                const step = e.key === "ArrowDown" ? 1 : -1;
+                list[(i + step + list.length) % list.length]?.focus();
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                menu.hidePopover();
+                button.focus();
+            }
+        });
+    }
+
+    document.addEventListener("astro:page-load", setup);
+    document.addEventListener("astro:before-swap", () => {
+        const menu = document.querySelector<HTMLElement>(
+            "[data-site-menu-panel]",
+        );
+        if (menu?.matches(":popover-open")) menu.hidePopover();
+    });
+    if (document.readyState !== "loading") setup();
+</script>

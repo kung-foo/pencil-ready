@@ -1,7 +1,7 @@
 ---
 /*
- * Header language selector ("Option A": globe button + menu; bottom
- * sheet on mobile). Every item is a real link to the *same page* in
+ * Header language selector ("Option A": globe button + menu; on
+ * phones a full-width sheet under the header). Every item is a real link to the *same page* in
  * another locale, so it works without JS and is crawlable.
  *
  * Built on the native `popover` attribute rather than an absolutely
@@ -15,6 +15,11 @@
  * links navigate (no query string carry-over, no cookie). The script
  * below adds placement under the button, focus management, arrow keys,
  * close-on-Tab, query-string preservation and the `lang` cookie.
+ *
+ * Below 387px the header can't fit three 44px buttons next to the
+ * wordmark, so the globe button hides and the ☰ menu (SiteMenu) opens
+ * this same popover instead. Only the button hides: the popover must
+ * stay rendered for that.
  *
  * Renders from `LOCALES`. The >6 (scrolling list + "Suggested" group)
  * and >10 (filter box) branches are dormant with two locales; `options`
@@ -94,7 +99,7 @@ const menuId = "language-menu";
         aria-expanded="false"
         aria-controls={menuId}
         aria-label={ui.selector.buttonLabel}
-        class="inline-flex items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors size-11 md:size-auto md:h-8 md:px-2 cursor-pointer"
+        class="inline-flex items-center justify-center gap-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors size-11 md:size-auto md:h-8 md:px-2 cursor-pointer max-[387px]:hidden aria-expanded:bg-primary/10 aria-expanded:text-primary"
         data-language-button
     >
         <svg
@@ -133,7 +138,7 @@ const menuId = "language-menu";
     <div
         id={menuId}
         popover="auto"
-        class="language-menu"
+        class="language-menu header-sheet"
         aria-label={ui.selector.heading}
         data-language-menu
     >
@@ -341,65 +346,8 @@ const menuId = "language-menu";
                 }
             </ul>
         </div>
-        <p class="md:hidden px-4 pb-4 pt-1 text-xs text-muted-foreground">
-            {ui.selector.remember}
-        </p>
     </div>
 </div>
-
-<style>
-    /* Popovers get UA styles (centered, border, padding); reset them and
-       place the menu explicitly. Mobile: bottom sheet. Desktop: card
-       under the button — `top`/`left` come from the script; without JS
-       it falls back to the top-right corner. */
-    .language-menu {
-        margin: 0;
-        padding: 0;
-        border: 0;
-        inset: auto 0 0 0;
-        width: 100%;
-        max-width: 100%;
-        max-height: 85vh;
-        overflow-y: auto;
-        background: var(--color-card);
-        color: var(--color-card-foreground);
-        border-radius: 0.75rem 0.75rem 0 0;
-        box-shadow: 0 -8px 24px
-            color-mix(in srgb, var(--color-foreground) 18%, transparent);
-    }
-    .language-menu > :global(svg:first-child) {
-        border-radius: 0.75rem 0.75rem 0 0;
-    }
-    .language-menu::backdrop {
-        background: color-mix(
-            in srgb,
-            var(--color-foreground) 35%,
-            transparent
-        );
-    }
-    @media (min-width: 48rem) {
-        .language-menu {
-            inset: var(--lang-menu-top, 4rem) auto auto
-                var(--lang-menu-left, calc(100vw - 232px - 1rem));
-            width: 232px;
-            max-height: none;
-            border-radius: 0.5rem;
-            border: 1px solid var(--color-border);
-            overflow: hidden;
-            box-shadow:
-                0 4px 16px
-                    color-mix(in srgb, var(--color-foreground) 12%, transparent),
-                0 1px 3px
-                    color-mix(in srgb, var(--color-foreground) 8%, transparent);
-        }
-        .language-menu > :global(svg:first-child) {
-            border-radius: 0;
-        }
-        .language-menu::backdrop {
-            background: transparent;
-        }
-    }
-</style>
 
 <script>
     import {
@@ -409,6 +357,7 @@ const menuId = "language-menu";
         localizePath,
     } from "@/i18n/locales";
     import { getPaper, isPaper, setPaper } from "@/lib/paper";
+    import { anchorUnderHeader } from "@/lib/header-sheet";
 
     // Set the preference cookie on an explicit choice, before the
     // navigation starts. Registered on `window` in the capture phase so
@@ -547,22 +496,9 @@ const menuId = "language-menu";
             suggested.hidden = seen.size === 0;
         }
 
-        const place = () => {
-            const r = button.getBoundingClientRect();
-            const width = 232;
-            const left = Math.max(
-                8,
-                Math.min(r.right - width, window.innerWidth - width - 8),
-            );
-            menu.style.setProperty("--lang-menu-top", `${r.bottom + 6}px`);
-            menu.style.setProperty("--lang-menu-left", `${left}px`);
-        };
-
+        anchorUnderHeader(menu, button, 232);
         menu.addEventListener("beforetoggle", (e) => {
-            if ((e as ToggleEvent).newState === "open") {
-                refreshHrefs();
-                place();
-            }
+            if ((e as ToggleEvent).newState === "open") refreshHrefs();
         });
         menu.addEventListener("toggle", (e) => {
             const open = (e as ToggleEvent).newState === "open";
@@ -577,10 +513,6 @@ const menuId = "language-menu";
                 filter.value = "";
                 applyFilter();
             }
-        });
-
-        window.addEventListener("resize", () => {
-            if (menu.matches(":popover-open")) place();
         });
 
         // Arrow keys move between items; Escape closes and returns focus

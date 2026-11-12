@@ -5,6 +5,8 @@ import PencilRule from "../components/PencilRule.astro";
 import InlineIcon from "../components/InlineIcon.astro";
 import Stippled from "../components/Stippled.astro";
 import LanguageSelector from "../components/LanguageSelector.astro";
+import SiteMenu from "../components/SiteMenu.astro";
+import WorksheetSearch from "../components/WorksheetSearch.astro";
 import "../styles/global.css";
 import { t } from "@/i18n";
 import {
@@ -292,7 +294,7 @@ const umami = {
     <body class="min-h-screen flex flex-col">
         <Stippled
             as="header"
-            class="border-b px-3 py-1 flex items-center justify-between gap-4"
+            class="border-b px-3 py-1 flex items-center justify-between gap-2"
         >
             <div>
                 <!-- inline-flex column sizes to the wordmark's natural
@@ -322,14 +324,13 @@ const umami = {
                     print → solve → sharpen → repeat
                 </p>
             </div>
-            <nav class="text-sm flex items-center gap-1 md:gap-3">
-                <a
-                    href={aboutPath}
-                    class="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                    {ui.nav.about}
-                </a>
+            <!-- Search covers the worksheets; ☰ holds everything else at
+                 every width. Language is a shortcut into ☰'s content and
+                 drops out of the bar on the narrowest phones. -->
+            <nav class="text-sm flex items-center md:gap-3">
+                <WorksheetSearch locale={locale} />
                 <LanguageSelector locale={locale} homeOnly={!indexable} />
+                <SiteMenu locale={locale} />
             </nav>
         </Stippled>
         <main class="flex-1">
