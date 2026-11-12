@@ -96,6 +96,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
         role="dialog"
         aria-label={ui.search.label}
         class="search-panel header-sheet"
+        tabindex="-1"
         data-search-panel
     >
         <div class="flex items-center gap-2 border-b px-4">
@@ -237,6 +238,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
        here the search row stays put while the list scrolls. */
     .search-panel {
         overflow: hidden;
+        outline: none;
     }
     .search-panel:popover-open {
         display: flex;
@@ -348,9 +350,17 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
         panel.addEventListener("toggle", (e) => {
             const open = (e as ToggleEvent).newState === "open";
             button.setAttribute("aria-expanded", String(open));
-            if (open) {
-                input.focus();
-            } else {
+            // Browse first on touch screens: focusing the input there can
+            // raise the on-screen keyboard over the list, so focus the
+            // panel instead and let a tap on the input start typing. With
+            // a mouse or trackpad, focus the input. A keyboard shortcut has
+            // already focused the input, so leave that alone.
+            if (open && !panel.contains(document.activeElement)) {
+                const fine = matchMedia(
+                    "(hover: hover) and (pointer: fine)",
+                ).matches;
+                (fine ? input : panel).focus({ preventScroll: true });
+            } else if (!open) {
                 input.value = "";
                 applyFilter();
             }
