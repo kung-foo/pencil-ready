@@ -185,6 +185,16 @@ The IP also feeds Umami's visitor-identity hash, so this isn't only
 cosmetic: with a constant IP, distinct visitors sharing a User-Agent
 collapse into a single session and unique-visitor counts undercount.
 
+**Excluding our own traffic.** `--umami-exclude` /
+`PENCIL_READY_UMAMI_EXCLUDE` takes comma-separated IPs or CIDR ranges
+(use a range for IPv6, where a home address rotates within the
+provider's prefix). `handle_umami_send` answers matching clients with
+`200 {}` and forwards nothing. Set it as a Fly secret
+(`fly secrets set PENCIL_READY_UMAMI_EXCLUDE=…`) so the addresses stay
+out of the repo; the startup log reports only how many ranges are
+active, and a malformed entry is logged and skipped rather than
+stopping the server.
+
 ## Layout rules
 
 These are the conventions for authoring problem components in `lib/problems/`:

@@ -9,6 +9,7 @@
 //! Swagger UI at /docs.
 
 use std::io::IsTerminal;
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -65,6 +66,9 @@ struct AppState {
     /// cloud.umami.is on first `/umami/script.js` request, then held
     /// for the lifetime of the process.
     umami_script: Arc<tokio::sync::Mutex<Option<Bytes>>>,
+    /// Client addresses whose analytics events are dropped instead of
+    /// forwarded to Umami (`--umami-exclude`).
+    umami_exclude: Vec<IpRange>,
 }
 
 // ---------------------------------------------------------------------------
@@ -1920,12 +1924,23 @@ async fn handle_umami_script(State(s): State<Arc<AppState>>) -> Response {
 /// visitors sharing a User-Agent don't collapse into one session.
 async fn handle_umami_send(State(s): State<Arc<AppState>>, req: Request) -> Response {
     let (parts, body) = req.into_parts();
+    let ip = client_ip(&parts.headers);
+    // Excluded clients (`--umami-exclude`) get an answer here and never
+    // reach Umami. The tracker only reads `cache` from a 200 reply, so an
+    // empty object is a complete one.
+    if is_excluded(&s.umami_exclude, &ip) {
+        return (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json")],
+            "{}",
+        )
+            .into_response();
+    }
     let body_bytes = match axum::body::to_bytes(body, 64 * 1024).await {
         Ok(b) => b,
         Err(_) => return (StatusCode::BAD_REQUEST, "request body too large").into_response(),
     };
 
-    let ip = client_ip(&parts.headers);
     let body_bytes = match inject_payload_ip(&body_bytes, &ip) {
         Some(b) => b,
         None => body_bytes.to_vec(),
@@ -1976,6 +1991,61 @@ fn inject_payload_ip(body: &[u8], ip: &str) -> Option<Vec<u8>> {
     let payload = value.get_mut("payload")?.as_object_mut()?;
     payload.insert("ip".into(), serde_json::Value::String(ip.to_string()));
     serde_json::to_vec(&value).ok()
+}
+
+/// A client address or CIDR range for `--umami-exclude`: `203.0.113.7`,
+/// `203.0.113.0/24`, `2001:db8:1::/48`. Ranges matter for IPv6, where a
+/// home connection's address changes within the provider's prefix.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct IpRange {
+    addr: IpAddr,
+    prefix: u8,
+}
+
+impl FromStr for IpRange {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (addr, prefix) = match s.split_once('/') {
+            Some((a, p)) => (a, Some(p)),
+            None => (s, None),
+        };
+        let addr = addr
+            .parse::<IpAddr>()
+            .map_err(|_| format!("not an IP address: {s}"))?
+            .to_canonical();
+        let max = if addr.is_ipv4() { 32 } else { 128 };
+        let prefix = match prefix {
+            None => max,
+            Some(p) => p
+                .parse::<u8>()
+                .ok()
+                .filter(|p| *p <= max)
+                .ok_or_else(|| format!("bad prefix length: {s}"))?,
+        };
+        Ok(IpRange { addr, prefix })
+    }
+}
+
+impl IpRange {
+    fn contains(&self, ip: IpAddr) -> bool {
+        let (net, ip, bits) = match (self.addr, ip.to_canonical()) {
+            (IpAddr::V4(n), IpAddr::V4(i)) => {
+                (u128::from(u32::from(n)), u128::from(u32::from(i)), 32)
+            }
+            (IpAddr::V6(n), IpAddr::V6(i)) => (u128::from(n), u128::from(i), 128),
+            _ => return false,
+        };
+        let host_bits = bits - u32::from(self.prefix);
+        host_bits >= 128 || (net ^ ip) >> host_bits == 0
+    }
+}
+
+/// Whether `ip` (as returned by `client_ip`, `-` when unknown) falls in
+/// any excluded range.
+fn is_excluded(ranges: &[IpRange], ip: &str) -> bool {
+    ip.parse::<IpAddr>()
+        .is_ok_and(|ip| ranges.iter().any(|r| r.contains(ip)))
 }
 
 /// Text substitution middleware: replaces `SERVER_REGION_PLACEHOLDER`
@@ -2247,6 +2317,12 @@ struct Cli {
     /// production.
     #[arg(long, env = "PENCIL_READY_DEBUG")]
     debug: bool,
+    /// Client IPs or CIDR ranges whose analytics events are dropped
+    /// instead of forwarded to Umami, e.g. your own connections.
+    /// Comma-separated or repeated. Set it as a deployment secret rather
+    /// than in the repo.
+    #[arg(long, env = "PENCIL_READY_UMAMI_EXCLUDE", value_delimiter = ',')]
+    umami_exclude: Vec<String>,
 }
 
 #[tokio::main]
@@ -2266,6 +2342,26 @@ async fn main() {
     if cli.debug {
         info!("--debug active: forcing debug borders on every worksheet render");
     }
+    // A bad entry is logged and skipped rather than fatal: a typo in an
+    // analytics setting shouldn't keep the site from starting. The
+    // startup log gives only the count, so the addresses stay out of it.
+    let umami_exclude: Vec<IpRange> = cli
+        .umami_exclude
+        .iter()
+        .map(|e| e.trim())
+        .filter(|e| !e.is_empty())
+        .filter_map(|e| {
+            e.parse()
+                .map_err(|err| warn!("ignoring --umami-exclude entry: {err}"))
+                .ok()
+        })
+        .collect();
+    if !umami_exclude.is_empty() {
+        info!(
+            ranges = umami_exclude.len(),
+            "umami: dropping events from excluded addresses"
+        );
+    }
     let state = Arc::new(AppState {
         root: root.clone(),
         region,
@@ -2273,6 +2369,7 @@ async fn main() {
         force_debug: cli.debug,
         umami_client: reqwest::Client::new(),
         umami_script: Arc::new(tokio::sync::Mutex::new(None)),
+        umami_exclude,
     });
 
     // Resolve the static directory. Explicit flag wins; otherwise
@@ -2468,7 +2565,10 @@ fn init_tracing() {
 
 #[cfg(test)]
 mod tests {
-    use super::{Method, inject_payload_ip, locale_root_redirect_target, www_redirect_target};
+    use super::{
+        IpRange, Method, inject_payload_ip, is_excluded, locale_root_redirect_target,
+        www_redirect_target,
+    };
 
     mod paper_fit {
         use super::super::*;
@@ -2761,5 +2861,43 @@ mod tests {
         assert!(inject_payload_ip(br#"{"no_payload":1}"#, "203.0.113.7").is_none());
         assert!(inject_payload_ip(br#"{"payload":"string"}"#, "203.0.113.7").is_none());
         assert!(inject_payload_ip(br#"{"payload":{}}"#, "-").is_none());
+    }
+
+    #[test]
+    fn umami_exclude_matches_addresses_and_ranges() {
+        let ranges: Vec<IpRange> = ["203.0.113.7", "198.51.100.0/24", "2001:db8:1:200::/56"]
+            .iter()
+            .map(|s| s.parse().unwrap())
+            .collect();
+        assert!(is_excluded(&ranges, "203.0.113.7"));
+        assert!(!is_excluded(&ranges, "203.0.113.8"));
+        assert!(is_excluded(&ranges, "198.51.100.200"));
+        assert!(!is_excluded(&ranges, "198.51.101.1"));
+        // A rotating IPv6 address inside the /56.
+        assert!(is_excluded(&ranges, "2001:db8:1:2a0:1234:5678:9abc:def0"));
+        assert!(!is_excluded(&ranges, "2001:db8:1:300::1"));
+        // IPv4-mapped IPv6 is the same client as plain IPv4.
+        assert!(is_excluded(&ranges, "::ffff:203.0.113.7"));
+        // Unknown client IP, and no ranges at all.
+        assert!(!is_excluded(&ranges, "-"));
+        assert!(!is_excluded(&[], "203.0.113.7"));
+    }
+
+    #[test]
+    fn umami_exclude_prefix_edges_and_bad_input() {
+        let any_v4: IpRange = "0.0.0.0/0".parse().unwrap();
+        assert!(any_v4.contains("8.8.8.8".parse().unwrap()));
+        assert!(!any_v4.contains("::1".parse().unwrap()));
+        let any_v6: IpRange = "::/0".parse().unwrap();
+        assert!(any_v6.contains("2001:db8::1".parse().unwrap()));
+        for bad in [
+            "nope",
+            "203.0.113.7/33",
+            "2001:db8::/129",
+            "203.0.113.7/x",
+            "",
+        ] {
+            assert!(bad.parse::<IpRange>().is_err(), "{bad} should not parse");
+        }
     }
 }
