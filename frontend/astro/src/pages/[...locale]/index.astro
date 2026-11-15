@@ -28,9 +28,9 @@ const WORKSHEET_INFO = await getWorksheetInfo(locale);
 >
     <div class="p-4 md:p-8 max-w-6xl mx-auto">
         <h1 class="text-3xl font-semibold mb-4">{ui.home.heading}</h1>
-        <p class="text-lg text-muted-foreground max-w-2xl mb-10">
-            {ui.home.intro}
-        </p>
+        <div class="text-lg text-muted-foreground max-w-2xl mb-10 space-y-3">
+            {ui.home.intro.map((para) => <p>{para}</p>)}
+        </div>
 
         <!--
           Sectioned layout: one heading + card grid per topic cluster.
