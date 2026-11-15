@@ -39,7 +39,10 @@ export const nb: UiStrings = {
     },
     home: {
         heading: "Matteark til utskrift",
-        intro: "Lær matte på den gammeldagse måten: med blyant og papir. Du trenger verken iPad eller KI. Skriv ut oppgavene du vil øve på, og finn fram blyanten. Bommer du på for mange, skriver du ut et nytt ark og prøver igjen.",
+        intro: [
+            "Lær matte på den gammeldagse måten: med blyant og papir. Du trenger verken iPad eller KI. Skriv ut oppgavene du vil øve på, og finn fram blyanten.",
+            "Tilpass hvert ark etter emne, trinn eller vanskelighetsgrad. Lag nye ark med nye oppgaver så mange ganger du trenger.",
+        ],
         sections: {
             arithmetic: "Regning",
             drills: "Pugg",
@@ -110,10 +113,10 @@ export const nb: UiStrings = {
         download: "Last ned",
         preparing: "Gjør klart …",
         print: "Skriv ut",
-        seed: "Frø",
+        seed: "Arkkode",
         seedPlaceholder: "tilfeldig",
-        shuffleLabel: "Nytt frø",
-        shuffleTitle: "Velg et nytt tilfeldig frø",
+        newProblems: "Nye oppgaver",
+        advanced: "Avansert",
         solveFirst: "Løs første oppgave",
         answerKey: "Fasit",
         pdfOnly: "(bare PDF)",

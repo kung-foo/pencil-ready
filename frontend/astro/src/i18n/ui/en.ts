@@ -45,7 +45,10 @@ export const en = {
     },
     home: {
         heading: "Printable math worksheets",
-        intro: "Master math the old-fashioned way: with handwritten drills. No need for an iPad or AI. Just print the problems you want to practice and pick up a pencil. If you miss too many, print a new sheet and try again.",
+        intro: [
+            "Master math the old-fashioned way: with handwritten drills. No need for an iPad or AI. Just print the problems you want to practice and pick up a pencil.",
+            "Customize any worksheet to meet the math category, grade level, or difficulty you need. Generate new worksheets with new problems as many times as you need them.",
+        ],
         sections: {
             arithmetic: "Arithmetic",
             drills: "Fact drills",
@@ -119,10 +122,10 @@ export const en = {
         download: "Download",
         preparing: "Preparing…",
         print: "Print",
-        seed: "Seed",
+        seed: "Worksheet code",
         seedPlaceholder: "random",
-        shuffleLabel: "Shuffle seed",
-        shuffleTitle: "Pick a new random seed",
+        newProblems: "New problems",
+        advanced: "Advanced",
         solveFirst: "Solve first problem",
         answerKey: "Answer key",
         pdfOnly: "(PDF only)",
