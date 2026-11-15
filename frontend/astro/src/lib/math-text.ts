@@ -97,7 +97,7 @@ export function parseMathText(s: string): MathToken[] {
     return tokens;
 }
 
-function tokenText(t: MathToken): string {
+export function tokenText(t: MathToken): string {
     switch (t.type) {
         case "text":
             return t.text;

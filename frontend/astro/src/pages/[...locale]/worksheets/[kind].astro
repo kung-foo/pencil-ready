@@ -3,6 +3,7 @@ import Layout from "@/layouts/Layout.astro";
 import Stippled from "@/components/Stippled.astro";
 import { WORKSHEET_KINDS, type WorksheetKind } from "@/lib/api";
 import { getWorksheetInfo } from "@/lib/worksheet-content";
+import { markdownPath } from "@/lib/worksheet-markdown";
 import { linkWorksheetList } from "@/lib/worksheet-links";
 import { toPlainText } from "@/lib/math-text";
 import { MathText } from "@/components/MathText";
@@ -76,6 +77,7 @@ const jsonLd = [
     description={toPlainText(info.summary)}
     locale={locale}
     jsonLd={jsonLd}
+    markdown={markdownPath(kind)}
 >
     <!--
     Page layout mirrors the React WorksheetPage 1:1: the island covers the
