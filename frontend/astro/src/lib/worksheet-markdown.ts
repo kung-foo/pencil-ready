@@ -58,6 +58,22 @@ const COMMON = [
     "student_name",
 ] as const;
 
+/** Kinds whose problem-type switches all default to off; the server
+ * rejects a request that turns none on. `example` goes in the example
+ * URLs so they work. */
+const REQUIRES_ONE_OF: Partial<
+    Record<WorksheetKind, { switches: string[]; example: string }>
+> = {
+    "algebra-one-step": {
+        switches: ["add", "subtract", "multiply", "divide"],
+        example: "add=true",
+    },
+    "algebra-square-root": {
+        switches: ["squares", "roots"],
+        example: "squares=true",
+    },
+};
+
 /** Every shared param: the ones on every endpoint. */
 const SHARED = new Set(
     Object.values(PATHS)
@@ -142,6 +158,11 @@ export async function buildWorksheetMarkdown(
     if (DIVISION_STYLE_KINDS.includes(kind)) commonNames.push("division");
     const common = commonNames.map((n) => all.find((p) => p.name === n)!);
 
+    const required = REQUIRES_ONE_OF[kind];
+    const q = (rest: string) =>
+        [required?.example, rest].filter(Boolean).join("&");
+    const url = (rest = "") => (q(rest) ? `${endpoint}?${q(rest)}` : endpoint);
+
     const sections = [
         `# ${info.title}`,
         `> ${toPlainText(info.summary)}`,
@@ -154,10 +175,15 @@ export async function buildWorksheetMarkdown(
         info.learning.map((l) => `- ${toPlainText(l)}`).join("\n"),
         "## Generate the PDF",
         `\`GET ${endpoint}\` returns the worksheet as a PDF. Every option is a query parameter; leave one out to get its default. The same \`seed\` with the same options always gives the same worksheet.`,
+        ...(required
+            ? [
+                  `At least one of ${required.switches.map((s) => `\`${s}\``).join(", ")} must be \`true\`; they all default to \`false\`, and a request with none on is rejected with HTTP 400.`,
+              ]
+            : []),
         "### Examples",
         [
-            `- Default settings, new problems on every request: ${endpoint}`,
-            `- Seed 42, with an answer key: ${endpoint}?seed=42&include_answers=true`,
+            `- Default settings, new problems on every request: ${url()}`,
+            `- Seed 42, with an answer key: ${url("seed=42&include_answers=true")}`,
         ].join("\n"),
         ...(own.length ? ["### Options for this worksheet", table(own)] : []),
         "### Options for every worksheet",
