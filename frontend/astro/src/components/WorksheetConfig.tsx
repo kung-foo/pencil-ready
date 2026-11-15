@@ -11,12 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import {
-    InputGroup,
-    InputGroupAddon,
-    InputGroupButton,
-    InputGroupInput,
-} from "@/components/ui/input-group";
 import { Shuffle } from "lucide-react";
 import {
     DIVISION_STYLE_KINDS,
@@ -80,42 +74,19 @@ export function WorksheetConfigPanel({
                 )}
 
                 <div className="pt-2 border-t space-y-4">
-                    <Field label={ui.seed}>
-                        <InputGroup>
-                            <InputGroupInput
-                                type="number"
-                                placeholder={ui.seedPlaceholder}
-                                value={cfg.seed ?? ""}
-                                onChange={(e) =>
-                                    patch(
-                                        "seed",
-                                        e.target.value === ""
-                                            ? undefined
-                                            : Number(e.target.value),
-                                    )
-                                }
-                            />
-                            <InputGroupAddon align="inline-end">
-                                <InputGroupButton
-                                    type="button"
-                                    aria-label={ui.shuffleLabel}
-                                    title={ui.shuffleTitle}
-                                    onClick={() =>
-                                        // 6-digit seed: deterministic for sharing, short enough
-                                        // to fit the filename slug without looking noisy.
-                                        patch(
-                                            "seed",
-                                            Math.floor(
-                                                Math.random() * 1_000_000,
-                                            ),
-                                        )
-                                    }
-                                >
-                                    <Shuffle />
-                                </InputGroupButton>
-                            </InputGroupAddon>
-                        </InputGroup>
-                    </Field>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() =>
+                            // 6-digit seed: deterministic for sharing, short enough
+                            // to fit the filename slug without looking noisy.
+                            patch("seed", Math.floor(Math.random() * 1_000_000))
+                        }
+                    >
+                        <Shuffle />
+                        {ui.newProblems}
+                    </Button>
 
                     <div className="flex items-center justify-between">
                         <Label htmlFor="solve_first">{ui.solveFirst}</Label>
@@ -158,29 +129,7 @@ export function WorksheetConfigPanel({
                         ui={ui}
                     />
 
-                    <Field label={ui.format}>
-                        <div className="flex gap-2">
-                            {FORMATS.map((f) => (
-                                <Button
-                                    key={f}
-                                    type="button"
-                                    variant={
-                                        cfg.format === f ? "default" : "outline"
-                                    }
-                                    size="sm"
-                                    // PNG / SVG are single-image; grey them out when the
-                                    // user has the answer-key toggle on.
-                                    disabled={
-                                        !!cfg.include_answers && f !== "pdf"
-                                    }
-                                    onClick={() => patch("format", f)}
-                                    className="flex-1 uppercase"
-                                >
-                                    {f}
-                                </Button>
-                            ))}
-                        </div>
-                    </Field>
+                    <AdvancedSection cfg={cfg} patch={patch} ui={ui} />
                 </div>
             </CardContent>
         </Card>
@@ -310,11 +259,102 @@ function PersonalizeSection({
     const summary = names.student ?? "";
 
     return (
-        <Accordion type="single" collapsible>
-            <AccordionItem value="personalize" className="border-b-0">
-                <AccordionTrigger className="py-2">
+        <PanelSection title={ui.personalize} summary={summary}>
+            <SubField label={ui.studentName}>
+                <DeferredNameInput
+                    value={names.student ?? ""}
+                    placeholder={ui.studentNamePlaceholder}
+                    onCommit={(v) => onNamesChange({ student: v })}
+                />
+            </SubField>
+        </PanelSection>
+    );
+}
+
+/** Rarely-needed output controls: the seed itself (for reproducing a
+ * sheet by hand) and non-PDF formats. Opens by default when the format
+ * isn't PDF, so a deep-linked `?format=svg` doesn't hide its own state. */
+function AdvancedSection({
+    cfg,
+    patch,
+    ui,
+}: {
+    cfg: WorksheetConfig;
+    patch: <K extends keyof WorksheetConfig>(
+        key: K,
+        value: WorksheetConfig[K],
+    ) => void;
+    ui: IslandStrings;
+}) {
+    return (
+        <PanelSection title={ui.advanced} defaultOpen={cfg.format !== "pdf"}>
+            <SubField label={ui.seed}>
+                <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={9}
+                    placeholder={ui.seedPlaceholder}
+                    value={cfg.seed ?? ""}
+                    onChange={(e) => {
+                        const digits = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 9);
+                        patch(
+                            "seed",
+                            digits === "" ? undefined : Number(digits),
+                        );
+                    }}
+                />
+            </SubField>
+            <SubField label={ui.format}>
+                <div className="flex gap-2">
+                    {FORMATS.map((f) => (
+                        <Button
+                            key={f}
+                            type="button"
+                            variant={cfg.format === f ? "default" : "outline"}
+                            size="sm"
+                            // PNG / SVG are single-image; grey them out when the
+                            // user has the answer-key toggle on.
+                            disabled={!!cfg.include_answers && f !== "pdf"}
+                            onClick={() => patch("format", f)}
+                            className="flex-1 uppercase"
+                        >
+                            {f}
+                        </Button>
+                    ))}
+                </div>
+            </SubField>
+        </PanelSection>
+    );
+}
+
+/** Collapsible group at the bottom of the config panel. The trigger's
+ * `-my-2` cancels its own `py-2`, so the row sits on the panel's
+ * `space-y-4` rhythm like the switch rows while keeping a full-height
+ * tap target. Use this for any new collapsible section rather than a
+ * raw `Accordion`. */
+function PanelSection({
+    title,
+    summary,
+    defaultOpen = false,
+    children,
+}: {
+    title: string;
+    summary?: string;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+}) {
+    return (
+        <Accordion
+            type="single"
+            collapsible
+            defaultValue={defaultOpen ? "section" : undefined}
+        >
+            <AccordionItem value="section" className="border-b-0">
+                <AccordionTrigger className="-my-2 py-2">
                     <span className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-2">
-                        <span>{ui.personalize}</span>
+                        <span>{title}</span>
                         {summary && (
                             <span className="truncate text-xs font-normal text-muted-foreground">
                                 {summary}
@@ -323,13 +363,7 @@ function PersonalizeSection({
                     </span>
                 </AccordionTrigger>
                 <AccordionContent className="space-y-3">
-                    <SubField label={ui.studentName}>
-                        <DeferredNameInput
-                            value={names.student ?? ""}
-                            placeholder={ui.studentNamePlaceholder}
-                            onCommit={(v) => onNamesChange({ student: v })}
-                        />
-                    </SubField>
+                    {children}
                 </AccordionContent>
             </AccordionItem>
         </Accordion>
