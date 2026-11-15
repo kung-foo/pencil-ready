@@ -2190,7 +2190,8 @@ fn locale_root_redirect_target(
 /// fonts ship with stable filenames but never change in practice
 /// (we'd version-bump the filename if they did) so they get the same
 /// year-long lifetime. Other static assets (svg/png/ico) get a month.
-/// HTML is held back to 5 minutes so region-rewrite tags and routine
+/// HTML and the header search index (`search-index.json`, built with the
+/// pages) are held back to 5 minutes so region-rewrite tags and routine
 /// content updates propagate without forcing a hard reload.
 ///
 /// The root `/` is the exception: `locale_root_redirect` answers it per
@@ -2227,7 +2228,7 @@ async fn cache_control(req: Request, next: Next) -> Response {
         Some("public, max-age=31536000, immutable")
     } else if path.ends_with(".svg") || path.ends_with(".png") || path.ends_with(".ico") {
         Some("public, max-age=2592000")
-    } else if path.ends_with(".html") || path.ends_with('/') {
+    } else if path.ends_with(".html") || path.ends_with('/') || path.ends_with(".json") {
         Some("public, max-age=300, must-revalidate")
     } else {
         None
