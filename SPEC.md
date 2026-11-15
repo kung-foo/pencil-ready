@@ -68,8 +68,7 @@ HTML + a single React island per worksheet page.
 - Prefetching: `prefetch: { prefetchAll: true, defaultStrategy: "hover" }`.
 - Sitemap + robots.txt generated at build time via `@astrojs/sitemap`.
 - Header navigation is three buttons. **Worksheets** (search) lists every
-  worksheet by topic and filters as you type on titles in every locale,
-  the alias phrases in `lib/worksheet-links.ts`, and topic names; Ctrl/⌘ K
+  worksheet by topic; typing searches with MiniSearch (below). Ctrl/⌘ K
   or "/" opens it. The **language** button is the existing language and
   paper menu. **☰** holds everything that isn't a worksheet (About,
   language and paper) and shows the same items at every width. Below
@@ -83,6 +82,20 @@ HTML + a single React island per worksheet page.
   full-width sheet on phones, a card aligned to its button on wide
   screens. The dim layer starts below the header, so the header stays
   usable while a menu is open.
+- Header search index: `lib/search-index.ts` builds one JSON file per
+  locale (`/search-index.json`, `/no/search-index.json`) from the same
+  worksheet content as the pages: title, topic, summary, learning goals,
+  the alias phrases in `lib/worksheet-links.ts`, and the title in the
+  other locales. Prerequisites stay out (they describe other worksheets).
+  The search panel loads MiniSearch (a dynamic import, so its own hashed
+  `/_astro/` chunk) and the index on browser idle, button hover/focus or
+  first use, then answers each keystroke in memory. Settings: lowercase
+  only (å, æ, ø stay distinct letters), prefix matching, typo tolerance
+  for words of 5+ letters, every word required, boosts title > alias >
+  other-language title > topic > summary > learning goal, and results
+  under a tenth of the top score dropped. If the index can't load, typing
+  filters the browse list on titles. About 3.7 KB gzipped per locale; the
+  server gives `.json` the same 5-minute revalidating cache as HTML.
 
 ### Language
 

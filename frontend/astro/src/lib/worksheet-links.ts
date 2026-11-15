@@ -74,6 +74,7 @@ const ALIASES_EN: ReadonlyArray<Alias> = [
     { phrase: "multiplication", kind: "multiply" },
     { phrase: "division", kind: "simple-divide" },
     { phrase: "mean", kind: "mean" },
+    { phrase: "average", kind: "mean" },
 ];
 
 /** Norwegian aliases — phrases as they appear in `content/worksheets/nb/`.
@@ -114,6 +115,7 @@ const ALIASES_NB: ReadonlyArray<Alias> = [
     { phrase: "multiplikasjon", kind: "multiply" },
     { phrase: "divisjon", kind: "simple-divide" },
     { phrase: "gjennomsnitt", kind: "mean" },
+    { phrase: "snitt", kind: "mean" },
 ];
 
 const ALIASES: Record<Locale, ReadonlyArray<Alias>> = {

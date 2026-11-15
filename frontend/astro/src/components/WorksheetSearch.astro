@@ -2,24 +2,25 @@
 /*
  * Header search: the "Worksheets" button and its panel, the one way into
  * the content from the header. With nothing typed it lists every
- * worksheet by topic; typing filters on titles (in every language), the
- * alias phrases in lib/worksheet-links.ts, and topic names.
+ * worksheet by topic. Typing searches the locale's index
+ * (lib/search-index.ts) with MiniSearch: titles in every language,
+ * aliases, topic names, summaries and learning goals, with typo
+ * tolerance, ranked, each result showing the line that matched.
  *
  * Same native-popover approach as LanguageSelector: the header is a
  * `.stippled` surface (`overflow: hidden`) with a `backdrop-filter`,
  * which would clip a dropdown; a popover renders in the top layer.
  * Every entry is a real link, so the panel works without JS. The script
- * adds the filter, Ctrl/⌘ K and "/" to open, arrow keys, Enter to follow
- * the first match, and placement under the button on wide screens.
+ * adds search, Ctrl/⌘ K and "/" to open, arrow keys, Enter to follow the
+ * first match, and placement under the button on wide screens.
  *
  * Topic headings link to the homepage sections until topics get pages
  * of their own.
  */
 import { t } from "@/i18n";
-import { LOCALES, localizePath, type Locale } from "@/i18n/locales";
+import { localizePath, type Locale } from "@/i18n/locales";
 import { WORKSHEET_SECTIONS, sectionAnchor } from "@/lib/worksheet-info";
 import { getWorksheetInfo } from "@/lib/worksheet-content";
-import { worksheetAliases } from "@/lib/worksheet-links";
 
 interface Props {
     locale: Locale;
@@ -28,36 +29,17 @@ interface Props {
 const { locale } = Astro.props;
 const ui = t(locale);
 const own = await getWorksheetInfo(locale);
-const everyLocale = await Promise.all(
-    LOCALES.map((l) => getWorksheetInfo(l.id)),
-);
-const aliases = worksheetAliases(locale);
 const homePath = localizePath("/", locale);
 const panelId = "worksheet-search";
 
-const groups = WORKSHEET_SECTIONS.map((section) => {
-    const name = ui.home.sections[section.id];
-    return {
-        name,
-        href: `${homePath}#${sectionAnchor(section.id)}`,
-        items: section.kinds.map((kind) => ({
-            title: own[kind].title,
-            href: localizePath(`/worksheets/${kind}/`, locale),
-            // Lowercased haystack for the filter: titles in every
-            // language (a Norwegian parent on the English site can type
-            // "brøk"), aliases, and the topic name.
-            search: [
-                ...new Set([
-                    ...everyLocale.map((info) => info[kind].title),
-                    ...(aliases.get(kind) ?? []),
-                    name,
-                ]),
-            ]
-                .join(" · ")
-                .toLowerCase(),
-        })),
-    };
-});
+const groups = WORKSHEET_SECTIONS.map((section) => ({
+    name: ui.home.sections[section.id],
+    href: `${homePath}#${sectionAnchor(section.id)}`,
+    items: section.kinds.map((kind) => ({
+        title: own[kind].title,
+        href: localizePath(`/worksheets/${kind}/`, locale),
+    })),
+}));
 ---
 
 <div class="worksheet-search" data-worksheet-search>
@@ -98,6 +80,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
         class="search-panel header-sheet"
         tabindex="-1"
         data-search-panel
+        data-index-url={localizePath("/search-index.json", locale)}
     >
         <div class="flex items-center gap-2 border-b px-4">
             <svg
@@ -147,6 +130,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
             </button>
         </div>
         <div class="search-results py-2" data-search-results>
+            <ul hidden data-search-hits></ul>
             {
                 groups.map((g) => (
                     <section class="px-4 py-2" data-search-group>
@@ -166,7 +150,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
                         </div>
                         <ul class="mt-1.5 flex flex-wrap gap-1.5 pl-3">
                             {g.items.map((item) => (
-                                <li data-search-item data-search={item.search}>
+                                <li data-search-item>
                                     <a
                                         href={item.href}
                                         class="search-link inline-block rounded-full border bg-background px-2.5 py-1 text-[0.8rem] text-foreground hover:border-primary"
@@ -262,7 +246,110 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
 </style>
 
 <script>
+    import type MiniSearch from "minisearch";
+    import type { SearchResult } from "minisearch";
     import { anchorUnderHeader } from "@/lib/header-sheet";
+    import type { SearchDoc } from "@/lib/search-index";
+
+    // MiniSearch and the locale's index load on first use (browser idle
+    // time, hovering or focusing the button, or opening the panel) and
+    // then stay in memory for the visit, across ClientRouter swaps.
+    // Settings as tested on the real index: lowercase only (å, æ and ø
+    // are letters of their own, not accented a, ae and o), prefix
+    // matches, typo tolerance for words of 5+ letters, every word must
+    // match, and boosts title > alias > other-language title > topic >
+    // summary > learning goal.
+    const BOOST: Record<string, number> = {
+        t: 10,
+        a: 8,
+        x: 6,
+        p: 5,
+        s: 3,
+        l: 2,
+    };
+    type Engine = MiniSearch<SearchDoc>;
+    const engines = new Map<string, Promise<Engine | null>>();
+    function loadEngine(url: string): Promise<Engine | null> {
+        let engine = engines.get(url);
+        if (!engine) {
+            engine = Promise.all([
+                import("minisearch"),
+                fetch(url).then((r) => {
+                    if (!r.ok) throw new Error(`${url}: ${r.status}`);
+                    return r.json() as Promise<SearchDoc[]>;
+                }),
+            ])
+                .then(([{ default: MiniSearch }, docs]) => {
+                    const ms = new MiniSearch<SearchDoc>({
+                        fields: Object.keys(BOOST),
+                        storeFields: ["u", "t", "p", "s", "l", "a", "x"],
+                        processTerm: (term) => term.toLowerCase(),
+                        searchOptions: {
+                            boost: BOOST,
+                            prefix: true,
+                            fuzzy: (term) => (term.length >= 5 ? 0.2 : false),
+                            combineWith: "AND",
+                        },
+                    });
+                    ms.addAll(docs);
+                    return ms;
+                })
+                // Without the index, typing filters the visible titles.
+                .catch(() => null);
+            engines.set(url, engine);
+        }
+        return engine;
+    }
+
+    // The line that explains a result: for each query term its strongest
+    // field, then the weakest of those. A match in the learning goals,
+    // aliases or other-language titles shows that line; a match on the
+    // title, topic or summary shows the summary.
+    function matchedLine(r: SearchResult): string {
+        let field = "t";
+        let weakest = Infinity;
+        for (const fields of Object.values(r.match)) {
+            const best = fields.reduce((b, f) => (BOOST[f] > BOOST[b] ? f : b));
+            if (BOOST[best] < weakest) {
+                weakest = BOOST[best];
+                field = best;
+            }
+        }
+        if (field === "l" || field === "a" || field === "x") {
+            const lines = String(r[field]).split("\n");
+            const terms = Object.keys(r.match);
+            return (
+                lines.find((line) =>
+                    terms.some((term) => line.toLowerCase().includes(term)),
+                ) ?? lines[0]
+            );
+        }
+        return String(r.s);
+    }
+
+    function hitRow(r: SearchResult): HTMLLIElement {
+        const title = document.createElement("span");
+        title.className = "text-sm font-medium text-foreground";
+        title.textContent = String(r.t);
+        const topic = document.createElement("span");
+        topic.className = "shrink-0 text-xs text-muted-foreground";
+        topic.textContent = String(r.p);
+        const top = document.createElement("span");
+        top.className = "flex items-baseline justify-between gap-3";
+        top.append(title, topic);
+        const line = document.createElement("span");
+        line.className = "truncate text-xs text-muted-foreground";
+        line.textContent = matchedLine(r);
+        const a = document.createElement("a");
+        a.href = String(r.u);
+        a.dataset.searchLink = "";
+        a.className =
+            "flex flex-col gap-0.5 px-4 py-2 outline-none hover:bg-muted focus-visible:bg-muted";
+        a.append(top, line);
+        const li = document.createElement("li");
+        li.append(a);
+        return li;
+    }
 
     const panelOf = () =>
         document.querySelector<HTMLElement>("[data-search-panel]");
@@ -310,10 +397,19 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
             "[data-search-input]",
         )!;
         const empty = root.querySelector<HTMLElement>("[data-search-empty]")!;
+        const hits = root.querySelector<HTMLElement>("[data-search-hits]")!;
         const groups = [
             ...root.querySelectorAll<HTMLElement>("[data-search-group]"),
         ];
+        const indexUrl = panel.dataset.indexUrl!;
         if (typeof panel.showPopover !== "function") return;
+
+        // Warm the index up before the first keystroke.
+        const warm = () => void loadEngine(indexUrl);
+        button.addEventListener("pointerenter", warm, { once: true });
+        button.addEventListener("focus", warm, { once: true });
+        if ("requestIdleCallback" in window) requestIdleCallback(warm);
+        else setTimeout(warm, 2000);
 
         const visibleLinks = () =>
             [
@@ -322,29 +418,51 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
                 ),
             ].filter((a) => a.offsetParent !== null);
 
-        // Every typed word must appear somewhere in the item's haystack.
-        // Lowercase only: å, æ and ø are letters of their own in
-        // Norwegian, not accented a, ae and o.
-        function applyFilter() {
-            const words = input.value.trim().toLowerCase().split(/\s+/);
-            const q = words.join("");
+        // Browse view: every topic and worksheet. With a query and the
+        // index loaded: ranked results. With a query and no index: the
+        // browse view filtered on titles and topic names.
+        function filterBrowse(words: string[]) {
             let shown = 0;
             for (const g of groups) {
+                const topic = g.querySelector("a")?.textContent ?? "";
                 let any = false;
                 for (const li of g.querySelectorAll<HTMLElement>(
                     "[data-search-item]",
                 )) {
-                    const hay = li.dataset.search ?? "";
-                    const hit = !q || words.every((w) => hay.includes(w));
+                    const hay = `${li.textContent} ${topic}`.toLowerCase();
+                    const hit = words.every((w) => hay.includes(w));
                     li.hidden = !hit;
                     if (hit) any = true;
                 }
                 g.hidden = !any;
                 if (any) shown++;
             }
+            hits.hidden = true;
             empty.hidden = shown > 0;
         }
-        input.addEventListener("input", applyFilter);
+        // Typo tolerance also finds weak near-misses ("mente" matching
+        // "hente"); anything under a tenth of the best score is noise.
+        function showHits(all: SearchResult[]) {
+            const results = all.filter((r) => r.score >= all[0].score * 0.1);
+            hits.replaceChildren(...results.slice(0, 8).map(hitRow));
+            hits.hidden = results.length === 0;
+            for (const g of groups) g.hidden = true;
+            empty.hidden = results.length > 0;
+        }
+        let latest = 0;
+        async function update() {
+            const q = input.value.trim();
+            const mine = ++latest;
+            if (!q) {
+                filterBrowse([]);
+                return;
+            }
+            const engine = await loadEngine(indexUrl);
+            if (mine !== latest) return; // a newer keystroke took over
+            if (engine) showHits(engine.search(q));
+            else filterBrowse(q.toLowerCase().split(/\s+/));
+        }
+        input.addEventListener("input", update);
 
         anchorUnderHeader(panel, button, 448);
         panel.addEventListener("toggle", (e) => {
@@ -362,7 +480,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
                 (fine ? input : panel).focus({ preventScroll: true });
             } else if (!open) {
                 input.value = "";
-                applyFilter();
+                void update();
             }
         });
 
@@ -374,9 +492,13 @@ const groups = WORKSHEET_SECTIONS.map((section) => {
             const active = document.activeElement as HTMLElement;
             const i = links.indexOf(active as HTMLAnchorElement);
             if (e.key === "Enter" && active === input) {
-                const first = panel.querySelector<HTMLAnchorElement>(
-                    "[data-search-item]:not([hidden]) a",
-                );
+                const first =
+                    panel.querySelector<HTMLAnchorElement>(
+                        "[data-search-hits]:not([hidden]) a",
+                    ) ??
+                    panel.querySelector<HTMLAnchorElement>(
+                        "[data-search-group]:not([hidden]) [data-search-item]:not([hidden]) a",
+                    );
                 if (first) {
                     e.preventDefault();
                     first.click();

@@ -29,6 +29,9 @@ importers:
       lucide-react:
         specifier: ^1.51.0
         version: 1.51.0(@types/react@18.3.31)(react@18.3.1)
+      minisearch:
+        specifier: 7.2.0
+        version: 7.2.0
       radix-ui:
         specifier: ^1.6.7
         version: 1.6.7(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2183,6 +2186,9 @@ packages:
 
   micromark-util-types@2.0.3:
     resolution: {integrity: sha512-oxB2Ik03hI0gv+VNn9tnh1t1YEe9MDPptViAEgfdf3YQHsn0pzGTgCdlSCJXcwhqm8phaEuM7zeEu3QQzVBrPg==}
+
+  minisearch@7.2.0:
+    resolution: {integrity: sha512-dqT2XBYUOZOiC5t2HRnwADjhNS2cecp9u+TJRiJ1Qp/f5qjkeT5APcGPjHw+bz89Ms8Jp+cG4AlE+QZ/QnDglg==}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -4744,6 +4750,8 @@ snapshots:
   micromark-util-symbol@2.0.1: {}
 
   micromark-util-types@2.0.3: {}
+
+  minisearch@7.2.0: {}
 
   mrmime@2.0.1: {}
 
