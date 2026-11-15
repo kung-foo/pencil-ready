@@ -288,7 +288,13 @@ const groups = WORKSHEET_SECTIONS.map((section) => ({
                     return ms;
                 })
                 // Without the index, typing filters the visible titles.
-                .catch(() => null);
+                // Forget the failure so the next hover, focus or
+                // keystroke tries again (a deploy or a brief outage
+                // shouldn't disable search until a reload).
+                .catch(() => {
+                    engines.delete(url);
+                    return null;
+                });
             engines.set(url, engine);
         }
         return engine;
@@ -450,10 +456,14 @@ const groups = WORKSHEET_SECTIONS.map((section) => ({
                 filterBrowse([]);
                 return;
             }
+            // Filter on titles first, so a result shown (and Enter) always
+            // belongs to this query while the index is still loading. An
+            // already-loaded index replaces it in the same task, before
+            // anything paints.
+            filterBrowse(q.toLowerCase().split(/\s+/));
             const engine = await loadEngine(indexUrl);
             if (mine !== latest) return; // a newer keystroke took over
             if (engine) showHits(engine.search(q));
-            else filterBrowse(q.toLowerCase().split(/\s+/));
         }
         input.addEventListener("input", update);
 
