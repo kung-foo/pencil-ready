@@ -249,6 +249,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => ({
     import type MiniSearch from "minisearch";
     import type { SearchResult } from "minisearch";
     import { anchorUnderHeader } from "@/lib/header-sheet";
+    import { SEARCH_BOOST, SEARCH_STORED } from "@/lib/search-config";
     import type { SearchDoc } from "@/lib/search-index";
 
     // MiniSearch and the locale's index load on first use (browser idle
@@ -257,16 +258,8 @@ const groups = WORKSHEET_SECTIONS.map((section) => ({
     // Settings as tested on the real index: lowercase only (å, æ and ø
     // are letters of their own, not accented a, ae and o), prefix
     // matches, typo tolerance for words of 5+ letters, every word must
-    // match, and boosts title > alias > other-language title > topic >
-    // summary > learning goal.
-    const BOOST: Record<string, number> = {
-        t: 10,
-        a: 8,
-        x: 6,
-        p: 5,
-        s: 3,
-        l: 2,
-    };
+    // match, and the field boosts in lib/search-config.ts.
+    const BOOST: Record<string, number> = SEARCH_BOOST;
     type Engine = MiniSearch<SearchDoc>;
     const engines = new Map<string, Promise<Engine | null>>();
     function loadEngine(url: string): Promise<Engine | null> {
@@ -282,7 +275,7 @@ const groups = WORKSHEET_SECTIONS.map((section) => ({
                 .then(([{ default: MiniSearch }, docs]) => {
                     const ms = new MiniSearch<SearchDoc>({
                         fields: Object.keys(BOOST),
-                        storeFields: ["u", "t", "p", "s", "l", "a", "x"],
+                        storeFields: SEARCH_STORED,
                         processTerm: (term) => term.toLowerCase(),
                         searchOptions: {
                             boost: BOOST,

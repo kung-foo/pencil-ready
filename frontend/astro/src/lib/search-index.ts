@@ -4,13 +4,9 @@
 // (components/WorksheetSearch.astro).
 //
 // Short keys keep the file small. Every field is a plain string, so the
-// client hands the documents straight to MiniSearch:
-//
-//   id  worksheet kind              u  page URL in this locale
-//   t   title                       p  topic name
-//   s   summary                     l  learning goals, one per line
-//   a   alias phrases, one per line (lib/worksheet-links.ts)
-//   x   the title in the other locales, one per line
+// client hands the documents straight to MiniSearch. Multi-value fields
+// are joined with newlines; the search panel splits them again to show
+// the line that matched.
 //
 // Prerequisites stay out on purpose: they describe *other* worksheets,
 // so matching them would surface the wrong sheet.
@@ -22,16 +18,30 @@ import { getWorksheetInfo } from "./worksheet-content";
 import { WORKSHEET_SECTIONS } from "./worksheet-info";
 import { worksheetAliases } from "./worksheet-links";
 
+/** One worksheet in the search index. */
 export type SearchDoc = {
+    /** Worksheet kind (`long-divide`); MiniSearch's document id. */
     id: string;
+    /** Page URL in this locale (`/no/worksheets/long-divide/`). */
     u: string;
+    /** Title in this locale. */
     t: string;
+    /** Topic name in this locale (the homepage section heading). */
     p: string;
+    /** Summary, math markup flattened to plain text. */
     s: string;
+    /** Learning goals, plain text, one per line. */
     l: string;
+    /** Alias phrases from lib/worksheet-links.ts, one per line. */
     a: string;
+    /** The title in each other locale, one per line, so a search in one
+     * language finds the sheet from the other ("brøk" on the English site). */
     x: string;
 };
+
+/** The fields MiniSearch searches: everything but the id and the URL.
+ * `SEARCH_BOOST` (lib/search-config.ts) is typed against this. */
+export type SearchField = Exclude<keyof SearchDoc, "id" | "u">;
 
 export async function buildSearchIndex(locale: Locale): Promise<SearchDoc[]> {
     const ui = t(locale);
