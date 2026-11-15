@@ -2207,6 +2207,22 @@ async fn cache_control(req: Request, next: Next) -> Response {
     let path = req.uri().path().to_string();
     let mut response = next.run(req).await;
 
+    // ServeDir sends bare `text/markdown` and `text/plain`, and without a
+    // charset a browser falls back to a legacy encoding and garbles the
+    // non-ASCII in `llms.txt` and the worksheet `.md` copies. Both are
+    // Astro output, always UTF-8.
+    let content_type = response.headers().get(header::CONTENT_TYPE);
+    let with_charset = match content_type.and_then(|v| v.to_str().ok()) {
+        Some("text/markdown") => Some("text/markdown; charset=utf-8"),
+        Some("text/plain") => Some("text/plain; charset=utf-8"),
+        _ => None,
+    };
+    if let Some(v) = with_charset {
+        response
+            .headers_mut()
+            .insert(header::CONTENT_TYPE, HeaderValue::from_static(v));
+    }
+
     if path == "/" {
         let headers = response.headers_mut();
         headers.insert(
@@ -2228,7 +2244,12 @@ async fn cache_control(req: Request, next: Next) -> Response {
         Some("public, max-age=31536000, immutable")
     } else if path.ends_with(".svg") || path.ends_with(".png") || path.ends_with(".ico") {
         Some("public, max-age=2592000")
-    } else if path.ends_with(".html") || path.ends_with('/') || path.ends_with(".json") {
+    } else if path.ends_with(".html")
+        || path.ends_with('/')
+        || path.ends_with(".json")
+        || path.ends_with(".md")
+        || path.ends_with(".txt")
+    {
         Some("public, max-age=300, must-revalidate")
     } else {
         None
@@ -2295,6 +2316,38 @@ struct InvalidParams(String);
     ),
 )]
 struct ApiDoc;
+
+/// Every worksheet endpoint, registered with its OpenAPI path. Shared by
+/// `main` and the `openapi_snapshot` test, which writes the spec the
+/// Astro build reads (`frontend/astro/src/data/openapi.json`).
+fn api_routes() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(handle_add))
+        .routes(routes!(handle_subtract))
+        .routes(routes!(handle_multiply))
+        .routes(routes!(handle_simple_divide))
+        .routes(routes!(handle_long_divide))
+        .routes(routes!(handle_mult_drill))
+        .routes(routes!(handle_div_drill))
+        .routes(routes!(handle_fraction_mult))
+        .routes(routes!(handle_fraction_simplify))
+        .routes(routes!(handle_fraction_equiv))
+        .routes(routes!(handle_fraction_add))
+        .routes(routes!(handle_fraction_subtract))
+        .routes(routes!(handle_fraction_decimal_percent))
+        .routes(routes!(handle_percent_of))
+        .routes(routes!(handle_gcf))
+        .routes(routes!(handle_factor_pairs))
+        .routes(routes!(handle_prime_factors))
+        .routes(routes!(handle_algebra_two_step))
+        .routes(routes!(handle_algebra_one_step))
+        .routes(routes!(handle_algebra_square_root))
+        .routes(routes!(handle_decimal_add))
+        .routes(routes!(handle_decimal_subtract))
+        .routes(routes!(handle_decimal_multiply))
+        .routes(routes!(handle_order_of_ops))
+        .routes(routes!(handle_mean))
+}
 
 #[derive(Parser)]
 #[command(name = "pencil-ready-server", about = "Pencil Ready worksheet server")]
@@ -2395,32 +2448,7 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let (api_router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(handle_add))
-        .routes(routes!(handle_subtract))
-        .routes(routes!(handle_multiply))
-        .routes(routes!(handle_simple_divide))
-        .routes(routes!(handle_long_divide))
-        .routes(routes!(handle_mult_drill))
-        .routes(routes!(handle_div_drill))
-        .routes(routes!(handle_fraction_mult))
-        .routes(routes!(handle_fraction_simplify))
-        .routes(routes!(handle_fraction_equiv))
-        .routes(routes!(handle_fraction_add))
-        .routes(routes!(handle_fraction_subtract))
-        .routes(routes!(handle_fraction_decimal_percent))
-        .routes(routes!(handle_percent_of))
-        .routes(routes!(handle_gcf))
-        .routes(routes!(handle_factor_pairs))
-        .routes(routes!(handle_prime_factors))
-        .routes(routes!(handle_algebra_two_step))
-        .routes(routes!(handle_algebra_one_step))
-        .routes(routes!(handle_algebra_square_root))
-        .routes(routes!(handle_decimal_add))
-        .routes(routes!(handle_decimal_subtract))
-        .routes(routes!(handle_decimal_multiply))
-        .routes(routes!(handle_order_of_ops))
-        .routes(routes!(handle_mean))
+    let (api_router, api) = api_routes()
         .with_state(state.clone())
         .split_for_parts();
 
@@ -2900,5 +2928,28 @@ mod tests {
         ] {
             assert!(bad.parse::<IpRange>().is_err(), "{bad} should not parse");
         }
+    }
+
+    /// The Astro build reads the API spec from a checked-in copy (the
+    /// Docker frontend stage has no Rust toolchain), so this keeps that
+    /// copy in step with the handlers. Refresh it with
+    /// `UPDATE_OPENAPI=1 cargo test -p pencil-ready-server openapi_snapshot`.
+    #[test]
+    fn openapi_snapshot() {
+        let (_, api) = super::api_routes().split_for_parts();
+        let json = api.to_pretty_json().unwrap() + "\n";
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../frontend/astro/src/data/openapi.json");
+        if std::env::var_os("UPDATE_OPENAPI").is_some() {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, &json).unwrap();
+            return;
+        }
+        let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
+        assert!(
+            on_disk == json,
+            "{} is stale; refresh with UPDATE_OPENAPI=1 cargo test -p pencil-ready-server openapi_snapshot",
+            path.display()
+        );
     }
 }

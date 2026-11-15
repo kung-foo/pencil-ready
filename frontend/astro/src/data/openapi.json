@@ -1,0 +1,4720 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Pencil Ready",
+    "description": "Generate printable math worksheets as PDF, PNG or SVG.\n\nEvery endpoint is a `GET` that returns the file directly, so a worksheet\nis just a URL: `/api/worksheets/add?digits=3,3&carry=force&seed=42`.\n\n**Conventions**\n\n- All parameters are optional; omitted ones take the per-worksheet default.\n- **Ranges** are `N` (exactly N) or `N-M` (inclusive), e.g. `digits=2-4`.\n- **Lists** are comma-separated, e.g. `denominators=2,3,4` or\n  `digits=3,2` (one entry per operand).\n- **Seeds** make output reproducible: the same parameters and `seed`\n  produce the same problems. Without a seed, each request is random.\n- Problem count and layout are identical on A4 and US Letter.\n- Errors return `400` with a plain-text message.\n",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "This server"
+    },
+    {
+      "url": "https://pencilready.com",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/api/worksheets/add": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Addition",
+        "description": "Multi-digit addition in columns, with control over carrying. `binary=true` renders in base 2.",
+        "operationId": "add",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Digit count (range) per operand, comma-separated. Default `2,2`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,2"
+          },
+          {
+            "name": "carry",
+            "in": "query",
+            "description": "Carrying constraint. Default `any`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/CarryMode"
+            }
+          },
+          {
+            "name": "binary",
+            "in": "query",
+            "description": "Render in base 2; `digits` become bit counts. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/algebra-one-step": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Algebra: one-step equations",
+        "description": "Solve `x + b = c`, `x − b = c`, `a·x = c` or `x ÷ a = c`. Enable at least one form.",
+        "operationId": "algebra_one_step",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "a_range",
+            "in": "query",
+            "description": "Coefficient range. Default `2-10`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2-10"
+          },
+          {
+            "name": "b_range",
+            "in": "query",
+            "description": "Constant range. Default `1-30`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1-30"
+          },
+          {
+            "name": "x_range",
+            "in": "query",
+            "description": "Answer (`x`) range. Default `0-20`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "0-20"
+          },
+          {
+            "name": "variable",
+            "in": "query",
+            "description": "Variable letter. Default `x`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "add",
+            "in": "query",
+            "description": "Include `x + b = c` problems. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "subtract",
+            "in": "query",
+            "description": "Include `x − b = c` problems. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "multiply",
+            "in": "query",
+            "description": "Include `a · x = c` problems. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "divide",
+            "in": "query",
+            "description": "Include `x ÷ a = c` problems. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/algebra-square-root": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Algebra: squares and square roots",
+        "description": "Solve `x² ± b = c` and `√x ± b = c`. Enable at least one of `squares` / `roots`.",
+        "operationId": "algebra_square_root",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "b_range",
+            "in": "query",
+            "description": "Constant range. Default `1-50`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1-30"
+          },
+          {
+            "name": "variable",
+            "in": "query",
+            "description": "Variable letter. Default `x`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "squares",
+            "in": "query",
+            "description": "Include `x² ± b = c` problems. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "roots",
+            "in": "query",
+            "description": "Include `√x ± b = c` problems. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/algebra-two-step": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Algebra: two-step equations",
+        "description": "Solve `a·x + b = c` and related forms for a whole-number `x`.",
+        "operationId": "algebra_two_step",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "a_range",
+            "in": "query",
+            "description": "Coefficient range. Default `2-10`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2-10"
+          },
+          {
+            "name": "b_range",
+            "in": "query",
+            "description": "Constant range. Default `1-30`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1-30"
+          },
+          {
+            "name": "x_range",
+            "in": "query",
+            "description": "Answer (`x`) range. Default `0-20`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "0-20"
+          },
+          {
+            "name": "variable",
+            "in": "query",
+            "description": "Variable letter. Default `x`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "implicit",
+            "in": "query",
+            "description": "Write the coefficient as `4x` instead of `4 · x`. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "mix_forms",
+            "in": "query",
+            "description": "Vary the equation form (e.g. `b + a·x = c`). Default true.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/decimal-add": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Decimal addition",
+        "description": "Column addition with a fixed number of decimal places.",
+        "operationId": "decimal_add",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Integer-part digit count (range) per operand, comma-separated.\nDefault `2,2`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,2"
+          },
+          {
+            "name": "decimal_places",
+            "in": "query",
+            "description": "Decimal places on every operand and the answer, 1-4. Default 2.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/decimal-multiply": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Decimal multiplication",
+        "description": "A decimal times a whole number (or a second decimal).",
+        "operationId": "decimal_multiply",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Integer-part digit count (range) of the top operand. Default `2`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2"
+          },
+          {
+            "name": "decimal_places",
+            "in": "query",
+            "description": "Decimal places on the top operand, 1-4. Default 1.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "multiplier_min",
+            "in": "query",
+            "description": "Smallest multiplier integer part, 0-99. Default 2.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "multiplier_max",
+            "in": "query",
+            "description": "Largest multiplier integer part, 0-99. Default 9.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "bottom_decimal_places",
+            "in": "query",
+            "description": "Decimal places on the multiplier; 0 = whole number. Default 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/decimal-subtract": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Decimal subtraction",
+        "description": "Column subtraction with a fixed number of decimal places.",
+        "operationId": "decimal_subtract",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Integer-part digit count (range) per operand, comma-separated.\nDefault `2,2`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,2"
+          },
+          {
+            "name": "decimal_places",
+            "in": "query",
+            "description": "Decimal places on every operand and the answer, 1-4. Default 2.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/div-drill": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Division drill",
+        "description": "One-line division facts built from the chosen divisors.",
+        "operationId": "div_drill",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "divisor",
+            "in": "query",
+            "description": "Divisors to drill: ranges, comma-separated. Default `2-9`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2-9"
+          },
+          {
+            "name": "max_quotient",
+            "in": "query",
+            "description": "Quotient range. Default `2-9`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2-9"
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "description": "Problem count; 0 = every fact in range. Default 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/factor-pairs": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Factor pairs",
+        "description": "Every factor of a number, as factor pairs (`1 × 24`, `2 × 12`, …),\nwith a row per pair under the number.",
+        "operationId": "factor_pairs",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max_number",
+            "in": "query",
+            "description": "Largest number, 10-100. Numbers come from its top two thirds\n(10-30 for 30). Default 30.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "primes",
+            "in": "query",
+            "description": "Include primes, which have one pair (`1 × p`). Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "exact_rows",
+            "in": "query",
+            "description": "Show only as many pair rows as each number has, as a hint for\nhow many to find. Default false (every cell shows the same rows).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/fraction-add": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Fraction addition",
+        "description": "Add two proper fractions; answers in simplest form. `relation` sets the difficulty: same denominator, one a multiple of the other, or unrelated.",
+        "operationId": "fraction_add",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "denominators",
+            "in": "query",
+            "description": "Allowed denominators of the two fractions, comma-separated.\nDefault `2,3,4,5,6,8,10,12`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,3,4,5,6,8,10,12"
+          },
+          {
+            "name": "relation",
+            "in": "query",
+            "description": "How the two denominators relate, which sets the difficulty.\nDefault `any`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DenominatorRelation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/fraction-decimal-percent": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Fractions, decimals and percents",
+        "description": "One number written three ways (`3/4 = 0.75 = 75%`): one form is printed, the student writes the other two.",
+        "operationId": "fraction_decimal_percent",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "denominators",
+            "in": "query",
+            "description": "Allowed denominators, comma-separated; each must divide 1000\n(2, 4, 5, 8, 10, 20, 25, 40, 50, 100). Default `2,4,5,10,20,25,50`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,4,5,10,20,25,50"
+          },
+          {
+            "name": "improper",
+            "in": "query",
+            "description": "Include values above 1 (below 3), as mixed numbers. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "given",
+            "in": "query",
+            "description": "Which form is printed. Default `any`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ConversionGiven"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/fraction-equiv": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Equivalent fractions",
+        "description": "Fill in the missing numerator or denominator of `a/b = c/d`.",
+        "operationId": "fraction_equiv",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "denominators",
+            "in": "query",
+            "description": "Allowed denominators of the base fraction, comma-separated.\nDefault `2,3,4,5,6,8,10`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,3,4,5,6,8,10"
+          },
+          {
+            "name": "scale",
+            "in": "query",
+            "description": "Scale-factor range (the multiplier), within 2-10. Default `2-5`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2-5"
+          },
+          {
+            "name": "missing",
+            "in": "query",
+            "description": "Which slot is blank. Default `any` (varies per problem).",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/MissingSlot"
+            }
+          },
+          {
+            "name": "proper_only",
+            "in": "query",
+            "description": "Base fraction is proper (numerator < denominator). Default true.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/fraction-mult": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Fraction multiplication",
+        "description": "Whole number times a proper fraction, with a whole-number answer.",
+        "operationId": "fraction_mult",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "denominators",
+            "in": "query",
+            "description": "Allowed denominators, comma-separated. Default `2,3,4,5,10`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,3,4,5,10"
+          },
+          {
+            "name": "min_whole",
+            "in": "query",
+            "description": "Smallest whole number. Default 2.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "max_whole",
+            "in": "query",
+            "description": "Largest whole number. Default 20.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "unit_only",
+            "in": "query",
+            "description": "Numerator is always 1. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/fraction-simplify": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Fraction simplification",
+        "description": "Reduce a fraction to lowest terms (or to a mixed/whole number).",
+        "operationId": "fraction_simplify",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "denominators",
+            "in": "query",
+            "description": "Allowed denominators of the printed fraction, comma-separated.\nDefault `2,3,4,5,6,8,10,12`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,3,4,5,6,8,10,12"
+          },
+          {
+            "name": "max_numerator",
+            "in": "query",
+            "description": "Largest numerator of the printed fraction. Default 20.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "proper_only",
+            "in": "query",
+            "description": "Only proper fractions (numerator < denominator), so no mixed-number\nanswers. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_whole",
+            "in": "query",
+            "description": "Include problems whose answer is a whole number. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/fraction-subtract": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Fraction subtraction",
+        "description": "Subtract two proper fractions (the first is always larger); answers in simplest form. Same parameters as fraction addition.",
+        "operationId": "fraction_subtract",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "denominators",
+            "in": "query",
+            "description": "Allowed denominators of the two fractions, comma-separated.\nDefault `2,3,4,5,6,8,10,12`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,3,4,5,6,8,10,12"
+          },
+          {
+            "name": "relation",
+            "in": "query",
+            "description": "How the two denominators relate, which sets the difficulty.\nDefault `any`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DenominatorRelation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/gcf": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Greatest common factor",
+        "description": "`GCF(12, 18) = ___`, with a line under it per number to list its\nfactors (`SFF` in Norwegian). Practice for simplifying fractions.",
+        "operationId": "gcf",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max_number",
+            "in": "query",
+            "description": "Largest number in a pair, 10-100. Default 30.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "coprime",
+            "in": "query",
+            "description": "Mix in pairs whose GCF is 1 (a fraction already in simplest\nform). Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "slots",
+            "in": "query",
+            "description": "A blank per factor (`6: __ __ __ __`) instead of one line per\nnumber, so the student knows how many factors to find. Default\nfalse.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/long-divide": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Long division",
+        "description": "Single-digit divisor, multi-digit dividend, optionally with remainders.",
+        "operationId": "long_divide",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Dividend digit count (range). Default `3`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "3"
+          },
+          {
+            "name": "remainder",
+            "in": "query",
+            "description": "Allow problems with a remainder. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/mean": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Mean (average)",
+        "description": "Find the average of a small data set, optionally with a column-addition scaffold.",
+        "operationId": "mean",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "description": "Values per data set (range). A range varies the count, and so\nthe divisor, per problem. Default `3-4`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "3-4"
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Digit count (range) of each value: `1-2` gives 1-99, `3` gives\n100-999. Default `1-2`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1-2"
+          },
+          {
+            "name": "scaffold",
+            "in": "query",
+            "description": "Print a pre-filled column-addition stack under the data. Changes\nthe scaffolding, not the layout. Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "decimals",
+            "in": "query",
+            "description": "Give every value one decimal place (e.g. `12.5`). Decimal or wide\nsets get an open work area instead of the addition stack. Default\nfalse.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/mult-drill": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Multiplication drill",
+        "description": "One-line times-table facts from the chosen tables.",
+        "operationId": "mult_drill",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "multiplicand",
+            "in": "query",
+            "description": "Tables to drill: ranges, comma-separated (e.g. `2,3` or `1-10`).\nDefault `1-10`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1-10"
+          },
+          {
+            "name": "multiplier",
+            "in": "query",
+            "description": "Range of the other factor. Default `1-10`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1-10"
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "description": "Problem count; 0 = every fact in the chosen tables. Default 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/multiply": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Multiplication",
+        "description": "Multi-digit long multiplication in columns.",
+        "operationId": "multiply",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Digit count (range) per operand, comma-separated. Default `2,2`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,2"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/order-of-ops": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Order of operations",
+        "description": "Evaluate expressions with 2-3 operators, optionally with parentheses.",
+        "operationId": "order_of_ops",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "operations",
+            "in": "query",
+            "description": "Operators per problem, 2 or 3. Default 2.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "parens",
+            "in": "query",
+            "description": "Wrap the additive part in parentheses so it evaluates first\n(e.g. `(a + b) × c`). Default false.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/percent-of": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Percent of a number",
+        "description": "`20% of 350 = ___`: whole-number answers, or up to two decimals with `decimals=true`.",
+        "operationId": "percent_of",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "percents",
+            "in": "query",
+            "description": "Percents to use (1-100): values or ranges, comma-separated\n(e.g. `10,50` or `1-99`). Default `10,20,25,50,75`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "10,20,25,50,75"
+          },
+          {
+            "name": "max_base",
+            "in": "query",
+            "description": "Largest base number, 10-1000. Default 400.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "decimals",
+            "in": "query",
+            "description": "Allow answers with up to two decimal places (`37% of 48 =\n17.76`), so any percent pairs with any base. Default false\n(whole-number answers only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/prime-factors": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Prime factorization",
+        "description": "`24 = ___`: write the number as a product of primes, with room under\nit for a factor tree.",
+        "operationId": "prime_factors",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max_number",
+            "in": "query",
+            "description": "Largest number, 10-100. Composite numbers come from its top two\nthirds (10-30 for 30). Default 30.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/simple-divide": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Simple division",
+        "description": "Single-digit divisor, whole-number quotient. Times-table recall in reverse.",
+        "operationId": "simple_divide",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max_quotient",
+            "in": "query",
+            "description": "Largest quotient (the answer), 2-12. Default 10.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    },
+    "/api/worksheets/subtract": {
+      "get": {
+        "tags": [
+          "worksheets"
+        ],
+        "summary": "Subtraction",
+        "description": "Multi-digit subtraction in columns, with control over borrowing.",
+        "operationId": "subtract",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format. Default `pdf`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/OutputFormat"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "description": "Seed for reproducible output. Omit for a random worksheet.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "problems",
+            "in": "query",
+            "description": "Number of problems. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "cols",
+            "in": "query",
+            "description": "Columns in the problem grid. Default depends on the worksheet type.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "description": "Paper size. Default `a4`; `letter` is accepted as an alias for\n`us-letter`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Paper"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Printed language and number notation. Default `us`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "division",
+            "in": "query",
+            "description": "Division layout for long-divide, simple-divide and mean. Default\nfollows `locale`: `bracket` for `us`, `equation` for `no`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DivisionStyle"
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "description": "Override the operator symbol, as a typst symbol expression\n(e.g. `sym.colon`). Default follows `locale`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solve_first",
+            "in": "query",
+            "description": "Render the first problem as a worked example.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_answers",
+            "in": "query",
+            "description": "Append an answer-key page showing just the final answers (PDF only).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "student_name",
+            "in": "query",
+            "description": "Pre-fill the student name on the header in a handwriting font.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "qr",
+            "in": "query",
+            "description": "Print a QR code encoding `share_url` in the bottom-right of every\npage. Default false; has no effect without a valid `share_url`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "share_url",
+            "in": "query",
+            "description": "URL encoded by the QR code when `qr=true`. Must start with\n`https://pencilready.com/`; other URLs are silently ignored.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "digits",
+            "in": "query",
+            "description": "Digit count (range) per operand, comma-separated. Default `2,2`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "2,2"
+          },
+          {
+            "name": "borrow",
+            "in": "query",
+            "description": "Borrowing constraint. Default `any`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/BorrowMode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorksheetFile"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidParams"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BorrowMode": {
+        "type": "string",
+        "description": "none: no borrows. no-across-zero: borrows allowed, never across a 0 digit. any: unconstrained. force: every problem borrows at least once. ripple: every problem has a borrow chaining through 2+ columns.",
+        "enum": [
+          "none",
+          "no-across-zero",
+          "any",
+          "force",
+          "ripple"
+        ]
+      },
+      "CarryMode": {
+        "type": "string",
+        "description": "none: no carries. any: unconstrained. force: every problem carries at least once. ripple: every problem has a carry chaining through 2+ columns.",
+        "enum": [
+          "none",
+          "any",
+          "force",
+          "ripple"
+        ]
+      },
+      "ConversionGiven": {
+        "type": "string",
+        "description": "fraction, decimal or percent: that form is printed on every problem. any: a third of the page each.",
+        "enum": [
+          "any",
+          "fraction",
+          "decimal",
+          "percent"
+        ]
+      },
+      "DenominatorRelation": {
+        "type": "string",
+        "description": "same: 3/8 + 1/8. multiple: one denominator divides the other, 1/2 + 1/4. unrelated: neither divides the other, 2/3 + 3/4. any: all of these.",
+        "enum": [
+          "same",
+          "multiple",
+          "unrelated",
+          "any"
+        ]
+      },
+      "DivisionStyle": {
+        "type": "string",
+        "description": "bracket: `4)852`, quotient on top; simple division as a vertical stack. equation: one line, `852 : 4 = 213`, long-division working written under the dividend.",
+        "enum": [
+          "bracket",
+          "equation"
+        ]
+      },
+      "Locale": {
+        "type": "string",
+        "description": "us: English copy, decimal point, × and ÷. no: Norwegian Bokmål copy, decimal comma, · and :.",
+        "enum": [
+          "us",
+          "no"
+        ]
+      },
+      "MissingSlot": {
+        "type": "string",
+        "description": "Which slot is left blank for the student to fill in.",
+        "enum": [
+          "any",
+          "left-num",
+          "left-den",
+          "right-num",
+          "right-den"
+        ]
+      },
+      "OutputFormat": {
+        "type": "string",
+        "description": "pdf: printable, any page count. png / svg: single page only; multi-page worksheets and include_answers return 400.",
+        "enum": [
+          "pdf",
+          "png",
+          "svg"
+        ]
+      },
+      "Paper": {
+        "type": "string",
+        "description": "a4 or us-letter (alias: letter). Problem count and layout are identical on both.",
+        "enum": [
+          "a4",
+          "us-letter"
+        ]
+      },
+      "WorksheetBytes": {
+        "type": "string",
+        "format": "binary",
+        "description": "Raw file bytes."
+      }
+    },
+    "responses": {
+      "InvalidParams": {
+        "description": "Parameters failed to parse or validate, or the combination can't\nproduce a worksheet. Body is a one-line, human-readable error.",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            },
+            "example": "digits: bad digit count: invalid digit found in string\n"
+          }
+        }
+      },
+      "WorksheetFile": {
+        "description": "The rendered worksheet. Media type follows `format`.\n`Content-Disposition` is `inline` with a suggested filename.",
+        "headers": {
+          "Content-Disposition": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "inline; filename=\"pencil-ready-<slug>.<ext>\""
+          }
+        },
+        "content": {
+          "application/pdf": {
+            "schema": {
+              "$ref": "#/components/schemas/WorksheetBytes"
+            }
+          },
+          "image/png": {
+            "schema": {
+              "$ref": "#/components/schemas/WorksheetBytes"
+            }
+          },
+          "image/svg+xml": {
+            "schema": {
+              "$ref": "#/components/schemas/WorksheetBytes"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "worksheets",
+      "description": "Worksheet generation endpoints"
+    }
+  ]
+}
