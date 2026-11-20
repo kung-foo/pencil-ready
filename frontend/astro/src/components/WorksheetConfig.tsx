@@ -98,7 +98,7 @@ export function WorksheetConfigPanel({
                         />
                     </div>
 
-                    {supportsGrid(cfg, locale) && (
+                    {supportsGrid(cfg) && (
                         <div className="flex items-center justify-between">
                             <Label htmlFor="grid">{ui.grid}</Label>
                             <Switch

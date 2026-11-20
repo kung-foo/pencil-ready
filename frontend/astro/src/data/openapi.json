@@ -137,7 +137,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -326,7 +326,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -562,7 +562,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -760,7 +760,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -978,7 +978,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -1160,7 +1160,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -1375,7 +1375,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -1557,7 +1557,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -1749,7 +1749,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -1939,7 +1939,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2119,7 +2119,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2308,7 +2308,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2507,7 +2507,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2709,7 +2709,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2909,7 +2909,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -3089,7 +3089,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -3279,7 +3279,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -3459,7 +3459,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -3658,7 +3658,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -3850,7 +3850,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -4021,7 +4021,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -4202,7 +4202,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -4393,7 +4393,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -4565,7 +4565,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -4737,7 +4737,7 @@
           {
             "name": "grid",
             "in": "query",
-            "description": "Draw a grid in the answer area to keep digits in columns.\nAdd, subtract, multiply and stacked simple division; other\nworksheet types ignore it.",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"

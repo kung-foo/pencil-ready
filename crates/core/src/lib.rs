@@ -446,33 +446,22 @@ pub enum WorksheetType {
 
 impl WorksheetType {
     /// Whether this worksheet type can draw an answer grid (the
-    /// `grid` param; other types ignore it). Vertical stacks of whole
-    /// numbers only.
+    /// `grid` param; other types ignore it). Multiply only: on add,
+    /// subtract and simple division the grid is a single row of answer
+    /// boxes, which doesn't help with alignment.
     pub fn supports_grid(&self) -> bool {
         self.grid_cols().is_some()
     }
 
-    /// Answer-grid column count for types that support the grid: wide
-    /// enough for the largest possible answer and the operands above it.
-    ///   multiply: product digits (top max + multiplier max), plus a
-    ///     column for the `+` before the last partial product
-    ///   add: widest operand + 1 for the carry out of the top column
-    ///   subtract: widest operand (the difference is never wider)
-    ///   simple divide (stacked): the dividend, so the quotient can be
-    ///     written under its own digits
+    /// Answer-grid column count for types that support the grid: the
+    /// digits of the largest possible product (top max + multiplier max),
+    /// plus a column for the `+` before the last partial product.
     pub(crate) fn grid_cols(&self) -> Option<u32> {
-        let widest = |d: &[DigitRange]| d.iter().map(|r| r.max).max().unwrap_or(2);
         match self {
             WorksheetType::Multiply { digits } => {
                 let top = digits.first().map(|r| r.max).unwrap_or(2);
                 let bot = digits.get(1).map(|r| r.max).unwrap_or(top);
                 Some(top + bot + 1)
-            }
-            WorksheetType::Add { digits, .. } => Some(widest(digits) + 1),
-            WorksheetType::Subtract { digits, .. } => Some(widest(digits)),
-            WorksheetType::SimpleDivision { style: DivisionStyle::Equation, .. } => None,
-            WorksheetType::SimpleDivision { max_quotient, .. } => {
-                Some(document::digit_count(9 * *max_quotient))
             }
             _ => None,
         }
@@ -481,32 +470,23 @@ impl WorksheetType {
     /// Cell size with the answer grid on, for types that support it.
     /// The grid sets the width once it outgrows the stack's box; the
     /// answer area becomes a 0.5em gap plus one 0.9em row per line of
-    /// working (`multiplication-basic-d*-grid` fixtures and friends).
+    /// working (`multiplication-basic-d*-grid` fixtures).
     fn grid_cell_size_cm(&self, max_digits: u32) -> Option<(f32, f32)> {
         const PITCH_CM: f32 = 0.5485;
         const PAD_CM: f32 = 0.3;
-        const EM_CM: f32 = 0.7761; // 22pt problem text
         const BASE_H_CM: f32 = 2.831;
         const ROW_H_CM: f32 = 0.6985;
         let cols = self.grid_cols()? as f32;
+        let WorksheetType::Multiply { digits } = self else {
+            return None;
+        };
         let box_w = document::box_width_cm(self, max_digits) as f32;
         let w = ceil_mm(box_w.max(cols * PITCH_CM) + PAD_CM);
-        let h = match self {
-            WorksheetType::Multiply { digits } => {
-                // One row per partial (multiplier digit) + the sum, or
-                // just the product for a 1-digit multiplier.
-                let mult = digits.get(1).or(digits.first()).map(|r| r.max).unwrap_or(2);
-                let rows = if mult <= 1 { 1 } else { mult + 1 } as f32;
-                ceil_mm(BASE_H_CM + ROW_H_CM * rows)
-            }
-            // Single answer row: the blank stack's 1.3em answer line
-            // becomes 0.5em gap + one 0.9em row.
-            _ => {
-                let (_, h0) = self.cell_size_cm(max_digits);
-                ceil_mm(h0 + (0.5 + 0.9 - 1.3) * EM_CM)
-            }
-        };
-        Some((w, h))
+        // One row per partial (multiplier digit) + the sum, or just the
+        // product for a 1-digit multiplier.
+        let mult = digits.get(1).or(digits.first()).map(|r| r.max).unwrap_or(2);
+        let rows = if mult <= 1 { 1 } else { mult + 1 } as f32;
+        Some((w, ceil_mm(BASE_H_CM + ROW_H_CM * rows)))
     }
 
     /// `cell_size_cm`, or the grid cell size when `grid` is on and the
@@ -2441,16 +2421,8 @@ mod tests {
         // Grid off: unchanged.
         assert_eq!(mul_grid(2, 2).cell_size_cm_for(2, false), (2.5, 5.5));
 
-        // Single-answer-row stacks: the 1.3em answer line becomes a
-        // 0.5em gap + one 0.9em row; width only grows when the grid
-        // outgrows the stack's box.
-        assert_eq!(add.cell_size_cm_for(3, true), (2.6, 3.6));
-        let sub = WorksheetType::Subtract {
-            digits: vec![DigitRange::fixed(4), DigitRange::fixed(3)],
-            borrow: BorrowMode::Any,
-        };
-        assert_eq!(sub.cell_size_cm_for(4, true), (3.1, 3.6));
         // Types without a grid ignore the flag.
+        assert_eq!(add.cell_size_cm_for(3, true), add.cell_size_cm(3));
         let long = WorksheetType::LongDivision {
             digits: DigitRange::fixed(3),
             remainder: false,

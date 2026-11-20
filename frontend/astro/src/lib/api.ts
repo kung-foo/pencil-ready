@@ -392,20 +392,9 @@ export function effectiveDivisionStyle(
 }
 
 /** Whether the worksheet draws an answer grid. Mirrors
- * `WorksheetType::supports_grid` in `crates/core`: whole-number vertical
- * stacks only, so stacked (bracket-style) simple division but not its
- * one-line equation style. */
-export function supportsGrid(cfg: WorksheetConfig, locale: Locale): boolean {
-    switch (cfg.kind) {
-        case "add":
-        case "subtract":
-        case "multiply":
-            return true;
-        case "simple-divide":
-            return effectiveDivisionStyle(cfg, locale) === "bracket";
-        default:
-            return false;
-    }
+ * `WorksheetType::supports_grid` in `crates/core`: multiply only. */
+export function supportsGrid(cfg: WorksheetConfig): boolean {
+    return cfg.kind === "multiply";
 }
 
 /** Build the API URL the server serves for a given config. Names are
