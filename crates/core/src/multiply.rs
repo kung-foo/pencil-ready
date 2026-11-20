@@ -40,7 +40,7 @@ pub fn generate(params: &WorksheetParams) -> anyhow::Result<Sheet> {
 
 fn generate_problems(params: &WorksheetParams) -> Vec<Vec<u32>> {
     let digits = match &params.worksheet {
-        WorksheetType::Multiply { digits } => digits,
+        WorksheetType::Multiply { digits, .. } => digits,
         _ => unreachable!(),
     };
 

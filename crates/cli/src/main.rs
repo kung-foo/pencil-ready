@@ -145,6 +145,11 @@ struct GlobalArgs {
     #[arg(long)]
     solve_first: bool,
 
+    /// Draw a grid in the answer area for keeping digits in columns.
+    /// Multiply only; ignored by other worksheet types.
+    #[arg(long)]
+    grid: bool,
+
     /// Append an answer-key page (or pages, one per problem page) showing
     /// just the correct answer for each problem. PDF only.
     #[arg(long)]
@@ -692,7 +697,7 @@ fn resolve(command: Command) -> Resolved {
             global,
             num_problems: problems,
             cols,
-            worksheet: WorksheetType::Multiply { digits },
+            worksheet: WorksheetType::Multiply { digits, grid: false },
         },
         Command::SimpleDivide {
             global,
@@ -971,6 +976,8 @@ fn main() -> Result<()> {
         cols,
         worksheet,
     } = resolve(cli.command);
+    let mut worksheet = worksheet;
+    worksheet.set_grid(global.grid);
 
     let params = WorksheetParams {
         worksheet,
@@ -1115,6 +1122,7 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             "multiply",
             WorksheetType::Multiply {
                 digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
+                grid: false,
             },
             12,
             4,

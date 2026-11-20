@@ -212,6 +212,10 @@ pub enum WorksheetType {
     },
     Multiply {
         digits: Vec<DigitRange>,
+        /// Draw a grid in the answer area: one column per digit of the
+        /// largest possible product plus one for the `+`, one row per
+        /// line of working. See `WorksheetType::set_grid`.
+        grid: bool,
     },
     SimpleDivision {
         max_quotient: u32,
@@ -445,6 +449,33 @@ pub enum WorksheetType {
 }
 
 impl WorksheetType {
+    /// Whether this worksheet type can draw an answer grid.
+    pub fn supports_grid(&self) -> bool {
+        matches!(self, WorksheetType::Multiply { .. })
+    }
+
+    /// Turn the answer grid on or off. No-op for types that don't
+    /// support it, so a shared `grid` param can be applied to any
+    /// worksheet (e.g. carried across a worksheet-type switch).
+    pub fn set_grid(&mut self, on: bool) {
+        if let WorksheetType::Multiply { grid, .. } = self {
+            *grid = on;
+        }
+    }
+
+    /// Grid column count when the grid is on: digits of the largest
+    /// possible product (top max + multiplier max) plus the `+` column.
+    pub(crate) fn grid_cols(&self) -> Option<u32> {
+        match self {
+            WorksheetType::Multiply { digits, grid: true } => {
+                let top = digits.first().map(|r| r.max).unwrap_or(2);
+                let bot = digits.get(1).map(|r| r.max).unwrap_or(top);
+                Some(top + bot + 1)
+            }
+            _ => None,
+        }
+    }
+
     /// Name of the typst component function this worksheet renders
     /// with. Matches the wrapper files under `lib/problems/<folder>/`.
     pub(crate) fn component_typst_name(&self) -> &'static str {
@@ -521,7 +552,24 @@ impl WorksheetType {
             // multiplier digit, plus a final sum row). We key off the
             // smaller of the two operand digit counts — that's the
             // multiplier by convention in the generator.
-            WorksheetType::Multiply { digits } => {
+            WorksheetType::Multiply { digits, grid: true } => {
+                // Grid cells (`multiplication-basic-d*-grid` fixtures):
+                // the grid sets the width once it outgrows the stack's
+                // box, and the answer area is exactly gap + one 0.9em row
+                // per line of working (multiplier digits + sum, or just
+                // the product for a 1-digit multiplier).
+                const PITCH_CM: f32 = 0.5485;
+                const PAD_CM: f32 = 0.3;
+                const BASE_H_CM: f32 = 2.831;
+                const ROW_H_CM: f32 = 0.6985;
+                let cols = self.grid_cols().unwrap_or(5) as f32;
+                let box_w = document::box_width_cm(self, max_digits) as f32;
+                let w = box_w.max(cols * PITCH_CM) + PAD_CM;
+                let mult = digits.get(1).or(digits.first()).map(|r| r.max).unwrap_or(2);
+                let rows = if mult <= 1 { 1 } else { mult + 1 } as f32;
+                (ceil_mm(w), ceil_mm(BASE_H_CM + ROW_H_CM * rows))
+            }
+            WorksheetType::Multiply { digits, .. } => {
                 let min_dig = digits.iter().map(|r| r.max).min().unwrap_or(2).max(1);
                 let height = match min_dig {
                     1..=2 => 5.5, // 2 partials + sum + padding
@@ -696,7 +744,7 @@ impl WorksheetType {
         match self {
             WorksheetType::Add { digits, .. }
             | WorksheetType::Subtract { digits, .. }
-            | WorksheetType::Multiply { digits } => digits.iter().map(|r| r.max).max().unwrap_or(2),
+            | WorksheetType::Multiply { digits, .. } => digits.iter().map(|r| r.max).max().unwrap_or(2),
             WorksheetType::LongDivision { digits, .. } => digits.max,
             WorksheetType::MultiplicationDrill {
                 multiplicand,
@@ -859,6 +907,11 @@ pub(crate) fn fraction_add_rows(relation: DenominatorRelation) -> u32 {
 /// (`fraction-addition-same-den` / `-worst` in cell-sizes.toml).
 fn fraction_add_cell_h(rows: u32) -> f32 {
     if rows == 2 { 2.7 } else { 3.9 }
+}
+
+/// Ceil to the next 0.1cm, as `measure_cells` does for declared sizes.
+fn ceil_mm(x: f32) -> f32 {
+    (x * 10.0).ceil() / 10.0
 }
 
 pub(crate) fn vertical_stack_width(max_digits: u32) -> f32 {
@@ -1660,7 +1713,7 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
                 bail!("subtract supports max 2 operands, got {}", digits.len());
             }
         }
-        WorksheetType::Multiply { digits } => {
+        WorksheetType::Multiply { digits, .. } => {
             validate_digit_ranges(digits)?;
             if digits.len() > 2 {
                 bail!("multiply supports max 2 operands, got {}", digits.len());
@@ -2326,6 +2379,7 @@ mod tests {
         // multiplication-basic-d3x3-blank: 3×3 → 2.6 × 6.5
         let mul_3x3 = WorksheetType::Multiply {
             digits: vec![DigitRange::fixed(3), DigitRange::fixed(3)],
+            grid: false,
         };
         assert_eq!(mul_3x3.cell_size_cm(3), (2.6, 6.5));
 
@@ -2333,8 +2387,23 @@ mod tests {
         // drives 5.5 cm height regardless of multiplicand width.
         let mul_3x2 = WorksheetType::Multiply {
             digits: vec![DigitRange::fixed(3), DigitRange::fixed(2)],
+            grid: false,
         };
         assert_eq!(mul_3x2.cell_size_cm(3), (2.6, 5.5));
+
+        // multiplication-basic-d*-grid: the grid sets the width once it
+        // outgrows the stack's box; the height is one row per line of
+        // working. (The fixtures hold the largest operands, so the
+        // declared width there can only match or exceed the formula.)
+        let mul_grid = |top: u32, bot: u32| WorksheetType::Multiply {
+            digits: vec![DigitRange::fixed(top), DigitRange::fixed(bot)],
+            grid: true,
+        };
+        assert_eq!(mul_grid(2, 2).cell_size_cm(2), (3.1, 5.0));
+        assert_eq!(mul_grid(3, 2).cell_size_cm(3), (3.6, 5.0));
+        assert_eq!(mul_grid(3, 3).cell_size_cm(3), (4.2, 5.7));
+        assert_eq!(mul_grid(4, 4).cell_size_cm(4), (5.3, 6.4));
+        assert_eq!(mul_grid(2, 1).cell_size_cm(2).1, 3.6);
 
         // division-long-d3-no-remainder: 3-digit dividend → 3.8 × 8.0.
         // With remainder=true the cell widens by 1.2cm to fit the

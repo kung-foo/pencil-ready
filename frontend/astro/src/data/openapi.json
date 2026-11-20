@@ -135,6 +135,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -309,6 +318,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -542,6 +560,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -725,6 +752,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -940,6 +976,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -1107,6 +1152,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -1319,6 +1373,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -1486,6 +1549,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -1675,6 +1747,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -1856,6 +1937,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -2021,6 +2111,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2201,6 +2300,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2391,6 +2499,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -2590,6 +2707,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -2781,6 +2907,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -2946,6 +3081,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -3133,6 +3277,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -3298,6 +3451,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -3494,6 +3656,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -3677,6 +3848,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -3833,6 +4013,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -4005,6 +4194,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -4193,6 +4391,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -4356,6 +4563,15 @@
             }
           },
           {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "student_name",
             "in": "query",
             "description": "Pre-fill the student name on the header in a handwriting font.",
@@ -4513,6 +4729,15 @@
             "name": "debug",
             "in": "query",
             "description": "Draw debug borders around problem boxes and grid cells.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "grid",
+            "in": "query",
+            "description": "Draw a grid in the answer area to keep digits in columns.\nMultiply only; other worksheet types ignore it.",
             "required": false,
             "schema": {
               "type": "boolean"

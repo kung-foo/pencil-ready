@@ -117,6 +117,10 @@ struct SharedParams {
     /// Draw debug borders around problem boxes and grid cells.
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     debug: Option<bool>,
+    /// Draw a grid in the answer area to keep digits in columns.
+    /// Multiply only; other worksheet types ignore it.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    grid: Option<bool>,
     /// Pre-fill the student name on the header in a handwriting font.
     #[serde(default)]
     student_name: Option<String>,
@@ -213,6 +217,8 @@ impl SharedParams {
         default_cols: u32,
     ) -> (OutputFormat, WorksheetParams) {
         let format = self.format.unwrap_or(OutputFormat::Pdf);
+        let mut worksheet = worksheet;
+        worksheet.set_grid(self.grid.unwrap_or(false));
         let params = WorksheetParams {
             worksheet,
             num_problems: self.problems.unwrap_or(default_problems),
@@ -338,6 +344,7 @@ impl MultiplySpecific {
         Ok(shared.fold(
             WorksheetType::Multiply {
                 digits: digits_or(self.digits, &[2, 2])?,
+                grid: false,
             },
             12,
             4,

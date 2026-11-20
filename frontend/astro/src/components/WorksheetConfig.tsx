@@ -97,6 +97,19 @@ export function WorksheetConfigPanel({
                         />
                     </div>
 
+                    {cfg.kind === "multiply" && (
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="grid">{ui.grid}</Label>
+                            <Switch
+                                id="grid"
+                                checked={cfg.grid ?? false}
+                                onCheckedChange={(v) =>
+                                    onChange({ ...cfg, grid: v })
+                                }
+                            />
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                         <Label htmlFor="include_answers">
                             {ui.answerKey}{" "}

@@ -158,10 +158,14 @@ fn opts_body(
         | WorksheetType::Subtract { .. }
         | WorksheetType::Multiply { .. }
         | WorksheetType::SimpleDivision { .. } => format!(
-            "operator: {operator_arg}, width: {w}cm, answer-rows: {r}, pad-width: {p}",
+            "operator: {operator_arg}, width: {w}cm, answer-rows: {r}, pad-width: {p}{g}",
             w = opts.width_cm,
             r = opts.answer_rows,
             p = opts.pad_width,
+            g = match worksheet.grid_cols() {
+                Some(c) => format!(", grid: true, grid-cols: {c}"),
+                None => String::new(),
+            },
         ),
         WorksheetType::DecimalAdd { .. }
         | WorksheetType::DecimalSubtract { .. }

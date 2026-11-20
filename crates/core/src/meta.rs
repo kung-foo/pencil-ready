@@ -341,6 +341,7 @@ mod tests {
     fn solve_first_and_seed_suffixes() {
         let mut p = params(WorksheetType::Multiply {
             digits: vec![DigitRange::fixed(3), DigitRange::fixed(2)],
+            grid: false,
         });
         p.solve_first = true;
         p.seed = Some(42);

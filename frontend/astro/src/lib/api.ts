@@ -90,7 +90,7 @@ export type KindConfig =
           /** Concept-level preset id (see `lib/levels.ts`). */
           level?: string;
       }
-    | { kind: "multiply"; digits?: string }
+    | { kind: "multiply"; digits?: string; grid?: boolean }
     | { kind: "simple-divide"; max_quotient?: number }
     | {
           kind: "long-divide";
@@ -267,7 +267,7 @@ export function parseConfig(
         case "subtract":
             return { ...shared, kind, level: s("level") };
         case "multiply":
-            return { ...shared, kind, digits: s("digits") };
+            return { ...shared, kind, digits: s("digits"), grid: b("grid") };
         case "simple-divide":
             return { ...shared, kind, max_quotient: n("max_quotient") };
         case "long-divide":
