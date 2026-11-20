@@ -118,8 +118,7 @@ struct SharedParams {
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     debug: Option<bool>,
     /// Draw a grid in the answer area to keep digits in columns.
-    /// Add, subtract, multiply and stacked simple division; other
-    /// worksheet types ignore it.
+    /// Multiply only; other worksheet types ignore it.
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     grid: Option<bool>,
     /// Pre-fill the student name on the header in a handwriting font.

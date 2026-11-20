@@ -146,8 +146,7 @@ struct GlobalArgs {
     solve_first: bool,
 
     /// Draw a grid in the answer area for keeping digits in columns.
-    /// Add, subtract, multiply and stacked simple division; ignored by
-    /// other worksheet types.
+    /// Multiply only; ignored by other worksheet types.
     #[arg(long)]
     grid: bool,
 
