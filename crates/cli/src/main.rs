@@ -146,7 +146,8 @@ struct GlobalArgs {
     solve_first: bool,
 
     /// Draw a grid in the answer area for keeping digits in columns.
-    /// Multiply only; ignored by other worksheet types.
+    /// Add, subtract, multiply and stacked simple division; ignored by
+    /// other worksheet types.
     #[arg(long)]
     grid: bool,
 
@@ -697,7 +698,7 @@ fn resolve(command: Command) -> Resolved {
             global,
             num_problems: problems,
             cols,
-            worksheet: WorksheetType::Multiply { digits, grid: false },
+            worksheet: WorksheetType::Multiply { digits },
         },
         Command::SimpleDivide {
             global,
@@ -976,8 +977,6 @@ fn main() -> Result<()> {
         cols,
         worksheet,
     } = resolve(cli.command);
-    let mut worksheet = worksheet;
-    worksheet.set_grid(global.grid);
 
     let params = WorksheetParams {
         worksheet,
@@ -989,6 +988,7 @@ fn main() -> Result<()> {
         symbol: global.symbol,
         locale: global.locale.into(),
         solve_first: global.solve_first,
+        grid: global.grid,
         include_answers: global.include_answers,
         student_name: global.student_name,
         instructions: None,
@@ -1055,6 +1055,7 @@ fn default_params_for(
         locale: global.locale.into(),
         // Force worked-example rendering for every type.
         solve_first: true,
+        grid: false,
         // `all` is a single-PDF sampler — don't duplicate pages with an
         // answer key.
         include_answers: false,
@@ -1122,7 +1123,6 @@ fn run_all(global: GlobalArgs) -> Result<()> {
             "multiply",
             WorksheetType::Multiply {
                 digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
-                grid: false,
             },
             12,
             4,

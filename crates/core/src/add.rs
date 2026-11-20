@@ -269,6 +269,7 @@ mod tests {
             symbol: None,
             locale: Default::default(),
             solve_first: false,
+            grid: false,
             include_answers: false,
             student_name: None,
             instructions: None,

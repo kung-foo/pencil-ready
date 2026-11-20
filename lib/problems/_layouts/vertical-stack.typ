@@ -57,8 +57,8 @@
   let dps = opts.at("decimal-places", default: none)
   let decimal-sep = opts.at("decimal-sep", default: ".")
   let decimal-width = opts.at("decimal-width", default: 0.5)
-  // Grid answer area (see the `grid-opt` branch below). Multiply only:
-  // whole numbers, no decimal point to place between columns.
+  // Grid answer area (see the `grid-opt` branch below). Whole numbers
+  // only: no decimal point to place between columns.
   let grid-opt = opts.at("grid", default: false) and dps == none
   let grid-digit-size = opts.at("grid-digit-size", default: 17pt)
   let grid-stroke = opts.at("grid-stroke", default: 0.4pt + luma(190))
@@ -188,7 +188,7 @@
           if solved {
             let product = numbers.at(operand-count)
             if answer-rows == 1 or answer-only {
-              rows.push(str(product))
+              rows.push(fmt(product))
             } else {
               let a = numbers.at(0)
               let tmp = numbers.at(1)

@@ -34,6 +34,7 @@ fn params(seed: u64) -> WorksheetParams {
         symbol: None,
         locale: Locale::Us,
         solve_first: false,
+        grid: false,
         include_answers: false,
         student_name: None,
         instructions: None,

@@ -41,7 +41,6 @@ fn params(kind_ix: u32, seed: u64) -> WorksheetParams {
         },
         1 => WorksheetType::Multiply {
             digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
-            grid: false,
         },
         _ => WorksheetType::Subtract {
             digits: vec![DigitRange::fixed(2), DigitRange::fixed(2)],
@@ -58,6 +57,7 @@ fn params(kind_ix: u32, seed: u64) -> WorksheetParams {
         symbol: None,
         locale: Locale::Us,
         solve_first: false,
+        grid: false,
         include_answers: false,
         student_name: None,
         instructions: None,

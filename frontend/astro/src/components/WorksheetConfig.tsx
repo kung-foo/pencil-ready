@@ -16,6 +16,7 @@ import {
     DIVISION_STYLE_KINDS,
     FORMATS,
     effectiveDivisionStyle,
+    supportsGrid,
     type DivisionStyle,
     type WorksheetConfig,
 } from "@/lib/api";
@@ -97,15 +98,13 @@ export function WorksheetConfigPanel({
                         />
                     </div>
 
-                    {cfg.kind === "multiply" && (
+                    {supportsGrid(cfg, locale) && (
                         <div className="flex items-center justify-between">
                             <Label htmlFor="grid">{ui.grid}</Label>
                             <Switch
                                 id="grid"
                                 checked={cfg.grid ?? false}
-                                onCheckedChange={(v) =>
-                                    onChange({ ...cfg, grid: v })
-                                }
+                                onCheckedChange={(v) => patch("grid", v)}
                             />
                         </div>
                     )}

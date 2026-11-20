@@ -140,6 +140,7 @@ fn opts_body(
     max_digits_for_opts: u32,
     row_height_cm: f32,
     strings: &LocaleStrings,
+    grid: bool,
 ) -> String {
     let operator_arg = if opts.operator.is_empty() {
         "[]".to_string()
@@ -163,8 +164,8 @@ fn opts_body(
             r = opts.answer_rows,
             p = opts.pad_width,
             g = match worksheet.grid_cols() {
-                Some(c) => format!(", grid: true, grid-cols: {c}"),
-                None => String::new(),
+                Some(c) if grid => format!(", grid: true, grid-cols: {c}"),
+                _ => String::new(),
             },
         ),
         WorksheetType::DecimalAdd { .. }
@@ -445,6 +446,7 @@ pub(crate) fn render_document(doc: &Document) -> Result<String> {
         max_digits(&sheet.problems),
         row_height_cm,
         strings,
+        chrome.grid,
     );
     let header_pad_top = HEADER_PAD_TOP_CM;
 

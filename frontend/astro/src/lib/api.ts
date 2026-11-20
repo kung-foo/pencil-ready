@@ -62,6 +62,9 @@ export type SharedConfig = {
     format: Format;
     seed?: number;
     solve_first?: boolean;
+    /** Grid in the answer area. Only drawn where `supportsGrid` holds;
+     * the server ignores it elsewhere. */
+    grid?: boolean;
     /** Append an answer-key page showing just the final answers. PDF only. */
     include_answers?: boolean;
     problems?: number;
@@ -90,7 +93,7 @@ export type KindConfig =
           /** Concept-level preset id (see `lib/levels.ts`). */
           level?: string;
       }
-    | { kind: "multiply"; digits?: string; grid?: boolean }
+    | { kind: "multiply"; digits?: string }
     | { kind: "simple-divide"; max_quotient?: number }
     | {
           kind: "long-divide";
@@ -252,6 +255,7 @@ export function parseConfig(
         format,
         seed: n("seed"),
         solve_first: b("solve_first"),
+        grid: b("grid"),
         include_answers: b("include_answers"),
         problems: n("problems"),
         cols: n("cols"),
@@ -267,7 +271,7 @@ export function parseConfig(
         case "subtract":
             return { ...shared, kind, level: s("level") };
         case "multiply":
-            return { ...shared, kind, digits: s("digits"), grid: b("grid") };
+            return { ...shared, kind, digits: s("digits") };
         case "simple-divide":
             return { ...shared, kind, max_quotient: n("max_quotient") };
         case "long-divide":
@@ -385,6 +389,23 @@ export function effectiveDivisionStyle(
     locale: Locale,
 ): DivisionStyle {
     return cfg.division ?? localeDef(locale).divisionStyle;
+}
+
+/** Whether the worksheet draws an answer grid. Mirrors
+ * `WorksheetType::supports_grid` in `crates/core`: whole-number vertical
+ * stacks only, so stacked (bracket-style) simple division but not its
+ * one-line equation style. */
+export function supportsGrid(cfg: WorksheetConfig, locale: Locale): boolean {
+    switch (cfg.kind) {
+        case "add":
+        case "subtract":
+        case "multiply":
+            return true;
+        case "simple-divide":
+            return effectiveDivisionStyle(cfg, locale) === "bracket";
+        default:
+            return false;
+    }
 }
 
 /** Build the API URL the server serves for a given config. Names are
