@@ -171,7 +171,10 @@
       )
       v(-0.9em)
       line(length: 100%, stroke: 0.8pt)
-      if grid-opt {
+      // The answer key skips the grid: it shows just the product, in
+      // the normal answer style. The box keeps the grid's size so
+      // answer pages line up with the problem pages.
+      if grid-opt and not answer-only {
         // Grid answer area: `grid-cols` cells one digit column wide and
         // `grid-row` tall, right-aligned so their columns continue the
         // operand columns above; `answer-rows` rows, `grid-gap` below the
