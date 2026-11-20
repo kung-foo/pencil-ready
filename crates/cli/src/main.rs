@@ -17,7 +17,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use pencil_ready_core::{
     BorrowMode, CarryMode, DigitRange, DivisionStyle, Fonts, Locale, OutputFormat, Paper,
     WorksheetParams,
-    WorksheetType, compile_typst, generate, generate_typst_source, long_division_default_cols,
+    WorksheetType, compile_typst, generate, generate_typst_source, long_division_default_cols, multiply_default_cols, multiply_default_problems,
     long_division_default_problems,
 };
 
@@ -221,11 +221,14 @@ enum Command {
         #[command(flatten)]
         global: GlobalArgs,
 
-        #[arg(long, default_value = "12")]
-        problems: u32,
+        /// Default: as many as fit on one page (at most 12).
+        #[arg(long)]
+        problems: Option<u32>,
 
-        #[arg(long, default_value = "4")]
-        cols: u32,
+        /// Default: as many as fit (at most 4); wide products and the
+        /// answer grid need wider cells.
+        #[arg(long)]
+        cols: Option<u32>,
 
         /// Digits per operand, comma-separated. Use N for fixed or N-M for range.
         #[arg(long, value_delimiter = ',', default_values_t = [DigitRange::fixed(2), DigitRange::fixed(2)])]
@@ -693,12 +696,17 @@ fn resolve(command: Command) -> Resolved {
             problems,
             cols,
             digits,
-        } => Resolved {
-            global,
-            num_problems: problems,
-            cols,
-            worksheet: WorksheetType::Multiply { digits },
-        },
+        } => {
+            let cols = cols.unwrap_or_else(|| multiply_default_cols(&digits, global.grid));
+            let problems =
+                problems.unwrap_or_else(|| multiply_default_problems(&digits, global.grid, cols, 12));
+            Resolved {
+                global,
+                num_problems: problems,
+                cols,
+                worksheet: WorksheetType::Multiply { digits },
+            }
+        }
         Command::SimpleDivide {
             global,
             problems,

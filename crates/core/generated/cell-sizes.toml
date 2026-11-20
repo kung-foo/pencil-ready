@@ -59,33 +59,33 @@ measured_height_cm = 4.428
 [[cell]]
 id = "multiplication-basic-d2x2-blank"
 label = "multiplication 2×2-digit (blank)"
-width_cm = 2.5
+width_cm = 3.1
 height_cm = 5.5
-measured_width_cm = 2.500
+measured_width_cm = 3.100
 measured_height_cm = 5.471
 
 [[cell]]
 id = "multiplication-basic-d3x2-blank"
 label = "multiplication 3×2-digit (blank)"
-width_cm = 2.6
+width_cm = 3.7
 height_cm = 5.5
-measured_width_cm = 2.550
+measured_width_cm = 3.650
 measured_height_cm = 5.471
 
 [[cell]]
 id = "multiplication-basic-d3x3-blank"
 label = "multiplication 3×3-digit (blank)"
-width_cm = 2.6
+width_cm = 4.2
 height_cm = 6.5
-measured_width_cm = 2.550
+measured_width_cm = 4.200
 measured_height_cm = 6.480
 
 [[cell]]
 id = "multiplication-basic-d2x1-grid"
 label = "multiplication 2×1-digit, grid (blank)"
-width_cm = 2.8
+width_cm = 2.6
 height_cm = 3.6
-measured_width_cm = 2.800
+measured_width_cm = 2.550
 measured_height_cm = 3.530
 
 [[cell]]
@@ -93,15 +93,15 @@ id = "multiplication-basic-d2x2-grid"
 label = "multiplication 2×2-digit, grid (blank)"
 width_cm = 3.1
 height_cm = 5.0
-measured_width_cm = 3.041
+measured_width_cm = 3.100
 measured_height_cm = 4.927
 
 [[cell]]
 id = "multiplication-basic-d3x2-grid"
 label = "multiplication 3×2-digit, grid (blank)"
-width_cm = 3.6
+width_cm = 3.7
 height_cm = 5.0
-measured_width_cm = 3.589
+measured_width_cm = 3.650
 measured_height_cm = 4.927
 
 [[cell]]
@@ -109,7 +109,7 @@ id = "multiplication-basic-d3x3-grid"
 label = "multiplication 3×3-digit, grid (blank)"
 width_cm = 4.2
 height_cm = 5.7
-measured_width_cm = 4.137
+measured_width_cm = 4.200
 measured_height_cm = 5.626
 
 [[cell]]
@@ -117,7 +117,7 @@ id = "multiplication-basic-d4x4-grid"
 label = "multiplication 4×4-digit, grid (blank)"
 width_cm = 5.3
 height_cm = 6.4
-measured_width_cm = 5.233
+measured_width_cm = 5.300
 measured_height_cm = 6.324
 
 [[cell]]
