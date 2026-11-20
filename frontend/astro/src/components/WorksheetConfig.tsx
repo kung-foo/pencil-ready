@@ -540,16 +540,27 @@ function rangeToDash(lo: number, hi: number): string {
     return lo === hi ? String(lo) : `${lo}-${hi}`;
 }
 
+// Client-side mirrors of the server's `parse_digits_csv` ("3", "2-4",
+// "3,2-4") and `parse_u32_csv` ("2,3,10"). Whitespace around items is
+// trimmed server-side, so it's allowed here too.
+const RANGE_CSV = /^\s*\d+(-\d+)?(\s*,\s*\d+(-\d+)?)*\s*$/;
+const INT_CSV = /^\s*\d+(\s*,\s*\d+)*\s*$/;
+
 /** Input that keeps its own draft while focused and only fires `onCommit`
  * on blur — keeps keystrokes from hammering the worksheet API. Also
- * commits on Enter so the preview refreshes without tabbing away. */
+ * commits on Enter so the preview refreshes without tabbing away.
+ * With `pattern`, a non-empty draft that doesn't match reverts to the
+ * last committed value instead of being sent (half-typed `3,` would
+ * otherwise reach the API and fail the render). */
 function DeferredNameInput({
     value,
     placeholder,
+    pattern,
     onCommit,
 }: {
     value: string;
     placeholder?: string;
+    pattern?: RegExp;
     onCommit: (next: string) => void;
 }) {
     const [draft, setDraft] = useState(value);
@@ -559,6 +570,10 @@ function DeferredNameInput({
 
     const commit = () => {
         const trimmed = draft.trim();
+        if (pattern && trimmed !== "" && !pattern.test(trimmed)) {
+            setDraft(value);
+            return;
+        }
         if (trimmed !== value) onCommit(trimmed);
     };
 
@@ -616,10 +631,11 @@ function KindSpecific({
         case "multiply":
             return (
                 <Field label={ui.digits}>
-                    <Input
+                    <DeferredNameInput
                         value={cfg.digits ?? ""}
                         placeholder="2,2"
-                        onChange={(e) => patch("digits", e.target.value)}
+                        pattern={RANGE_CSV}
+                        onCommit={(v) => patch("digits", v)}
                     />
                 </Field>
             );
@@ -640,12 +656,11 @@ function KindSpecific({
             return (
                 <div className="space-y-4">
                     <Field label={ui.multiplicand}>
-                        <Input
+                        <DeferredNameInput
                             value={cfg.multiplicand ?? ""}
                             placeholder="1-10"
-                            onChange={(e) =>
-                                patch("multiplicand", e.target.value)
-                            }
+                            pattern={RANGE_CSV}
+                            onCommit={(v) => patch("multiplicand", v)}
                         />
                     </Field>
                     <RangeSliderField
@@ -666,10 +681,11 @@ function KindSpecific({
             return (
                 <div className="space-y-4">
                     <Field label={ui.divisor}>
-                        <Input
+                        <DeferredNameInput
                             value={cfg.divisor ?? ""}
                             placeholder="2-9"
-                            onChange={(e) => patch("divisor", e.target.value)}
+                            pattern={RANGE_CSV}
+                            onCommit={(v) => patch("divisor", v)}
                         />
                     </Field>
                     <RangeSliderField
@@ -689,12 +705,11 @@ function KindSpecific({
             return (
                 <div className="space-y-4">
                     <Field label={ui.denominators}>
-                        <Input
+                        <DeferredNameInput
                             value={cfg.denominators ?? ""}
                             placeholder="2,3,4,5,10"
-                            onChange={(e) =>
-                                patch("denominators", e.target.value)
-                            }
+                            pattern={INT_CSV}
+                            onCommit={(v) => patch("denominators", v)}
                         />
                     </Field>
                     <div className="flex items-center justify-between">
