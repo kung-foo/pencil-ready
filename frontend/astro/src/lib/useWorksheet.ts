@@ -19,13 +19,18 @@ function messageForStatus(status: number, ui: IslandStrings): string {
  * object URL. Keeps the previous object URL alive until the next one is
  * ready so the in-page preview never flickers. Caller uses `blobUrl` for
  * both the iframe/img src and the `<a href>` of the download button,
- * guaranteeing preview === download bytes.
+ * guaranteeing preview === download bytes. A `null` url fetches nothing
+ * and stays in `loading`.
  */
-export function useWorksheet(url: string, ui: IslandStrings): WorksheetState {
+export function useWorksheet(
+    url: string | null,
+    ui: IslandStrings,
+): WorksheetState {
     const [state, setState] = useState<WorksheetState>({ status: "loading" });
     const currentBlobUrl = useRef<string | null>(null);
 
     useEffect(() => {
+        if (url === null) return;
         let cancelled = false;
         setState({ status: "loading" });
 

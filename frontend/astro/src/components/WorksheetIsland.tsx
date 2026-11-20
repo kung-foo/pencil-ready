@@ -125,6 +125,18 @@ export function WorksheetIsland({
         [cfg, names, locale, paper],
     );
     const state = useWorksheet(url, ui);
+    // Print always goes through a PDF: printing a PNG blob from the hidden
+    // iframe comes out blank. When the configured format is already PDF,
+    // reuse the preview's bytes instead of fetching them twice.
+    const pdfUrl = useMemo(
+        () =>
+            cfg.format === "pdf"
+                ? null
+                : worksheetUrl({ ...cfg, format: "pdf" }, names, locale, paper),
+        [cfg, names, locale, paper],
+    );
+    const pdfState = useWorksheet(pdfUrl, ui);
+    const printState = pdfUrl === null ? state : pdfState;
 
     const onChange = (next: WorksheetConfig) => {
         if (next.kind !== kind) {
@@ -164,7 +176,7 @@ export function WorksheetIsland({
                     ui={ui}
                 />
                 <PrintButton
-                    state={state}
+                    state={printState}
                     kind={kind}
                     locale={locale}
                     ui={ui}
