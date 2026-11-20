@@ -125,6 +125,7 @@ export const nb: UiStrings = {
         studentNamePlaceholder: "f.eks. Mattehesten",
         format: "Format",
         digits: "Sifre (f.eks. 2,2 eller 3,2)",
+        grid: "Rutenett i svarfeltet",
         maxQuotient: "Største svar",
         multiplicand: "Første faktor (f.eks. 2,3 eller 1-10)",
         multiplier: "Andre faktor",
@@ -208,7 +209,10 @@ export const nb: UiStrings = {
         "prime-factors": [
             { label: "Tall fra 10 til 30", example: "24 = 2 · 2 · 2 · 3" },
             { label: "Tall fra 20 til 60", example: "45 = 3 · 3 · 5" },
-            { label: "Tall fra 33 til 100", example: "96 = 2 · 2 · 2 · 2 · 2 · 3" },
+            {
+                label: "Tall fra 33 til 100",
+                example: "96 = 2 · 2 · 2 · 2 · 2 · 3",
+            },
         ],
         gcf: [
             { label: "Tall opp til 30", example: "SFF(12, 18) = 6" },

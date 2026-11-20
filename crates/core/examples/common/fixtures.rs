@@ -34,6 +34,11 @@ pub const FIXTURES: &[Fixture] = &[
     Fixture { id: "multiplication-basic-d2x2-blank", label: "multiplication 2×2-digit (blank)", snippet: r#"multiplication-basic-problem((23, 45, 1035),   opts: (operator: [#sym.times], width: 2.2cm,  answer-rows: 3))"# },
     Fixture { id: "multiplication-basic-d3x2-blank", label: "multiplication 3×2-digit (blank)", snippet: r#"multiplication-basic-problem((123, 45, 5535),  opts: (operator: [#sym.times], width: 2.25cm, answer-rows: 3))"# },
     Fixture { id: "multiplication-basic-d3x3-blank", label: "multiplication 3×3-digit (blank)", snippet: r#"multiplication-basic-problem((123, 456, 56088),opts: (operator: [#sym.times], width: 2.25cm, answer-rows: 4))"# },
+    Fixture { id: "multiplication-basic-d2x1-grid", label: "multiplication 2×1-digit, grid (blank)", snippet: r#"multiplication-basic-problem((99, 9, 891),     opts: (operator: [#sym.times], width: 2.5cm,  answer-rows: 1, grid: true, grid-cols: 4))"# },
+    Fixture { id: "multiplication-basic-d2x2-grid", label: "multiplication 2×2-digit, grid (blank)", snippet: r#"multiplication-basic-problem((99, 99, 9801),   opts: (operator: [#sym.times], width: 2.5cm,  answer-rows: 3, grid: true, grid-cols: 5))"# },
+    Fixture { id: "multiplication-basic-d3x2-grid", label: "multiplication 3×2-digit, grid (blank)", snippet: r#"multiplication-basic-problem((999, 99, 98901),  opts: (operator: [#sym.times], width: 2.6cm,  answer-rows: 3, grid: true, grid-cols: 6))"# },
+    Fixture { id: "multiplication-basic-d3x3-grid", label: "multiplication 3×3-digit, grid (blank)", snippet: r#"multiplication-basic-problem((999, 999, 998001),opts: (operator: [#sym.times], width: 2.6cm,  answer-rows: 4, grid: true, grid-cols: 7))"# },
+    Fixture { id: "multiplication-basic-d4x4-grid", label: "multiplication 4×4-digit, grid (blank)", snippet: r#"multiplication-basic-problem((9999, 9999, 99980001),opts: (operator: [#sym.times], width: 3.1cm,  answer-rows: 5, grid: true, grid-cols: 9))"# },
 
     // --- long division (answer-rows = ~2 × dividend digits) ---
     Fixture { id: "division-long-d2-blank", label: "long division, 2-digit dividend (blank)", snippet: r#"division-long-problem((96, 4, 24),     opts: (width: 3.0cm, answer-rows: 4))"# },

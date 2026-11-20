@@ -57,6 +57,13 @@
   let dps = opts.at("decimal-places", default: none)
   let decimal-sep = opts.at("decimal-sep", default: ".")
   let decimal-width = opts.at("decimal-width", default: 0.5)
+  // Grid answer area (see the `grid-opt` branch below). Whole numbers
+  // only: no decimal point to place between columns.
+  let grid-opt = opts.at("grid", default: false) and dps == none
+  let grid-digit-size = opts.at("grid-digit-size", default: 17pt)
+  let grid-stroke = opts.at("grid-stroke", default: 0.4pt + luma(190))
+  let grid-row = opts.at("grid-row", default: 0.9em)
+  let grid-gap = opts.at("grid-gap", default: 0.5em)
   let solved = mode != "blank"
   let answer-only = mode == "answer-only"
 
@@ -127,10 +134,24 @@
   let rest = operands.slice(1)
 
   let carry-space = problem-carry-space
-  let answer-space = if answer-space-opt == auto { problem-line-height * answer-rows } else { answer-space-opt }
+  let answer-space = if answer-space-opt != auto { answer-space-opt } else if grid-opt {
+    // Exactly the rows the working needs (partials + sum), nothing spare.
+    grid-gap + grid-row * answer-rows
+  } else { problem-line-height * answer-rows }
+  // Grid columns: the longest possible product (digits(a) + digits(b))
+  // plus one on the left for the `+` before the last partial product.
+  // The sheet passes `grid-cols` from the configured digit ranges so
+  // every problem on it gets the same grid; the fallback sizes from
+  // this problem's own operands.
+  let grid-cols = opts.at("grid-cols", default: operands.map(n => str(n).len()).sum() + 1)
+  // Digit-column pitch: glyph advance + tracking, the spacing of the
+  // operand digits (the "00" − "0" difference; needs context).
+  let digit-pitch() = measure(text("00")).width - measure(text("0")).width
 
-  let content = box(
-    width: width,
+  // With the grid on, the box widens to hold it, so the cell's footprint
+  // (and debug outline) covers everything drawn.
+  let content = context box(
+    width: if grid-opt { calc.max(width.to-absolute(), digit-pitch() * grid-cols) } else { width },
     stroke: debug-box,
     inset: (top: carry-space, bottom: answer-space),
     {
@@ -150,7 +171,63 @@
       )
       v(-0.9em)
       line(length: 100%, stroke: 0.8pt)
-      if solved {
+      if grid-opt {
+        // Grid answer area: `grid-cols` cells one digit column wide and
+        // `grid-row` tall, right-aligned so their columns continue the
+        // operand columns above; `answer-rows` rows, `grid-gap` below the
+        // rule, filling the reserved answer space exactly. Worked /
+        // answer-only digits go one per cell at `grid-digit-size`.
+        context {
+          let pitch = digit-pitch()
+          let ncols = grid-cols
+          let row-h = grid-row.to-absolute()
+          let gap = grid-gap.to-absolute()
+          let nrows = answer-rows
+          let rows = ()
+          let rule-before = none
+          if solved {
+            let product = numbers.at(operand-count)
+            if answer-rows == 1 or answer-only {
+              rows.push(fmt(product))
+            } else {
+              let a = numbers.at(0)
+              let tmp = numbers.at(1)
+              let i = 0
+              while tmp > 0 {
+                rows.push(str(a * calc.rem(tmp, 10) * calc.pow(10, i)))
+                tmp = calc.quo(tmp, 10)
+                i += 1
+              }
+              rule-before = rows.len()
+              rows.at(-1) = "+" + " " * (ncols - 1 - rows.at(-1).len()) + rows.at(-1)
+              rows.push(str(product))
+            }
+          }
+          let cells = ()
+          for r in range(calc.max(nrows, rows.len())) {
+            let s = if r < rows.len() { rows.at(r).clusters() } else { () }
+            for c in range(ncols) {
+              let k = c - (ncols - s.len())
+              let d = if k >= 0 { s.at(k) } else { " " }
+              cells.push(if d == " " { [] } else if d == "+" { text(font: operator-font, fill: black, d) } else { d })
+            }
+          }
+          let resolved-answer-font = if answer-font != none { answer-font } else { problem-font }
+          let resolved-answer-color = if answer-color != none { answer-color } else { black }
+          // Explicit width so the grid lays out at its own size.
+          place(right, dy: gap, box(width: pitch * ncols, {
+            set text(size: grid-digit-size, tracking: 0pt, font: resolved-answer-font, fill: resolved-answer-color)
+            grid(
+              columns: (pitch,) * ncols,
+              rows: row-h,
+              stroke: grid-stroke,
+              align: center + horizon,
+              ..cells,
+              ..if rule-before != none { (grid.hline(y: rule-before, stroke: 0.5pt + black),) } else { () },
+            )
+          }))
+        }
+      } else if solved {
         v(-0.65em)
         // Optional font/color overrides for the answer (e.g. a handwriting
         // face + graphite color to make the answer read as if filled in by

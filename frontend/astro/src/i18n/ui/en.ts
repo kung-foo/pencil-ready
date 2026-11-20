@@ -134,6 +134,7 @@ export const en = {
         studentNamePlaceholder: "e.g. Math Hippo",
         format: "Format",
         digits: "Digits (e.g. 2,2 or 3,2)",
+        grid: "Answer grid",
         maxQuotient: "Max quotient",
         multiplicand: "Multiplicand (e.g. 2,3 or 1-10)",
         multiplier: "Multiplier",
@@ -222,7 +223,10 @@ export const en = {
         "prime-factors": [
             { label: "Numbers 10 to 30", example: "24 = 2 × 2 × 2 × 3" },
             { label: "Numbers 20 to 60", example: "45 = 3 × 3 × 5" },
-            { label: "Numbers 33 to 100", example: "96 = 2 × 2 × 2 × 2 × 2 × 3" },
+            {
+                label: "Numbers 33 to 100",
+                example: "96 = 2 × 2 × 2 × 2 × 2 × 3",
+            },
         ],
         gcf: [
             { label: "Numbers up to 30", example: "GCF(12, 18) = 6" },

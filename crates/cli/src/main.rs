@@ -145,6 +145,12 @@ struct GlobalArgs {
     #[arg(long)]
     solve_first: bool,
 
+    /// Draw a grid in the answer area for keeping digits in columns.
+    /// Add, subtract, multiply and stacked simple division; ignored by
+    /// other worksheet types.
+    #[arg(long)]
+    grid: bool,
+
     /// Append an answer-key page (or pages, one per problem page) showing
     /// just the correct answer for each problem. PDF only.
     #[arg(long)]
@@ -982,6 +988,7 @@ fn main() -> Result<()> {
         symbol: global.symbol,
         locale: global.locale.into(),
         solve_first: global.solve_first,
+        grid: global.grid,
         include_answers: global.include_answers,
         student_name: global.student_name,
         instructions: None,
@@ -1048,6 +1055,7 @@ fn default_params_for(
         locale: global.locale.into(),
         // Force worked-example rendering for every type.
         solve_first: true,
+        grid: false,
         // `all` is a single-PDF sampler — don't duplicate pages with an
         // answer key.
         include_answers: false,

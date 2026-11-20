@@ -117,6 +117,11 @@ struct SharedParams {
     /// Draw debug borders around problem boxes and grid cells.
     #[serde(default, deserialize_with = "deserialize_loose_bool")]
     debug: Option<bool>,
+    /// Draw a grid in the answer area to keep digits in columns.
+    /// Add, subtract, multiply and stacked simple division; other
+    /// worksheet types ignore it.
+    #[serde(default, deserialize_with = "deserialize_loose_bool")]
+    grid: Option<bool>,
     /// Pre-fill the student name on the header in a handwriting font.
     #[serde(default)]
     student_name: Option<String>,
@@ -223,6 +228,7 @@ impl SharedParams {
             symbol: self.symbol,
             locale: self.locale.unwrap_or_default(),
             solve_first: self.solve_first.unwrap_or(false),
+            grid: self.grid.unwrap_or(false),
             include_answers: self.include_answers.unwrap_or(false),
             student_name: self.student_name.filter(|s| !s.is_empty()),
             instructions: None,
