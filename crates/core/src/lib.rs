@@ -458,11 +458,7 @@ impl WorksheetType {
     /// plus a column for the `+` before the last partial product.
     pub(crate) fn grid_cols(&self) -> Option<u32> {
         match self {
-            WorksheetType::Multiply { digits } => {
-                let top = digits.first().map(|r| r.max).unwrap_or(2);
-                let bot = digits.get(1).map(|r| r.max).unwrap_or(top);
-                Some(top + bot + 1)
-            }
+            WorksheetType::Multiply { digits } => Some(product_digits(digits) + 1),
             _ => None,
         }
     }
@@ -471,7 +467,7 @@ impl WorksheetType {
     /// The grid sets the width once it outgrows the stack's box; the
     /// answer area becomes a 0.5em gap plus one 0.9em row per line of
     /// working (`multiplication-basic-d*-grid` fixtures).
-    fn grid_cell_size_cm(&self, max_digits: u32) -> Option<(f32, f32)> {
+    fn grid_cell_size_cm(&self) -> Option<(f32, f32)> {
         const PITCH_CM: f32 = 0.5485;
         const PAD_CM: f32 = 0.3;
         const BASE_H_CM: f32 = 2.831;
@@ -480,7 +476,9 @@ impl WorksheetType {
         let WorksheetType::Multiply { digits } = self else {
             return None;
         };
-        let box_w = document::box_width_cm(self, max_digits) as f32;
+        // The stack's box is sized for the product (see
+        // `multiply_cell_width_cm`); the grid widens it further if needed.
+        let box_w = document::box_width_cm(self, product_digits(digits)) as f32;
         let w = ceil_mm(box_w.max(cols * PITCH_CM) + PAD_CM);
         // One row per partial (multiplier digit) + the sum, or just the
         // product for a 1-digit multiplier.
@@ -493,7 +491,7 @@ impl WorksheetType {
     /// type supports it.
     pub fn cell_size_cm_for(&self, max_digits: u32, grid: bool) -> (f32, f32) {
         if grid {
-            if let Some(sz) = self.grid_cell_size_cm(max_digits) {
+            if let Some(sz) = self.grid_cell_size_cm() {
                 return sz;
             }
         }
@@ -583,7 +581,11 @@ impl WorksheetType {
                     3 => 6.5,     // 3 partials + sum + padding
                     _ => 7.5,     // 4+ partials; conservative
                 };
-                (vertical_stack_width(max_digits), height)
+                // Width: the stack's box is sized for the widest number on the
+                // sheet, and for multiply that's the product
+                // (`document::max_digits` counts it), so size the cell for
+                // the worst-case product rather than the operands.
+                (multiply_cell_width_cm(self, digits), height)
             }
 
             // Long division: unique layout, sized per style. Height grows
@@ -917,8 +919,49 @@ fn fraction_add_cell_h(rows: u32) -> f32 {
 }
 
 /// Ceil to the next 0.1cm, as `measure_cells` does for declared sizes.
+/// The small epsilon keeps f32 noise (3.1 stored as 3.1000001) from
+/// rounding a whole millimetre up.
 fn ceil_mm(x: f32) -> f32 {
-    (x * 10.0).ceil() / 10.0
+    ((x * 10.0) - 1e-3).ceil() / 10.0
+}
+
+/// Digits of the largest possible product: top max + multiplier max.
+fn product_digits(digits: &[DigitRange]) -> u32 {
+    let top = digits.first().map(|r| r.max).unwrap_or(2);
+    let bot = digits.get(1).map(|r| r.max).unwrap_or(top);
+    top + bot
+}
+
+/// Multiply cell width: the vertical stack's box at the worst-case
+/// product width (what `opts_body` emits on a sheet whose largest
+/// product is that wide), plus the measuring tool's cell padding.
+fn multiply_cell_width_cm(worksheet: &WorksheetType, digits: &[DigitRange]) -> f32 {
+    const PAD_CM: f32 = 0.3;
+    ceil_mm(document::box_width_cm(worksheet, product_digits(digits)) as f32 + PAD_CM)
+}
+
+/// Default grid columns for a multiply worksheet: as many as fit every
+/// paper, capped at the usual four. Shared by the server and CLI so an
+/// omitted `cols` never fails the paper-fit check (wide products, or
+/// the answer grid, need wider cells).
+pub fn multiply_default_cols(digits: &[DigitRange], grid: bool) -> u32 {
+    let ws = WorksheetType::Multiply { digits: digits.to_vec() };
+    let max_digits = ws.max_digits_bound();
+    let (w, _) = ws.cell_size_cm_for(max_digits, grid);
+    let (area_w, _) = common_content_area_cm(HEADER_HEIGHT_CM);
+    ((area_w / w).floor() as u32).clamp(1, 4)
+}
+
+/// Default problem count for multiply: up to `max`, but never more than
+/// one page holds at `cols` columns on every paper — so an omitted
+/// `problems` never spills onto a second page when wide products drop
+/// the default column count.
+pub fn multiply_default_problems(digits: &[DigitRange], grid: bool, cols: u32, max: u32) -> u32 {
+    let ws = WorksheetType::Multiply { digits: digits.to_vec() };
+    let (_, h) = ws.cell_size_cm_for(ws.max_digits_bound(), grid);
+    let (_, area_h) = common_content_area_cm(HEADER_HEIGHT_CM);
+    let rows = ((area_h / h).floor() as u32).max(1);
+    (cols * rows).min(max)
 }
 
 pub(crate) fn vertical_stack_width(max_digits: u32) -> f32 {
@@ -1732,6 +1775,11 @@ fn validate_worksheet_params(params: &WorksheetParams) -> Result<()> {
             if digits.len() > 2 {
                 bail!("multiply supports max 2 operands, got {}", digits.len());
             }
+            // Products are u32: 10 digits (5×5) would overflow.
+            let product = product_digits(digits);
+            if product > 9 {
+                bail!("multiply products can have at most 9 digits (e.g. 5,4), got up to {product}");
+            }
         }
         WorksheetType::SimpleDivision { max_quotient, .. } => {
             validate_max_quotient(*max_quotient)?;
@@ -2295,6 +2343,72 @@ mod tests {
     /// default columns, in both styles — an omitted `cols` should never
     /// trip the paper-fit check.
     #[test]
+    fn multiply_defaults_always_fit_one_page() {
+        // Every digit combination the UI accepts, with and without the
+        // answer grid: the default column count must pass the
+        // paper-fit check.
+        for top in 1..=5 {
+            for bot in 1..=top {
+                for grid in [false, true] {
+                    if top + bot > 9 {
+                        continue; // rejected by validation (u32 product)
+                    }
+                    let digits = vec![DigitRange::fixed(top), DigitRange::fixed(bot)];
+                    let cols = multiply_default_cols(&digits, grid);
+                    let problems = multiply_default_problems(&digits, grid, cols, 12);
+                    let params = WorksheetParams {
+                        worksheet: WorksheetType::Multiply { digits },
+                        num_problems: problems,
+                        cols,
+                        paper: Paper::A4,
+                        debug: false,
+                        seed: Some(42),
+                        symbol: None,
+                        locale: Locale::Us,
+                        solve_first: false,
+                        grid,
+                        include_answers: false,
+                        student_name: None,
+                        instructions: None,
+                        share_url: None,
+                    };
+                    let doc = Document::from_params(&params);
+                    assert!(doc.is_ok(), "{top}x{bot} grid={grid} cols={cols}");
+                    assert_eq!(doc.unwrap().pages, 1, "{top}x{bot} grid={grid} spills");
+                }
+            }
+        }
+        // Small products keep the usual four columns.
+        assert_eq!(multiply_default_cols(&[DigitRange::fixed(2), DigitRange::fixed(2)], false), 4);
+        assert_eq!(multiply_default_cols(&[DigitRange::fixed(3), DigitRange::fixed(3)], true), 4);
+        assert_eq!(multiply_default_cols(&[DigitRange::fixed(4), DigitRange::fixed(4)], false), 3);
+    }
+
+    #[test]
+    fn multiply_rejects_products_that_overflow() {
+        let params = WorksheetParams {
+            worksheet: WorksheetType::Multiply {
+                digits: vec![DigitRange::fixed(5), DigitRange::fixed(5)],
+            },
+            num_problems: 12,
+            cols: 2,
+            paper: Paper::A4,
+            debug: false,
+            seed: Some(42),
+            symbol: None,
+            locale: Locale::Us,
+            solve_first: false,
+            grid: false,
+            include_answers: false,
+            student_name: None,
+            instructions: None,
+            share_url: None,
+        };
+        let err = Document::from_params(&params).unwrap_err().to_string();
+        assert!(err.contains("at most 9 digits"), "{err}");
+    }
+
+    #[test]
     fn long_division_default_cols_always_fit() {
         for style in [DivisionStyle::Bracket, DivisionStyle::Equation] {
             for digits in 2..=4 {
@@ -2393,18 +2507,19 @@ mod tests {
         };
         assert_eq!(add.cell_size_cm(3), (2.6, 3.5));
 
-        // multiplication-basic-d3x3-blank: 3×3 → 2.6 × 6.5
+        // multiplication-basic-d3x3-blank: 3×3 → 4.2 × 6.5 (width from
+        // the 6-digit product, which sets the stack's box)
         let mul_3x3 = WorksheetType::Multiply {
             digits: vec![DigitRange::fixed(3), DigitRange::fixed(3)],
         };
-        assert_eq!(mul_3x3.cell_size_cm(3), (2.6, 6.5));
+        assert_eq!(mul_3x3.cell_size_cm(3), (4.2, 6.5));
 
         // multiplication-basic-d2x2-blank / d3x2-blank: 2-digit multiplier
         // drives 5.5 cm height regardless of multiplicand width.
         let mul_3x2 = WorksheetType::Multiply {
             digits: vec![DigitRange::fixed(3), DigitRange::fixed(2)],
         };
-        assert_eq!(mul_3x2.cell_size_cm(3), (2.6, 5.5));
+        assert_eq!(mul_3x2.cell_size_cm(3), (3.7, 5.5));
 
         // multiplication-basic-d*-grid: the grid sets the width once it
         // outgrows the stack's box; the height is one row per line of
@@ -2414,12 +2529,12 @@ mod tests {
             digits: vec![DigitRange::fixed(top), DigitRange::fixed(bot)],
         };
         assert_eq!(mul_grid(2, 2).cell_size_cm_for(2, true), (3.1, 5.0));
-        assert_eq!(mul_grid(3, 2).cell_size_cm_for(3, true), (3.6, 5.0));
+        assert_eq!(mul_grid(3, 2).cell_size_cm_for(3, true), (3.7, 5.0));
         assert_eq!(mul_grid(3, 3).cell_size_cm_for(3, true), (4.2, 5.7));
         assert_eq!(mul_grid(4, 4).cell_size_cm_for(4, true), (5.3, 6.4));
-        assert_eq!(mul_grid(2, 1).cell_size_cm_for(2, true).1, 3.6);
+        assert_eq!(mul_grid(2, 1).cell_size_cm_for(2, true), (2.6, 3.6));
         // Grid off: unchanged.
-        assert_eq!(mul_grid(2, 2).cell_size_cm_for(2, false), (2.5, 5.5));
+        assert_eq!(mul_grid(2, 2).cell_size_cm_for(2, false), (3.1, 5.5));
 
         // Types without a grid ignore the flag.
         assert_eq!(add.cell_size_cm_for(3, true), add.cell_size_cm(3));

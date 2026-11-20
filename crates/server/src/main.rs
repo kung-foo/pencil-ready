@@ -28,7 +28,7 @@ use pencil_ready_core::{
     BorrowMode, CarryMode, ConversionGiven, DenominatorRelation, DigitRange, DivisionStyle, Fonts, Locale, MissingSlot,
     OutputFormat,
     Paper,
-    WorksheetParams, WorksheetType, factor_pairs_default_problems, generate, long_division_default_cols,
+    WorksheetParams, WorksheetType, factor_pairs_default_problems, generate, long_division_default_cols, multiply_default_cols, multiply_default_problems,
     long_division_default_problems,
 };
 use serde::Deserialize;
@@ -340,13 +340,13 @@ struct MultiplySpecific {
 
 impl MultiplySpecific {
     fn build(self, shared: SharedParams) -> Result<(OutputFormat, WorksheetParams)> {
-        Ok(shared.fold(
-            WorksheetType::Multiply {
-                digits: digits_or(self.digits, &[2, 2])?,
-            },
-            12,
-            4,
-        ))
+        let digits = digits_or(self.digits, &[2, 2])?;
+        // Wide products (and the answer grid) need wider cells; an
+        // omitted `cols` defaults to as many as fit, at most 4.
+        let grid = shared.grid.unwrap_or(false);
+        let cols = shared.cols.unwrap_or_else(|| multiply_default_cols(&digits, grid));
+        let problems = multiply_default_problems(&digits, grid, cols, 12);
+        Ok(shared.fold(WorksheetType::Multiply { digits }, problems, cols))
     }
 }
 
